@@ -36,6 +36,10 @@ build/
 .node_repl_history
 .yarn-integrity
 
+# Package lock files
+package-lock.json
+yarn.lock
+
 # Mac OS artifacts
 .DS_Store
 
