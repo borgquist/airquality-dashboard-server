@@ -1,31 +1,9 @@
 {
-  "apiUrl": "http://192.168.0.114:8000/data", 
-  "refreshIntervalSec": 600,
-  "uvRefreshIntervalSec": 1800,
+  "externalApiUrl": "http://192.168.0.114:8000/data",
   "location": {
     "latitude": 24.4667,
     "longitude": 54.3667
   },
-  "aqiThresholds": {
-    "good": 50,
-    "moderate": 100,
-    "unhealthySensitive": 150,
-    "unhealthy": 200,
-    "veryUnhealthy": 300,
-    "hazardous": 500
-  },
-  "colors": {
-    "good": { "bg": "green", "text": "white" },
-    "moderate": { "bg": "#8cd211", "text": "black" },
-    "unhealthySensitive": { "bg": "yellow", "text": "black" },
-    "unhealthy": { "bg": "orange", "text": "black" },
-    "veryUnhealthy": { "bg": "red", "text": "white" },
-    "hazardous": { "bg": "darkred", "text": "white" }
-  },
-  "displayOptions": {
-    "showChart": true,
-    "showWeather": true,
-    "showTime": true,
-    "showLastUpdated": true
-  }
+  "logLevel": "info",
+  "port": 3000
 }

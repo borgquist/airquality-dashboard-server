@@ -6,11 +6,11 @@ const winston = require('winston');
 const cors = require('cors');
 
 // Load configuration
-const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+const serverConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
 // Configure logger
 const logger = winston.createLogger({
-  level: 'info',
+  level: serverConfig.logLevel || 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -28,7 +28,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = serverConfig.port || process.env.PORT || 3000;
 
 // Enable CORS
 app.use(cors());
@@ -40,7 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/airquality', async (req, res) => {
   try {
     logger.info('Fetching air quality data');
-    const response = await fetch(config.apiUrl);
+    const response = await fetch(serverConfig.externalApiUrl);
     const data = await response.json();
     
     // Log the successful data fetch
@@ -61,9 +61,9 @@ app.get('/api/airquality', async (req, res) => {
 app.get('/api/uvindex', async (req, res) => {
   try {
     logger.info('Fetching UV index data');
-    // Use latitude and longitude from config or default to a specific location
-    const lat = config.location?.latitude || 24.4667;
-    const lon = config.location?.longitude || 54.3667;
+    // Use latitude and longitude from config
+    const lat = serverConfig.location.latitude;
+    const lon = serverConfig.location.longitude;
     
     const response = await fetch(`https://currentuvindex.com/api/v1/uvi?latitude=${lat}&longitude=${lon}`);
     const data = await response.json();
