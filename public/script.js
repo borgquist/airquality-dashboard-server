@@ -426,15 +426,15 @@ function createUvForecastGraph(forecastData) {
   const cityName = config.location?.cityName || 'Abu Dhabi';
   const timezoneName = config.location?.timeZone?.name || 'UTC+4';
   
-  // Filter for the next two days of data
-  const twoDaysForecast = forecastData.filter(entry => {
+  // Filter for multiple days of data
+  const multipleDaysForecast = forecastData.filter(entry => {
     const entryTime = new Date(entry.time);
     return entryTime > currentTime && 
-           entryTime < new Date(currentTime.getTime() + 48 * 60 * 60 * 1000);
+           entryTime < new Date(currentTime.getTime() + 72 * 60 * 60 * 1000); // Show up to 3 days
   });
   
-  if (twoDaysForecast.length === 0) {
-    debugPrint('No UV forecast data available for the next 48 hours');
+  if (multipleDaysForecast.length === 0) {
+    debugPrint('No UV forecast data available for the next 72 hours');
     document.getElementById('uvForecastGraph').style.display = 'none';
     return;
   }
@@ -446,13 +446,31 @@ function createUvForecastGraph(forecastData) {
   const borderColors = [];
   
   // Process each entry for the chart
-  twoDaysForecast.forEach(entry => {
+  let previousDay = null;
+  multipleDaysForecast.forEach(entry => {
     const entryTime = new Date(entry.time);
     
-    // Format the time with date info to distinguish between days
-    const timeLabel = entryTime.getDate() === currentTime.getDate() ? 
-      entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) :
-      `Tomorrow ${entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+    // Format the time only (without date)
+    let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    
+    // Check which day this entry belongs to relative to today
+    const dayDiff = Math.floor((entryTime - currentTime) / (24 * 60 * 60 * 1000));
+    let dayLabel;
+    
+    if (dayDiff === 0) {
+      dayLabel = 'Today';
+    } else if (dayDiff === 1) {
+      dayLabel = 'Tomorrow';
+    } else {
+      // For days beyond tomorrow, use the weekday name
+      dayLabel = entryTime.toLocaleDateString(undefined, { weekday: 'long' });
+    }
+    
+    // Only add the day label when the day changes
+    if (dayLabel !== previousDay) {
+      timeLabel = dayLabel;
+      previousDay = dayLabel;
+    }
     
     times.push(timeLabel);
     uviValues.push(entry.uvi);
