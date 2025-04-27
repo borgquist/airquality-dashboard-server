@@ -12,6 +12,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 INSTALL_DIR="$SCRIPT_DIR"
 USER=$(whoami)
 LOG_SERVER_PORT=8088
+DATA_PROXY_PORT=8080
 SYSTEM_TYPE=""
 
 # Detect the operating system
@@ -59,6 +60,7 @@ echo "System type: $SYSTEM_TYPE"
 echo "Directory: $INSTALL_DIR"
 echo "User: $USER"
 echo "Log server port: $LOG_SERVER_PORT"
+echo "Data proxy port: $DATA_PROXY_PORT"
 echo ""
 
 # Step 1: Create logs directory
@@ -104,10 +106,10 @@ else
   exit 1
 fi
 
-# Step 3: Set up the service based on the system type
+# Step 3: Set up the services based on the system type
 if [[ "$SYSTEM_TYPE" == "macos" ]]; then
-  # macOS: Create launchd plist
-  PLIST_PATH="$HOME/Library/LaunchAgents/com.airvisual.logserver.plist"
+  # macOS: Create launchd plist for log server
+  LOG_PLIST_PATH="$HOME/Library/LaunchAgents/com.airvisual.logserver.plist"
   echo "Creating launchd service for log server..."
   
   # Get the full path to the node executable
@@ -130,6 +132,7 @@ if [[ "$SYSTEM_TYPE" == "macos" ]]; then
   
   echo "Using Node.js at: $NODE_PATH"
   
+  # Create log server plist
   cat > /tmp/com.airvisual.logserver.plist << EOL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -156,19 +159,56 @@ if [[ "$SYSTEM_TYPE" == "macos" ]]; then
 </plist>
 EOL
 
+  # Create data proxy server plist
+  DATA_PROXY_PLIST_PATH="$HOME/Library/LaunchAgents/com.airvisual.dataproxy.plist"
+  echo "Creating launchd service for data proxy server..."
+  
+  cat > /tmp/com.airvisual.dataproxy.plist << EOL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.airvisual.dataproxy</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${NODE_PATH}</string>
+        <string>${INSTALL_DIR}/data-proxy.js</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>WorkingDirectory</key>
+    <string>${INSTALL_DIR}</string>
+    <key>StandardErrorPath</key>
+    <string>${INSTALL_DIR}/logs/dataproxy-error.log</string>
+    <key>StandardOutPath</key>
+    <string>${INSTALL_DIR}/logs/dataproxy-output.log</string>
+</dict>
+</plist>
+EOL
+
   # Create LaunchAgents directory if it doesn't exist
   mkdir -p "$HOME/Library/LaunchAgents"
 
-  # Install the plist file
-  mv /tmp/com.airvisual.logserver.plist "$PLIST_PATH"
-  echo "Created launchd service at: $PLIST_PATH"
+  # Install the plist files
+  mv /tmp/com.airvisual.logserver.plist "$LOG_PLIST_PATH"
+  echo "Created launchd service at: $LOG_PLIST_PATH"
   
-  # Start the service
+  mv /tmp/com.airvisual.dataproxy.plist "$DATA_PROXY_PLIST_PATH"
+  echo "Created launchd service at: $DATA_PROXY_PLIST_PATH"
+  
+  # Start the services
   echo "Loading and starting log server service..."
-  launchctl unload "$PLIST_PATH" 2>/dev/null || true
-  launchctl load -w "$PLIST_PATH"
+  launchctl unload "$LOG_PLIST_PATH" 2>/dev/null || true
+  launchctl load -w "$LOG_PLIST_PATH"
   
-  # Check if the service is running
+  echo "Loading and starting data proxy service..."
+  launchctl unload "$DATA_PROXY_PLIST_PATH" 2>/dev/null || true
+  launchctl load -w "$DATA_PROXY_PLIST_PATH"
+  
+  # Check if the log server is running
   sleep 2 # Give the service a moment to start
   if pgrep -f "node.*log-server.js" > /dev/null; then
     echo "Log server service started successfully!"
@@ -183,10 +223,30 @@ EOL
     fi
   fi
   
-  SERVICE_CHECK_CMD="pgrep -f \"node.*log-server.js\""
-  START_CMD="launchctl load -w $PLIST_PATH"
-  STOP_CMD="launchctl unload $PLIST_PATH"
-  RESTART_CMD="launchctl unload $PLIST_PATH && launchctl load -w $PLIST_PATH"
+  # Check if the data proxy server is running
+  if pgrep -f "node.*data-proxy.js" > /dev/null; then
+    echo "Data proxy service started successfully!"
+    echo "Dashboard is available at: http://localhost:${DATA_PROXY_PORT}"
+    echo "Data endpoint: http://localhost:${DATA_PROXY_PORT}/data"
+  else
+    echo "Warning: Data proxy service did not start properly."
+    echo "Check logs for more information: ${INSTALL_DIR}/logs/dataproxy-error.log"
+    # Try to show any errors
+    if [ -f "${INSTALL_DIR}/logs/dataproxy-error.log" ]; then
+      echo "Error log content:"
+      cat "${INSTALL_DIR}/logs/dataproxy-error.log"
+    fi
+  fi
+  
+  SERVICE_CHECK_CMD_LOG="pgrep -f \"node.*log-server.js\""
+  START_CMD_LOG="launchctl load -w $LOG_PLIST_PATH"
+  STOP_CMD_LOG="launchctl unload $LOG_PLIST_PATH"
+  RESTART_CMD_LOG="launchctl unload $LOG_PLIST_PATH && launchctl load -w $LOG_PLIST_PATH"
+  
+  SERVICE_CHECK_CMD_PROXY="pgrep -f \"node.*data-proxy.js\""
+  START_CMD_PROXY="launchctl load -w $DATA_PROXY_PLIST_PATH"
+  STOP_CMD_PROXY="launchctl unload $DATA_PROXY_PLIST_PATH"
+  RESTART_CMD_PROXY="launchctl unload $DATA_PROXY_PLIST_PATH && launchctl load -w $DATA_PROXY_PLIST_PATH"
   
 elif [[ "$SYSTEM_TYPE" == "linux" ]]; then
   # Linux: Create systemd service if systemd is available
@@ -358,4 +418,18 @@ if eval "$SERVICE_CHECK_CMD" > /dev/null; then
 else
   echo "Warning: Log server service did not start properly."
   echo "Check logs for more information: $INSTALL_DIR/logs/server-error.log"
-fi 
+fi
+
+# Output the important URLs and commands
+echo ""
+echo "=== Dashboard Installation Complete ==="
+echo ""
+echo "URLs:"
+echo "  Dashboard URL: http://localhost:$DATA_PROXY_PORT"
+echo "  Log Viewer: http://localhost:$LOG_SERVER_PORT"
+echo ""
+echo "Commands to manage services:"
+echo "  Restart log server: launchctl unload $LOG_PLIST_PATH && launchctl load -w $LOG_PLIST_PATH"
+echo "  Restart data proxy: launchctl unload $DATA_PROXY_PLIST_PATH && launchctl load -w $DATA_PROXY_PLIST_PATH"
+echo ""
+echo "Access the dashboard in your browser at: http://localhost:$DATA_PROXY_PORT" 
