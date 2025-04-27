@@ -17,6 +17,42 @@
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAB4FBMVEUAAAAAgAAAgQEAfwIAfgAAfwAAgAAAfwAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAfwAAgAAAgAAAfwAAgAAAgAAAgAAAgAAAgQEAgAAAgAAAgAAAgAAAfwAAgAAAgAAAfwAAgAAAfwEAfwAAfwAAgAAAfwAAgAAAgAAAfwAAgAAAfwAAgAAAfwAAfwAAgAAAfwEAgAAAgAEAgAAAfwAAfwEAgAAAfwAAgAAAfwAAgAAAfwAAgAAAgAAAfwAAgAAAfwEAgAAAgAAAfwAAgAAAfwAAgAAAfwAAgAAAfwEAfwAAgAAAgAAAgAAAgAAAfwAAfwAAfwEAgAAAgAAAfwAAgAAAgAAAgAAAgAAAfwAAgAAAgAAAgAAAgAAAgAAAfwAAgAEAgAAAgAEAgAAAfwAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAfwAAgAAAgAAAgAAAgAAAgAAAfwAAgAEAgAAAfwAAgAAAgAAAfwAAgAAAfwAAgAAAgAAAgAAAfgAAgAAAgAAAgAAAfwAAgAAAfwAAgAAAgAAAfwAAgAAAgQAAfwAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAfwAAgAAAfwAAgAEAgAAAfwAAgAAAfwAAgAAAfwAAgAAAgAAAfwAAfwAAgAAAgQEAgAEAfwD////WrA2NAAAAnnRSTlMAAxIkMT9KWGl3g5Ccqri+x83X4On2/vfq2c7Iv7mrnZFyYUxBLSMTCFSirfT16qF9SBkCZeOuVBJC4wy2BjbJHuYEXupWM/kyMnpF3Q9wvxGYDan5dIh+FNgZx6cHiTCb+F/vlQV72AqQHHJJVeQSqGBI7W8= FoR1p1i1GTbGBh/qHYZNDQ4bjk09fPgn1/PPUaTtnPSkF9JiB4pFFQAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfkBAUQHxLGXzgzAAABuElEQVQ4y5WTZ1fCMBSG40AQ1IJ7g+KeKO5Z3Huv4sSFCxVxK7i34p54/rm5aY8F/KDvl7R9TnKb3JsEAEUxWKw2TCZ2u81qwTCk9B+FqQ4S7na4CLfTQcLdtRg6mKnhIbxkHZ56D+GtZYijQQ0n4SPrOTw+Pl6gTsJdR0nFNACaCB/fTAYCQRoIBpKZIJ9nUUNsgLFBfYhcPszbAkA4lxcg0FSADRqbhF+zuQVoa83JFdpgJTujvcOXSKVSCZ/Q0c7n2bJUZaK0kSju7Oru6U0O9CWH+gf6x0ZHhvNF9ZRSMh3ARicHp6ZnZuemc/MLi0vLK8H84JqIhhjgQCuxvra+sbm1vbO7t39weHR8curyvWcRNlqJnV9cXl3fhMPh29j9w+PT84vZHFcZiEogGr1/e//4/PqOxb6+f36jqpkYYRU0xvlBXDVIGd1yCRukGPNPtQXiglbO2MjYLUbC2ShlaGHM3ixuFqNZt5iVxXSLXW0xF1q3GPnPYv9vMWWAFwsoPpM1G69YTB4eXiyU4IM+VoThA8b4jDEy1LGb5Bg+Yl7KT1KxsOKxEkVmqsTi/wHY+ojgByA+3QAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMC0wNC0wNVQxNjozMToxOCswMDowMLKI6RwAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjAtMDQtMDVUMTY6MzE6MTgrMDA6MDDDxVGgAAAAAElFTkSuQmCC">
+  
+  <!-- Fallback configuration for file:// URLs -->
+  <script>
+    // Define a fallback configuration when loaded from file:// URL
+    if (window.location.protocol === 'file:') {
+      window.fallbackConfig = {
+        apiUrl: "http://localhost:8000/data",
+        location: "Local Dev",
+        refreshIntervalSec: 30,
+        aqiThresholds: {
+          good: 50,
+          moderate: 100,
+          unhealthySensitive: 150,
+          unhealthy: 200,
+          veryUnhealthy: 300,
+          hazardous: 500
+        },
+        colors: {
+          good: { bg: "green", text: "white" },
+          moderate: { bg: "#8cd211", text: "black" },
+          unhealthySensitive: { bg: "yellow", text: "black" },
+          unhealthy: { bg: "orange", text: "black" },
+          veryUnhealthy: { bg: "red", text: "white" },
+          hazardous: { bg: "darkred", text: "white" }
+        },
+        displayOptions: {
+          showChart: true,
+          showWeather: true,
+          showTime: true,
+          showLastUpdated: true
+        }
+      };
+      
+      console.log("Using fallback configuration for file:// URL");
+    }
+  </script>
 </head>
 <body>
   <!-- Loader -->
@@ -80,6 +116,19 @@
       document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('debug-log').style.display = 'block';
       });
+      
+      // Create fallback for fetch config.json
+      const originalFetch = window.fetch;
+      window.fetch = function(url, options) {
+        if (url === 'config.json' || url.endsWith('/config.json')) {
+          console.log('Intercepting config.json fetch, returning fallback config');
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(window.fallbackConfig)
+          });
+        }
+        return originalFetch.apply(this, arguments);
+      };
     }
   </script>
   
