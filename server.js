@@ -36,7 +36,7 @@ app.use(cors());
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API endpoint to fetch data
+// API endpoint to fetch air quality data
 app.get('/api/airquality', async (req, res) => {
   try {
     logger.info('Fetching air quality data');
@@ -54,6 +54,30 @@ app.get('/api/airquality', async (req, res) => {
   } catch (error) {
     logger.error('Error fetching air quality data', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch air quality data' });
+  }
+});
+
+// API endpoint to fetch UV index data
+app.get('/api/uvindex', async (req, res) => {
+  try {
+    logger.info('Fetching UV index data');
+    // Use latitude and longitude from config or default to a specific location
+    const lat = config.location?.latitude || 24.4667;
+    const lon = config.location?.longitude || 54.3667;
+    
+    const response = await fetch(`https://currentuvindex.com/api/v1/uvi?latitude=${lat}&longitude=${lon}`);
+    const data = await response.json();
+    
+    // Log the successful data fetch
+    logger.info('UV index data fetched successfully', {
+      timestamp: new Date().toISOString(),
+      current_uvi: data.now.uvi
+    });
+    
+    res.json(data);
+  } catch (error) {
+    logger.error('Error fetching UV index data', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch UV index data' });
   }
 });
 

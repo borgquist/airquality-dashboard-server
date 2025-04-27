@@ -20,6 +20,8 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   line-height: 1.6;
+  transition: background-color 1s ease;
+  min-height: 100vh;
 }
 
 .container {
@@ -46,7 +48,7 @@ h1 {
 
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1.5rem;
 }
 
@@ -70,44 +72,36 @@ h1 {
   padding-bottom: 0.5rem;
 }
 
+.card h3 {
+  color: var(--color-primary);
+  margin: 1rem 0;
+  font-size: 1.2rem;
+}
+
 .main-aqi {
   text-align: center;
 }
 
 .aqi-value {
-  font-size: 3.5rem;
+  font-size: 5rem;
   font-weight: bold;
   margin: 1rem 0;
 }
 
 .aqi-category {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   border-radius: var(--border-radius);
   display: inline-block;
   font-weight: bold;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
 }
 
 .main-pollutant {
   font-size: 1.1rem;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-}
-
-th {
-  background-color: rgba(0, 0, 0, 0.03);
-}
-
-.weather-data {
+.info-data {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
@@ -122,6 +116,63 @@ th {
 
 .label {
   font-weight: bold;
+}
+
+/* UV Index Styles */
+.uv-index {
+  text-align: center;
+}
+
+.uv-current {
+  margin: 1rem 0;
+}
+
+.uv-value {
+  font-size: 3.5rem;
+  font-weight: bold;
+}
+
+.uv-category {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  display: inline-block;
+  font-weight: bold;
+}
+
+.uv-forecast-container {
+  margin-top: 1.5rem;
+}
+
+.uv-graph-container {
+  height: 200px;
+  margin-top: 1rem;
+}
+
+/* UV Index category colors */
+.uv-low {
+  background-color: #3EC530;
+  color: white;
+}
+
+.uv-moderate {
+  background-color: #FFF200;
+  color: black;
+}
+
+.uv-high {
+  background-color: #F18B00;
+  color: black;
+}
+
+.uv-very-high {
+  background-color: #E53210;
+  color: white;
+}
+
+.uv-extreme {
+  background-color: #B567A4;
+  color: white;
 }
 
 /* AQI category colors */
@@ -155,16 +206,43 @@ th {
   color: white;
 }
 
+/* Background colors for body */
+body.bg-good {
+  background-color: rgba(0, 128, 0, 0.2);
+}
+
+body.bg-unhealthy {
+  background-color: rgba(255, 165, 0, 0.2);
+}
+
+body.bg-very-unhealthy {
+  background-color: rgba(255, 0, 0, 0.2);
+}
+
+body.bg-hazardous {
+  background-color: rgba(139, 0, 0, 0.2);
+}
+
+@media (min-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 1rem;
   }
   
-  .dashboard {
-    grid-template-columns: 1fr;
+  .aqi-value {
+    font-size: 3.5rem;
   }
   
-  .aqi-value {
+  .uv-value {
     font-size: 2.5rem;
   }
 } 

@@ -1,6 +1,11 @@
 {
   "apiUrl": "http://192.168.0.114:8000/data", 
   "refreshIntervalSec": 600,
+  "uvRefreshIntervalSec": 1800,
+  "location": {
+    "latitude": 24.4667,
+    "longitude": 54.3667
+  },
   "aqiThresholds": {
     "good": 50,
     "moderate": 100,

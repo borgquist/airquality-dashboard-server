@@ -1,6 +1,11 @@
 {
   "apiUrl": "/api/airquality", 
-  "refreshIntervalSec": 5,
+  "refreshIntervalSec": 600,
+  "uvRefreshIntervalSec": 1800,
+  "location": {
+    "latitude": 24.4667,
+    "longitude": 54.3667
+  },
   "aqiThresholds": {
     "good": 50,
     "moderate": 100,

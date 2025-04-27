@@ -1,5 +1,6 @@
 // Load configuration
 let config;
+let uvChart;
 
 // Fetch configuration and initialize
 async function loadConfig() {
@@ -15,10 +16,14 @@ async function loadConfig() {
 // Initialize the dashboard
 function initDashboard() {
   fetchAirQualityData();
+  fetchUvIndexData();
   
   // Set up auto-refresh based on config
-  const refreshInterval = (config.refreshIntervalSec || 600) * 1000;
-  setInterval(fetchAirQualityData, refreshInterval);
+  const refreshIntervalAqi = (config.refreshIntervalSec || 600) * 1000;
+  const refreshIntervalUv = (config.uvRefreshIntervalSec || 1800) * 1000;
+  
+  setInterval(fetchAirQualityData, refreshIntervalAqi);
+  setInterval(fetchUvIndexData, refreshIntervalUv);
 }
 
 // Fetch the air quality data from the server
@@ -30,7 +35,7 @@ async function fetchAirQualityData() {
     }
     
     const data = await response.json();
-    updateDashboard(data);
+    updateAirQualityDisplay(data);
   } catch (error) {
     console.error('Error fetching air quality data:', error);
     document.getElementById('lastUpdatedTime').textContent = 
@@ -38,8 +43,24 @@ async function fetchAirQualityData() {
   }
 }
 
-// Update the dashboard with the latest data
-function updateDashboard(data) {
+// Fetch UV index data
+async function fetchUvIndexData() {
+  try {
+    const response = await fetch('/api/uvindex');
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    updateUvIndexDisplay(data);
+  } catch (error) {
+    console.error('Error fetching UV index data:', error);
+    document.getElementById('uvIndexValue').textContent = 'Error';
+  }
+}
+
+// Update the air quality dashboard with the latest data
+function updateAirQualityDisplay(data) {
   if (!data || !data.current) {
     console.error('Invalid data format');
     return;
@@ -72,24 +93,8 @@ function updateDashboard(data) {
   // Add the current category class
   categoryElement.classList.add(aqiCategory.className);
   
-  // Update pollutant values
-  if (data.current.pm1) {
-    document.getElementById('pm1Aqi').textContent = data.current.pm1.aqius || '-';
-    document.getElementById('pm1Conc').textContent = 
-      data.current.pm1.conc ? `${data.current.pm1.conc} μg/m³` : '-';
-  }
-  
-  if (data.current.pm25) {
-    document.getElementById('pm25Aqi').textContent = data.current.pm25.aqius || '-';
-    document.getElementById('pm25Conc').textContent = 
-      data.current.pm25.conc ? `${data.current.pm25.conc} μg/m³` : '-';
-  }
-  
-  if (data.current.pm10) {
-    document.getElementById('pm10Aqi').textContent = data.current.pm10.aqius || '-';
-    document.getElementById('pm10Conc').textContent = 
-      data.current.pm10.conc ? `${data.current.pm10.conc} μg/m³` : '-';
-  }
+  // Update page background based on AQI
+  updatePageBackground(aqiValue);
   
   // Update weather data
   document.getElementById('temperature').textContent = 
@@ -98,6 +103,35 @@ function updateDashboard(data) {
     data.current.hm ? `${data.current.hm}%` : '-';
   document.getElementById('pressure').textContent = 
     data.current.pr ? `${(data.current.pr / 100).toFixed(1)} hPa` : '-';
+}
+
+// Update the UV index display
+function updateUvIndexDisplay(data) {
+  if (!data || !data.now) {
+    console.error('Invalid UV index data format');
+    return;
+  }
+  
+  // Update current UV index value
+  const currentUvIndex = data.now.uvi;
+  document.getElementById('uvIndexValue').textContent = currentUvIndex;
+  
+  // Set UV category and color
+  const uvCategory = getUVCategory(currentUvIndex);
+  const categoryElement = document.getElementById('uvIndexCategory');
+  categoryElement.textContent = uvCategory.name;
+  
+  // Remove all category classes
+  categoryElement.classList.remove(
+    'uv-low', 'uv-moderate', 'uv-high', 
+    'uv-very-high', 'uv-extreme'
+  );
+  
+  // Add the current category class
+  categoryElement.classList.add(uvCategory.className);
+  
+  // Create or update the UV forecast graph
+  createUvForecastGraph(data.forecast);
 }
 
 // Format pollutant name for display
@@ -125,6 +159,134 @@ function getAQICategory(aqi) {
   } else {
     return { name: 'Hazardous', className: 'hazardous' };
   }
+}
+
+// Get UV category based on UV index value
+function getUVCategory(uvi) {
+  if (uvi < 3) {
+    return { name: 'Low', className: 'uv-low' };
+  } else if (uvi < 6) {
+    return { name: 'Moderate', className: 'uv-moderate' };
+  } else if (uvi < 8) {
+    return { name: 'High', className: 'uv-high' };
+  } else if (uvi < 11) {
+    return { name: 'Very High', className: 'uv-very-high' };
+  } else {
+    return { name: 'Extreme', className: 'uv-extreme' };
+  }
+}
+
+// Update the page background based on AQI
+function updatePageBackground(aqi) {
+  // Remove all background classes
+  document.body.classList.remove(
+    'bg-good', 'bg-unhealthy', 'bg-very-unhealthy', 'bg-hazardous'
+  );
+  
+  // Add appropriate background class based on AQI
+  if (aqi <= 100) {
+    document.body.classList.add('bg-good');
+  } else if (aqi <= 200) {
+    document.body.classList.add('bg-unhealthy');
+  } else if (aqi <= 300) {
+    document.body.classList.add('bg-very-unhealthy');
+  } else {
+    document.body.classList.add('bg-hazardous');
+  }
+}
+
+// Create or update the UV forecast graph
+function createUvForecastGraph(forecastData) {
+  if (!forecastData || !forecastData.length) {
+    console.error('No forecast data available');
+    return;
+  }
+  
+  // Only display forecast for the rest of the current day (next 12 hours)
+  const currentTime = new Date();
+  const next12Hours = forecastData.filter(entry => {
+    const entryTime = new Date(entry.time);
+    return entryTime > currentTime && entryTime <= new Date(currentTime.getTime() + 12 * 60 * 60 * 1000);
+  });
+  
+  if (next12Hours.length === 0) {
+    debugPrint('No UV forecast data available for the next 12 hours');
+    document.getElementById('uvForecastGraph').style.display = 'none';
+    return;
+  }
+  
+  const times = next12Hours.map(entry => {
+    const date = new Date(entry.time);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  });
+  
+  const uviValues = next12Hours.map(entry => entry.uvi);
+  
+  // Background colors based on whether UV index is <= 4 (safe) or > 4 (caution)
+  const backgroundColors = uviValues.map(value => 
+    value <= 4 ? 'rgba(46, 204, 113, 0.5)' : 'rgba(231, 76, 60, 0.5)'
+  );
+  
+  const borderColors = uviValues.map(value => 
+    value <= 4 ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)'
+  );
+  
+  const ctx = document.getElementById('uvForecastGraph').getContext('2d');
+  
+  // Destroy previous chart if it exists
+  if (uvChart) {
+    uvChart.destroy();
+  }
+  
+  uvChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: times,
+      datasets: [{
+        label: 'UV Index',
+        data: uviValues,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: Math.max(...uviValues) + 1,
+          title: {
+            display: true,
+            text: 'UV Index'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Time'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const value = context.raw;
+              const category = getUVCategory(value).name;
+              return `UV Index: ${value} (${category})`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Helper function for safe logging
+function debugPrint(message) {
+  console.log(message);
 }
 
 // Start the dashboard
