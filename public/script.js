@@ -284,14 +284,13 @@ function getCurrentInterpolatedUvi(adjustedForecast) {
 function interpolateAndAdjustTimes(forecastData) {
   const adjusted = [];
   
-  // Get timezone offset from config
-  const timezoneOffset = config.location?.timeZone?.offset || 4; // Default to UTC+4 if not specified
+  // Get timezone information from config
   const cityName = config.location?.cityName || 'Abu Dhabi';
   
   for (let i = 0; i < forecastData.length; i++) {
-    // Adjust for timezone offset
+    // Use time as is - don't apply any timezone adjustments
+    // The API data is likely already in the correct timezone
     const time = new Date(forecastData[i].time);
-    time.setHours(time.getHours() + timezoneOffset);
     
     adjusted.push({
       time: time,
@@ -450,10 +449,6 @@ function createUvForecastGraph(forecastData) {
   twoDaysForecast.forEach(entry => {
     const entryTime = new Date(entry.time);
     
-    // Adjust for timezone
-    const timezoneOffset = config.location?.timeZone?.offset || 4; // Default to UTC+4 if not specified
-    entryTime.setHours(entryTime.getHours() + timezoneOffset);
-    
     // Format the time with date info to distinguish between days
     const timeLabel = entryTime.getDate() === currentTime.getDate() ? 
       entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) :
@@ -506,7 +501,7 @@ function createUvForecastGraph(forecastData) {
         x: {
           title: {
             display: true,
-            text: `Time (${cityName} ${timezoneName})`
+            text: `Time (Local Time)`
           },
           grid: {
             display: false
