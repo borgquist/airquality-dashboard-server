@@ -2,7 +2,7 @@
   "apiUrl": "/api/airquality",
   "uvApiUrl": "/api/uvindex",
   "versionApiUrl": "/api/version",
-  "refreshIntervalSec": 20,
+  "refreshIntervalSec": 300,
   "uvRefreshIntervalSec": 1800,
   "aqiThresholds": {
     "good": 50,

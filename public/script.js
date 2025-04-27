@@ -172,61 +172,65 @@ function addUvSafetyTimes(forecastData) {
     return;
   }
   
-  const today = new Date();
-  const todayForecasts = forecastData.filter(entry => {
-    const entryDate = new Date(entry.time);
-    return entryDate.getDate() === today.getDate() && 
-           entryDate.getMonth() === today.getMonth() &&
-           entryDate.getFullYear() === today.getFullYear();
+  // Get current time and tomorrow's date
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  // Filter for today and tomorrow's forecasts
+  const twoDaysForecast = forecastData.filter(entry => {
+    const entryTime = new Date(entry.time);
+    return entryTime >= now && 
+           entryTime < new Date(now.getTime() + 48 * 60 * 60 * 1000);
   });
   
-  if (todayForecasts.length === 0) {
+  if (twoDaysForecast.length === 0) {
     return;
   }
   
-  // Find first and last time when UV index > 4
-  let morningUnsafe = null;
-  let eveningUnsafe = null;
+  // Interpolate and adjust for timezone
+  const adjustedForecast = interpolateAndAdjustTimes(twoDaysForecast);
   
-  // Find morning transition (safe to unsafe)
-  for (let i = 0; i < todayForecasts.length; i++) {
-    if (todayForecasts[i].uvi > 4) {
-      morningUnsafe = new Date(todayForecasts[i].time);
-      break;
-    }
-  }
-  
-  // Find evening transition (unsafe to safe)
-  for (let i = todayForecasts.length - 1; i >= 0; i--) {
-    if (todayForecasts[i].uvi > 4) {
-      // The next entry after this one would be safe
-      if (i < todayForecasts.length - 1) {
-        eveningUnsafe = new Date(todayForecasts[i+1].time);
-      }
-      break;
-    }
-  }
-  
-  // Create safety message
+  // Find next unsafe period (UV > 4)
+  const currentUvi = getCurrentInterpolatedUvi(adjustedForecast);
   let safetyMessage = '';
-  const safetyElement = document.createElement('div');
-  safetyElement.className = 'uv-safety-info';
   
-  if (morningUnsafe && eveningUnsafe) {
-    const morningTime = morningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
-    const eveningTime = eveningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
-    safetyMessage = `UV safe before ${morningTime} and after ${eveningTime}`;
-  } else if (morningUnsafe) {
-    const morningTime = morningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
-    safetyMessage = `UV safe before ${morningTime}`;
-  } else if (eveningUnsafe) {
-    const eveningTime = eveningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
-    safetyMessage = `UV safe after ${eveningTime}`;
+  if (currentUvi <= 4) {
+    // Currently safe - find when it becomes unsafe
+    const nextUnsafeTime = findNextTransitionTime(adjustedForecast, 4, true);
+    
+    if (nextUnsafeTime) {
+      const isToday = nextUnsafeTime.getDate() === now.getDate();
+      const timeStr = formatTimeForDisplay(nextUnsafeTime);
+      
+      if (isToday) {
+        safetyMessage = `UV is fine now until ${timeStr} today`;
+      } else {
+        safetyMessage = `UV is fine for the rest of today and until ${timeStr} tomorrow`;
+      }
+    } else {
+      safetyMessage = 'UV is fine for the next 48 hours';
+    }
   } else {
-    // Check if all values are <= 4 (safe all day)
-    const allSafe = todayForecasts.every(entry => entry.uvi <= 4);
-    if (allSafe) {
-      safetyMessage = 'UV safe all day';
+    // Currently unsafe - find when it becomes safe
+    const nextSafeTime = findNextTransitionTime(adjustedForecast, 4, false);
+    
+    if (nextSafeTime) {
+      const timeStr = formatTimeForDisplay(nextSafeTime);
+      safetyMessage = `UV will be fine after ${timeStr}`;
+      
+      // Also check when it becomes unsafe tomorrow
+      const tomorrowForecasts = adjustedForecast.filter(entry => 
+        entry.time.getDate() === tomorrow.getDate()
+      );
+      
+      if (tomorrowForecasts.length > 0) {
+        const nextUnsafeTime = findNextTransitionTime(tomorrowForecasts, 4, true);
+        if (nextUnsafeTime) {
+          const tomorrowTimeStr = formatTimeForDisplay(nextUnsafeTime);
+          safetyMessage += ` and until ${tomorrowTimeStr} tomorrow`;
+        }
+      }
     } else {
       safetyMessage = 'UV safety data unavailable';
     }
@@ -239,9 +243,111 @@ function addUvSafetyTimes(forecastData) {
   }
   
   // Add the safety message to the page
+  const safetyElement = document.createElement('div');
+  safetyElement.className = 'uv-safety-info';
   safetyElement.textContent = safetyMessage;
+  
   const forecastContainer = document.querySelector('.uv-forecast-container');
   forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
+}
+
+// Helper function to get the current interpolated UV index
+function getCurrentInterpolatedUvi(adjustedForecast) {
+  const now = new Date();
+  
+  // Find the two closest points
+  let before = null;
+  let after = null;
+  
+  for (let i = 0; i < adjustedForecast.length; i++) {
+    if (adjustedForecast[i].time > now) {
+      after = adjustedForecast[i];
+      if (i > 0) {
+        before = adjustedForecast[i-1];
+      }
+      break;
+    }
+  }
+  
+  // If we couldn't find appropriate points, return -1
+  if (!before || !after) return -1;
+  
+  // Calculate the interpolated value
+  const timeDiff = after.time.getTime() - before.time.getTime();
+  const timeProgress = now.getTime() - before.time.getTime();
+  const progressRatio = timeProgress / timeDiff;
+  
+  return before.uvi + (after.uvi - before.uvi) * progressRatio;
+}
+
+// Helper function to interpolate and adjust times for timezone
+function interpolateAndAdjustTimes(forecastData) {
+  const adjusted = [];
+  
+  // Get timezone offset from config
+  const timezoneOffset = config.location?.timeZone?.offset || 4; // Default to UTC+4 if not specified
+  const cityName = config.location?.cityName || 'Abu Dhabi';
+  
+  for (let i = 0; i < forecastData.length; i++) {
+    // Adjust for timezone offset
+    const time = new Date(forecastData[i].time);
+    time.setHours(time.getHours() + timezoneOffset);
+    
+    adjusted.push({
+      time: time,
+      uvi: forecastData[i].uvi
+    });
+  }
+  
+  return adjusted;
+}
+
+// Helper function to find the next time when UV transitions above/below the threshold
+function findNextTransitionTime(forecast, threshold, findingUnsafe) {
+  for (let i = 0; i < forecast.length - 1; i++) {
+    const current = forecast[i];
+    const next = forecast[i+1];
+    
+    if (findingUnsafe) {
+      // Looking for transition from <= threshold to > threshold
+      if (current.uvi <= threshold && next.uvi > threshold) {
+        // Interpolate to find more precise time
+        return interpolateTransitionTime(current, next, threshold);
+      }
+    } else {
+      // Looking for transition from > threshold to <= threshold
+      if (current.uvi > threshold && next.uvi <= threshold) {
+        return interpolateTransitionTime(current, next, threshold);
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to interpolate the exact transition time
+function interpolateTransitionTime(before, after, threshold) {
+  const uvDiff = after.uvi - before.uvi;
+  const timeDiff = after.time.getTime() - before.time.getTime();
+  
+  // If the UVI doesn't change, we can't interpolate
+  if (uvDiff === 0) return after.time;
+  
+  // Calculate the time at which the UV index equals the threshold
+  const thresholdDiff = threshold - before.uvi;
+  const timeOffset = (thresholdDiff / uvDiff) * timeDiff;
+  
+  const result = new Date(before.time.getTime() + timeOffset);
+  
+  // Round to nearest 15 minutes
+  result.setMinutes(Math.round(result.getMinutes() / 15) * 15);
+  
+  return result;
+}
+
+// Helper function to format time for display
+function formatTimeForDisplay(date) {
+  return date.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
 }
 
 // Format pollutant name for display
@@ -312,34 +418,55 @@ function createUvForecastGraph(forecastData) {
     return;
   }
   
-  // Only display forecast for the rest of the current day (next 12 hours)
+  // Get the current time and create date ranges for today and tomorrow
   const currentTime = new Date();
-  const next12Hours = forecastData.filter(entry => {
+  const tomorrow = new Date(currentTime);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  // Get timezone information from config
+  const cityName = config.location?.cityName || 'Abu Dhabi';
+  const timezoneName = config.location?.timeZone?.name || 'UTC+4';
+  
+  // Filter for the next two days of data
+  const twoDaysForecast = forecastData.filter(entry => {
     const entryTime = new Date(entry.time);
-    return entryTime > currentTime && entryTime <= new Date(currentTime.getTime() + 12 * 60 * 60 * 1000);
+    return entryTime > currentTime && 
+           entryTime < new Date(currentTime.getTime() + 48 * 60 * 60 * 1000);
   });
   
-  if (next12Hours.length === 0) {
-    debugPrint('No UV forecast data available for the next 12 hours');
+  if (twoDaysForecast.length === 0) {
+    debugPrint('No UV forecast data available for the next 48 hours');
     document.getElementById('uvForecastGraph').style.display = 'none';
     return;
   }
   
-  const times = next12Hours.map(entry => {
-    const date = new Date(entry.time);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Create arrays for labels (times) and data
+  const times = [];
+  const uviValues = [];
+  const backgroundColors = [];
+  const borderColors = [];
+  
+  // Process each entry for the chart
+  twoDaysForecast.forEach(entry => {
+    const entryTime = new Date(entry.time);
+    
+    // Adjust for timezone
+    const timezoneOffset = config.location?.timeZone?.offset || 4; // Default to UTC+4 if not specified
+    entryTime.setHours(entryTime.getHours() + timezoneOffset);
+    
+    // Format the time with date info to distinguish between days
+    const timeLabel = entryTime.getDate() === currentTime.getDate() ? 
+      entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) :
+      `Tomorrow ${entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+    
+    times.push(timeLabel);
+    uviValues.push(entry.uvi);
+    
+    // Colors based on safety threshold
+    const isSafe = entry.uvi <= 4;
+    backgroundColors.push(isSafe ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)');
+    borderColors.push(isSafe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)');
   });
-  
-  const uviValues = next12Hours.map(entry => entry.uvi);
-  
-  // Background colors based on whether UV index is <= 4 (safe) or > 4 (caution)
-  const backgroundColors = uviValues.map(value => 
-    value <= 4 ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)'
-  );
-  
-  const borderColors = uviValues.map(value => 
-    value <= 4 ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)'
-  );
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
@@ -379,10 +506,14 @@ function createUvForecastGraph(forecastData) {
         x: {
           title: {
             display: true,
-            text: 'Time'
+            text: `Time (${cityName} ${timezoneName})`
           },
           grid: {
             display: false
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
           }
         }
       },

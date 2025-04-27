@@ -2,8 +2,14 @@
   "externalApiUrl": "http://192.168.0.114:8000/data",
   "location": {
     "latitude": 24.4667,
-    "longitude": 54.3667
+    "longitude": 54.3667,
+    "cityName": "Abu Dhabi",
+    "timeZone": {
+      "offset": 4,
+      "name": "UTC+4"
+    }
   },
+  "pollingIntervalSec": 300,
   "logLevel": "info",
   "port": 3000
 }
