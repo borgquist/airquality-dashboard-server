@@ -16,261 +16,12 @@ if (!fs.existsSync(LOG_DIR)) {
   console.log(`Created log directory: ${LOG_DIR}`);
 }
 
-// HTML templates
-const indexHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>AirVisual Dashboard Log Server</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    h1 {
-      color: #2c3e50;
-    }
-    .container {
-      background-color: white;
-      border-radius: 5px;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    tr:hover {
-      background-color: #f5f5f5;
-    }
-    .button {
-      display: inline-block;
-      padding: 8px 16px;
-      background-color: #3498db;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin: 5px 0;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-family: monospace;
-    }
-    .status {
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 4px;
-    }
-    .success {
-      background-color: #d4edda;
-      color: #155724;
-    }
-    .error {
-      background-color: #f8d7da;
-      color: #721c24;
-    }
-  </style>
-</head>
-<body>
-  <h1>AirVisual Dashboard Log Server</h1>
-  
-  <div class="container">
-    <h2>Configuration</h2>
-    <p>Edit your dashboard configuration below:</p>
-    <textarea id="config-editor"></textarea>
-    <div>
-      <button class="button" onclick="saveConfig()">Save Configuration</button>
-      <button class="button" onclick="loadConfig()">Reload from File</button>
-    </div>
-    <div id="config-status"></div>
-  </div>
-  
-  <div class="container">
-    <h2>Logs</h2>
-    <p>Recent log files:</p>
-    <table id="logs-table">
-      <thead>
-        <tr>
-          <th>Filename</th>
-          <th>Size</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="logs-body">
-        <tr>
-          <td colspan="4">Loading logs...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  
-  <div class="container">
-    <h2>Server Info</h2>
-    <p>Log directory: <code>${LOG_DIR}</code></p>
-    <p>Server running on port: <code>${PORT}</code></p>
-  </div>
-  
-  <script>
-    // Load config
-    async function loadConfig() {
-      try {
-        const response = await fetch('/get-config');
-        const configStatus = document.getElementById('config-status');
-        
-        if (response.ok) {
-          const config = await response.json();
-          document.getElementById('config-editor').value = JSON.stringify(config, null, 2);
-          configStatus.className = 'status success';
-          configStatus.textContent = 'Configuration loaded successfully';
-        } else {
-          const error = await response.json();
-          document.getElementById('config-editor').value = '{\n  "apiUrl": "https://device.iqair.com/v2/YOUR_DEVICE_ID",\n  "location": "My Location",\n  "refreshIntervalSec": 600\n}';
-          configStatus.className = 'status error';
-          configStatus.textContent = error.message || 'Failed to load configuration';
-        }
-      } catch (err) {
-        const configStatus = document.getElementById('config-status');
-        configStatus.className = 'status error';
-        configStatus.textContent = 'Error: ' + err.message;
-      }
-    }
-    
-    // Save config
-    async function saveConfig() {
-      try {
-        const configText = document.getElementById('config-editor').value;
-        const configStatus = document.getElementById('config-status');
-        
-        // Validate JSON
-        try {
-          JSON.parse(configText);
-        } catch (err) {
-          configStatus.className = 'status error';
-          configStatus.textContent = 'Invalid JSON: ' + err.message;
-          return;
-        }
-        
-        const response = await fetch('/save-config', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: configText
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          configStatus.className = 'status success';
-          configStatus.textContent = result.message || 'Configuration saved successfully';
-        } else {
-          const error = await response.json();
-          configStatus.className = 'status error';
-          configStatus.textContent = error.message || 'Failed to save configuration';
-        }
-      } catch (err) {
-        const configStatus = document.getElementById('config-status');
-        configStatus.className = 'status error';
-        configStatus.textContent = 'Error: ' + err.message;
-      }
-    }
-    
-    // Load logs
-    async function loadLogs() {
-      try {
-        const response = await fetch('/list-logs');
-        if (response.ok) {
-          const data = await response.json();
-          const logsBody = document.getElementById('logs-body');
-          
-          if (data.files && data.files.length > 0) {
-            logsBody.innerHTML = '';
-            data.files.forEach(file => {
-              const row = document.createElement('tr');
-              
-              const nameCell = document.createElement('td');
-              nameCell.textContent = file.name;
-              row.appendChild(nameCell);
-              
-              const sizeCell = document.createElement('td');
-              sizeCell.textContent = formatSize(file.size);
-              row.appendChild(sizeCell);
-              
-              const dateCell = document.createElement('td');
-              dateCell.textContent = new Date(file.created).toLocaleString();
-              row.appendChild(dateCell);
-              
-              const actionsCell = document.createElement('td');
-              const viewLink = document.createElement('a');
-              viewLink.href = '/view-log?file=' + encodeURIComponent(file.name);
-              viewLink.className = 'button';
-              viewLink.textContent = 'View';
-              viewLink.target = '_blank';
-              actionsCell.appendChild(viewLink);
-              
-              const downloadLink = document.createElement('a');
-              downloadLink.href = '/download-log?file=' + encodeURIComponent(file.name);
-              downloadLink.className = 'button';
-              downloadLink.style.marginLeft = '5px';
-              downloadLink.textContent = 'Download';
-              actionsCell.appendChild(downloadLink);
-              
-              row.appendChild(actionsCell);
-              logsBody.appendChild(row);
-            });
-          } else {
-            logsBody.innerHTML = '<tr><td colspan="4">No log files found</td></tr>';
-          }
-        } else {
-          const logsBody = document.getElementById('logs-body');
-          logsBody.innerHTML = '<tr><td colspan="4">Failed to load logs</td></tr>';
-        }
-      } catch (err) {
-        const logsBody = document.getElementById('logs-body');
-        logsBody.innerHTML = '<tr><td colspan="4">Error: ' + err.message + '</td></tr>';
-      }
-    }
-    
-    // Format file size
-    function formatSize(bytes) {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    }
-    
-    // Load data on page load
-    window.onload = function() {
-      loadConfig();
-      loadLogs();
-    };
-  </script>
-</body>
-</html>
-`;
-
 // Create HTTP server
 const server = http.createServer((req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Filename');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   // Handle OPTIONS request (preflight CORS)
   if (req.method === 'OPTIONS') {
@@ -286,149 +37,123 @@ const server = http.createServer((req, res) => {
   // Log request
   console.log(`${new Date().toISOString()} - ${req.method} ${pathname}`);
   
-  // Serve index page
+  // Simplified HTML interface for viewing logs
   if (pathname === '/' && req.method === 'GET') {
+    // List log files
+    const files = fs.readdirSync(LOG_DIR)
+      .filter(file => file.endsWith('.log'))
+      .map(file => {
+        const fullPath = path.join(LOG_DIR, file);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: file,
+          size: stats.size,
+          created: stats.birthtime
+        };
+      })
+      .sort((a, b) => b.created - a.created); // Sort newest first
+    
+    // Generate HTML
+    const fileList = files.map(file => {
+      const size = file.size < 1024 ? 
+        `${file.size} B` : 
+        file.size < 1024 * 1024 ? 
+          `${(file.size / 1024).toFixed(2)} KB` : 
+          `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+          
+      return `
+        <tr>
+          <td>${file.name}</td>
+          <td>${size}</td>
+          <td>${new Date(file.created).toLocaleString()}</td>
+          <td>
+            <a href="/view-log?file=${encodeURIComponent(file.name)}" class="button">View</a>
+            <a href="/download-log?file=${encodeURIComponent(file.name)}" class="button">Download</a>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>AirVisual Dashboard Logs</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+          h1 { color: #2c3e50; }
+          .container { background-color: white; border-radius: 5px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f2f2f2; }
+          tr:hover { background-color: #f5f5f5; }
+          .button { display: inline-block; padding: 5px 10px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px; margin-right: 5px; }
+        </style>
+      </head>
+      <body>
+        <h1>AirVisual Dashboard Logs</h1>
+        
+        <div class="container">
+          <h2>Log Files</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Size</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${files.length > 0 ? fileList : '<tr><td colspan="4">No log files found</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="container">
+          <h2>Server Info</h2>
+          <p>Log directory: <code>${LOG_DIR}</code></p>
+          <p>Server running on port: <code>${PORT}</code></p>
+        </div>
+      </body>
+      </html>
+    `;
+    
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(indexHtml);
+    res.end(html);
     return;
   }
   
-  // Handle log saving endpoint
+  // Simple endpoint for saving logs
   if (pathname === '/save-log' && req.method === 'POST') {
-    let body = '';
+    let data = '';
     
     // Get data from request
     req.on('data', chunk => {
-      body += chunk.toString();
+      data += chunk.toString();
     });
     
     // Process the complete request
     req.on('end', () => {
       try {
-        // Generate filename with timestamp
-        const date = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `dashboard-log-${date}.log`;
-        const filepath = path.join(LOG_DIR, filename);
+        // Generate filename with date (not full timestamp to avoid too many files)
+        const date = new Date().toISOString().split('T')[0];
+        const logFile = path.join(LOG_DIR, `dashboard-${date}.log`);
         
-        // Write log to file
-        fs.writeFileSync(filepath, body);
-        console.log(`Log saved to ${filepath}`);
+        // Append log to file
+        fs.appendFileSync(logFile, data);
         
         // Send success response
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          status: 'success', 
-          message: `Log saved to ${filepath}`,
-          filepath: filepath
-        }));
+        res.end(JSON.stringify({ success: true }));
       } catch (err) {
         console.error('Error saving log:', err);
         
         // Send error response
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          status: 'error', 
-          message: `Failed to save log: ${err.message}`
-        }));
+        res.end(JSON.stringify({ error: 'Failed to save log' }));
       }
     });
-    return;
-  }
-  
-  // Handle config serving endpoint
-  if (pathname === '/get-config' && req.method === 'GET') {
-    try {
-      const configPath = path.join(__dirname, 'config.json');
-      
-      if (fs.existsSync(configPath)) {
-        const configData = fs.readFileSync(configPath, 'utf8');
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(configData);
-        console.log('Config served successfully');
-      } else {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          status: 'error', 
-          message: 'Config file not found'
-        }));
-      }
-    } catch (err) {
-      console.error('Error serving config:', err);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status: 'error', 
-        message: `Failed to serve config: ${err.message}`
-      }));
-    }
-    return;
-  }
-
-  // Handle config saving endpoint
-  if (pathname === '/save-config' && req.method === 'POST') {
-    let body = '';
-    
-    // Get data from request
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    
-    // Process the complete request
-    req.on('end', () => {
-      try {
-        // Verify it's valid JSON
-        JSON.parse(body);
-        
-        // Save to config.json
-        const configPath = path.join(__dirname, 'config.json');
-        fs.writeFileSync(configPath, body);
-        console.log(`Config saved to ${configPath}`);
-        
-        // Send success response
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          status: 'success', 
-          message: `Configuration saved successfully to ${configPath}`
-        }));
-      } catch (err) {
-        console.error('Error saving config:', err);
-        
-        // Send error response
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          status: 'error', 
-          message: `Failed to save config: ${err.message}`
-        }));
-      }
-    });
-    return;
-  }
-  
-  // Handle get logs endpoint
-  if (pathname === '/list-logs' && req.method === 'GET') {
-    try {
-      const files = fs.readdirSync(LOG_DIR)
-        .filter(file => file.endsWith('.log'))
-        .map(file => {
-          const fullPath = path.join(LOG_DIR, file);
-          const stats = fs.statSync(fullPath);
-          return {
-            name: file,
-            size: stats.size,
-            created: stats.birthtime
-          };
-        })
-        .sort((a, b) => b.created - a.created); // Sort newest first
-      
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ files }));
-    } catch (err) {
-      console.error('Error listing logs:', err);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status: 'error', 
-        message: `Failed to list logs: ${err.message}`
-      }));
-    }
     return;
   }
   
@@ -484,7 +209,7 @@ const server = http.createServer((req, res) => {
           </style>
         </head>
         <body>
-          <a href="/" class="back">← Back to Log Server</a>
+          <a href="/" class="back">← Back to Logs</a>
           <h1>Log File: ${filename}</h1>
           <pre>${logContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
         </body>
@@ -527,7 +252,7 @@ const server = http.createServer((req, res) => {
         <body>
           <h1>Error</h1>
           <div class="error">${err.message}</div>
-          <a href="/" class="back">← Back to Log Server</a>
+          <a href="/" class="back">← Back to Logs</a>
         </body>
         </html>
       `);
@@ -560,20 +285,14 @@ const server = http.createServer((req, res) => {
     } catch (err) {
       console.error('Error downloading log:', err);
       res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status: 'error', 
-        message: `Failed to download log: ${err.message}`
-      }));
+      res.end(JSON.stringify({ error: 'Failed to download log' }));
     }
     return;
   }
   
   // Default response for unknown endpoints
   res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ 
-    status: 'error', 
-    message: 'Endpoint not found' 
-  }));
+  res.end(JSON.stringify({ error: 'Endpoint not found' }));
 });
 
 // Start the server

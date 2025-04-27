@@ -59,6 +59,30 @@
   <!-- Debug Log (hidden by default, toggle with Ctrl+D) -->
   <div id="debug-log" style="position: fixed; bottom: 10px; left: 10px; background-color: rgba(0,0,0,0.7); color: lime; font-family: monospace; padding: 10px; border-radius: 5px; max-width: 80%; max-height: 200px; overflow-y: auto; font-size: 12px; display: none; z-index: 9999;"></div>
   
+  <!-- Helper script for loading configuration -->
+  <script>
+    // If loading from file://, add URL parameters for configuration
+    if (window.location.protocol === 'file:') {
+      // Create a dynamic configuration script that overrides the config
+      const configScript = document.createElement('script');
+      configScript.textContent = `
+        // Override config when loaded directly from file system
+        window.fileSystemConfigOverride = {
+          apiEndpoint: 'http://localhost:8000/data',
+          refreshInterval: 30000, // 30 seconds
+          debugMode: true
+        };
+        console.log('Added file system config override');
+      `;
+      document.head.appendChild(configScript);
+      
+      // Show debug log when loading from file system
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('debug-log').style.display = 'block';
+      });
+    }
+  </script>
+  
   <!-- JavaScript Modules -->
   <script src="js/config-loader.js"></script>
   <script src="js/data-service.js"></script>
@@ -76,8 +100,11 @@
         debugLog('Debug mode enabled');
       }
       
+      // Use file system override if available
+      const configOverride = window.fileSystemConfigOverride || {};
+      
       // Load configuration and start the dashboard
-      loadConfig()
+      loadConfig(configOverride)
         .catch(err => {
           console.error('Failed to initialize dashboard:', err);
           displayError('Initialization failed', err);

@@ -54,6 +54,13 @@ const ConfigLoader = (function() {
         Logger.log('Initializing configuration');
         
         try {
+            // First check URL parameters for configuration overrides
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('apiUrl')) {
+                customConfig.apiEndpoint = urlParams.get('apiUrl');
+                Logger.log('Using API URL from URL parameters:', customConfig.apiEndpoint);
+            }
+            
             // First load from localStorage if available
             loadFromStorage();
             
@@ -289,7 +296,12 @@ const Logger = (function() {
         };
         
         addLogEntry(logEntry);
+        
+        // Log to console
         console.log(`[INFO] ${message}`, data !== undefined ? data : '');
+        
+        // Also save to file via the log server if we're using it
+        saveLogToFile('INFO', message, data);
     }
     
     /**
@@ -307,7 +319,12 @@ const Logger = (function() {
         };
         
         addLogEntry(logEntry);
+        
+        // Log to console
         console.error(`[ERROR] ${message}`, data !== undefined ? data : '');
+        
+        // Also save to file via the log server
+        saveLogToFile('ERROR', message, data);
     }
     
     /**
@@ -325,7 +342,66 @@ const Logger = (function() {
         };
         
         addLogEntry(logEntry);
+        
+        // Log to console
         console.warn(`[WARN] ${message}`, data !== undefined ? data : '');
+        
+        // Also save to file via the log server
+        saveLogToFile('WARN', message, data);
+    }
+    
+    /**
+     * Save log entry to file via the log server
+     * @param {string} level - Log level (INFO, WARN, ERROR)
+     * @param {string} message - The message to log
+     * @param {*} [data] - Optional data
+     */
+    function saveLogToFile(level, message, data) {
+        try {
+            // Create log entry with timestamp
+            const timestamp = new Date().toISOString();
+            let logText = `[${timestamp}] [${level}] ${message}`;
+            
+            // Add data if present
+            if (data !== undefined) {
+                if (typeof data === 'object') {
+                    try {
+                        logText += ` ${JSON.stringify(data)}`;
+                    } catch (e) {
+                        logText += ' [Object]';
+                    }
+                } else {
+                    logText += ` ${data}`;
+                }
+            }
+            
+            // If we're in a browser context, try to send to log server
+            if (typeof window !== 'undefined' && window.fetch) {
+                const logData = {
+                    timestamp,
+                    level,
+                    message,
+                    data,
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                };
+                
+                // Try to send using the log server
+                fetch('http://localhost:8088/save-log', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: logText + '\n'
+                }).catch(err => {
+                    // Silently fail - don't want logging to break the app
+                    console.warn('Failed to save log to server', err);
+                });
+            }
+        } catch (e) {
+            // Fail silently - don't let logging break the app
+            console.warn('Error in saveLogToFile', e);
+        }
     }
     
     /**
