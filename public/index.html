@@ -18,11 +18,11 @@
         <h2>Current AQI</h2>
         <div id="aqiDisplay" class="aqi-value">-</div>
         <div id="aqiCategory" class="aqi-category">-</div>
-        <div id="mainPollutant" class="main-pollutant">Main pollutant: <span id="mainPollutantValue">-</span></div>
+        <div id="mainPollutant" class="main-pollutant">PM2.5</div>
       </div>
       
       <div class="card info-box">
-        <h2>Additional Info</h2>
+        <h2>Weather Data</h2>
         <div class="info-data">
           <div class="weather-item">
             <span class="label">Temperature:</span>
@@ -48,13 +48,19 @@
           </div>
         </div>
         <div class="uv-forecast-container">
-          <h3>UV Forecast</h3>
+          <h3>Forecast</h3>
           <div class="uv-graph-container">
             <canvas id="uvForecastGraph"></canvas>
           </div>
         </div>
       </div>
     </div>
+    
+    <footer>
+      <div class="version-info">
+        <span id="appVersion">-</span>
+      </div>
+    </footer>
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

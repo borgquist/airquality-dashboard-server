@@ -17,6 +17,7 @@ async function loadConfig() {
 function initDashboard() {
   fetchAirQualityData();
   fetchUvIndexData();
+  fetchVersionInfo();
   
   // Set up auto-refresh based on config
   const refreshIntervalAqi = (config.refreshIntervalSec || 600) * 1000;
@@ -59,6 +60,35 @@ async function fetchUvIndexData() {
   }
 }
 
+// Fetch version information
+async function fetchVersionInfo() {
+  try {
+    const response = await fetch('/api/version');
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    updateVersionDisplay(data);
+  } catch (error) {
+    console.error('Error fetching version information:', error);
+    document.getElementById('appVersion').textContent = 'v?.?.?';
+  }
+}
+
+// Update the version display
+function updateVersionDisplay(data) {
+  if (!data || !data.version) {
+    return;
+  }
+  
+  document.getElementById('appVersion').textContent = `v${data.version}`;
+  
+  // Add title attribute with more details
+  const versionInfo = document.getElementById('appVersion');
+  versionInfo.setAttribute('title', `${data.name} - Last updated: ${data.lastUpdated}`);
+}
+
 // Update the air quality dashboard with the latest data
 function updateAirQualityDisplay(data) {
   if (!data || !data.current) {
@@ -76,8 +106,7 @@ function updateAirQualityDisplay(data) {
   const aqiValue = data.current.aqius;
   
   document.getElementById('aqiDisplay').textContent = aqiValue;
-  document.getElementById('mainPollutantValue').textContent = 
-    formatPollutantName(mainPollutant);
+  document.getElementById('mainPollutant').textContent = formatPollutantName(mainPollutant);
   
   // Set AQI category and color
   const aqiCategory = getAQICategory(aqiValue);
@@ -132,6 +161,87 @@ function updateUvIndexDisplay(data) {
   
   // Create or update the UV forecast graph
   createUvForecastGraph(data.forecast);
+  
+  // Add safety time information
+  addUvSafetyTimes(data.forecast);
+}
+
+// Add UV safety times information
+function addUvSafetyTimes(forecastData) {
+  if (!forecastData || !forecastData.length) {
+    return;
+  }
+  
+  const today = new Date();
+  const todayForecasts = forecastData.filter(entry => {
+    const entryDate = new Date(entry.time);
+    return entryDate.getDate() === today.getDate() && 
+           entryDate.getMonth() === today.getMonth() &&
+           entryDate.getFullYear() === today.getFullYear();
+  });
+  
+  if (todayForecasts.length === 0) {
+    return;
+  }
+  
+  // Find first and last time when UV index > 4
+  let morningUnsafe = null;
+  let eveningUnsafe = null;
+  
+  // Find morning transition (safe to unsafe)
+  for (let i = 0; i < todayForecasts.length; i++) {
+    if (todayForecasts[i].uvi > 4) {
+      morningUnsafe = new Date(todayForecasts[i].time);
+      break;
+    }
+  }
+  
+  // Find evening transition (unsafe to safe)
+  for (let i = todayForecasts.length - 1; i >= 0; i--) {
+    if (todayForecasts[i].uvi > 4) {
+      // The next entry after this one would be safe
+      if (i < todayForecasts.length - 1) {
+        eveningUnsafe = new Date(todayForecasts[i+1].time);
+      }
+      break;
+    }
+  }
+  
+  // Create safety message
+  let safetyMessage = '';
+  const safetyElement = document.createElement('div');
+  safetyElement.className = 'uv-safety-info';
+  
+  if (morningUnsafe && eveningUnsafe) {
+    const morningTime = morningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
+    const eveningTime = eveningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
+    safetyMessage = `UV safe before ${morningTime} and after ${eveningTime}`;
+  } else if (morningUnsafe) {
+    const morningTime = morningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
+    safetyMessage = `UV safe before ${morningTime}`;
+  } else if (eveningUnsafe) {
+    const eveningTime = eveningUnsafe.toLocaleTimeString([], {hour: 'numeric'});
+    safetyMessage = `UV safe after ${eveningTime}`;
+  } else {
+    // Check if all values are <= 4 (safe all day)
+    const allSafe = todayForecasts.every(entry => entry.uvi <= 4);
+    if (allSafe) {
+      safetyMessage = 'UV safe all day';
+    } else {
+      safetyMessage = 'UV safety data unavailable';
+    }
+  }
+  
+  // Remove any existing safety info
+  const existingSafetyInfo = document.querySelector('.uv-safety-info');
+  if (existingSafetyInfo) {
+    existingSafetyInfo.remove();
+  }
+  
+  // Add the safety message to the page
+  safetyElement.textContent = safetyMessage;
+  const forecastContainer = document.querySelector('.uv-forecast-container');
+  forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
 }
 
 // Format pollutant name for display
@@ -224,7 +334,7 @@ function createUvForecastGraph(forecastData) {
   
   // Background colors based on whether UV index is <= 4 (safe) or > 4 (caution)
   const backgroundColors = uviValues.map(value => 
-    value <= 4 ? 'rgba(46, 204, 113, 0.5)' : 'rgba(231, 76, 60, 0.5)'
+    value <= 4 ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)'
   );
   
   const borderColors = uviValues.map(value => 
@@ -247,7 +357,8 @@ function createUvForecastGraph(forecastData) {
         data: uviValues,
         backgroundColor: backgroundColors,
         borderColor: borderColors,
-        borderWidth: 1
+        borderWidth: 1,
+        borderRadius: 4
       }]
     },
     options: {
@@ -256,20 +367,29 @@ function createUvForecastGraph(forecastData) {
       scales: {
         y: {
           beginAtZero: true,
-          max: Math.max(...uviValues) + 1,
+          max: Math.max(Math.max(...uviValues) + 1, 5),
           title: {
             display: true,
             text: 'UV Index'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
           }
         },
         x: {
           title: {
             display: true,
             text: 'Time'
+          },
+          grid: {
+            display: false
           }
         }
       },
       plugins: {
+        legend: {
+          display: false
+        },
         tooltip: {
           callbacks: {
             label: function(context) {

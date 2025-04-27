@@ -81,6 +81,17 @@ app.get('/api/uvindex', async (req, res) => {
   }
 });
 
+// API endpoint to fetch version information
+app.get('/api/version', (req, res) => {
+  try {
+    const versionInfo = JSON.parse(fs.readFileSync('./version.json', 'utf8'));
+    res.json(versionInfo);
+  } catch (error) {
+    logger.error('Error reading version information', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch version information' });
+  }
+});
+
 // Serve index.html for all routes to support SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
