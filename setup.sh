@@ -110,6 +110,26 @@ if [[ "$SYSTEM_TYPE" == "macos" ]]; then
   PLIST_PATH="$HOME/Library/LaunchAgents/com.airvisual.logserver.plist"
   echo "Creating launchd service for log server..."
   
+  # Get the full path to the node executable
+  NODE_PATH=$(command -v node)
+  if [ -z "$NODE_PATH" ]; then
+    # Try to find node in common Homebrew locations if not in PATH
+    if [ -f "/opt/homebrew/bin/node" ]; then
+      NODE_PATH="/opt/homebrew/bin/node"
+    elif [ -f "/usr/local/bin/node" ]; then
+      NODE_PATH="/usr/local/bin/node"
+    else
+      # Last resort: try to find node using find command
+      NODE_PATH=$(find /opt/homebrew -name node -type f | grep bin/node | head -1)
+      if [ -z "$NODE_PATH" ]; then
+        echo "Error: Could not find node executable. Please ensure node is installed and in PATH."
+        exit 1
+      fi
+    fi
+  fi
+  
+  echo "Using Node.js at: $NODE_PATH"
+  
   cat > /tmp/com.airvisual.logserver.plist << EOL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -119,7 +139,7 @@ if [[ "$SYSTEM_TYPE" == "macos" ]]; then
     <string>com.airvisual.logserver</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/node</string>
+        <string>${NODE_PATH}</string>
         <string>${INSTALL_DIR}/log-server.js</string>
     </array>
     <key>RunAtLoad</key>
@@ -149,6 +169,20 @@ EOL
   launchctl load -w "$PLIST_PATH"
   
   # Check if the service is running
+  sleep 2 # Give the service a moment to start
+  if pgrep -f "node.*log-server.js" > /dev/null; then
+    echo "Log server service started successfully!"
+    echo "Service is running on: http://localhost:${LOG_SERVER_PORT}"
+  else
+    echo "Warning: Log server service did not start properly."
+    echo "Check logs for more information: ${INSTALL_DIR}/logs/server-error.log"
+    # Try to show any errors
+    if [ -f "${INSTALL_DIR}/logs/server-error.log" ]; then
+      echo "Error log content:"
+      cat "${INSTALL_DIR}/logs/server-error.log"
+    fi
+  fi
+  
   SERVICE_CHECK_CMD="pgrep -f \"node.*log-server.js\""
   START_CMD="launchctl load -w $PLIST_PATH"
   STOP_CMD="launchctl unload $PLIST_PATH"
