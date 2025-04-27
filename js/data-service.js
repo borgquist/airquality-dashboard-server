@@ -46,7 +46,7 @@ const DataService = (function() {
             const now = Date.now();
             const cacheAge = now - dataCache.lastUpdated;
             
-            if (config.cacheOptions.enabled && cacheAge < config.refreshInterval) {
+            if (config.cacheOptions && config.cacheOptions.enabled && cacheAge < config.refreshInterval) {
                 Logger.log(`Using cached data (${Math.round(cacheAge / 1000)}s old)`);
                 return Promise.resolve(dataCache.current);
             }
@@ -56,7 +56,12 @@ const DataService = (function() {
         lastFetchTime = Date.now();
         
         // Prepare URL with parameters
-        let url = config.apiEndpoint;
+        let url = config.apiUrl || config.apiEndpoint;
+        if (!url) {
+            Logger.error('No API URL defined in configuration');
+            return Promise.reject(new Error('No API URL defined in configuration'));
+        }
+        
         if (config.location) {
             url += `?location=${encodeURIComponent(config.location)}`;
         }
@@ -71,6 +76,10 @@ const DataService = (function() {
                 return response.json();
             })
             .then(data => {
+                // Add diagnostic logging
+                console.log('Raw data from API:', data);
+                Logger.log('Raw data received from API', data);
+                
                 return processData(data);
             })
             .catch(error => {
@@ -100,7 +109,10 @@ const DataService = (function() {
             if (Array.isArray(data)) {
                 // If array, take the latest reading
                 processedData = processArrayData(data);
-            } else if (data.readings) {
+            } else if (data && data._meta) {
+                // Special case for localhost:8000/data format
+                processedData = processLocalData(data);
+            } else if (data && data.readings) {
                 // If it has a readings property, process that
                 processedData = processReadingsData(data);
             } else {
@@ -112,7 +124,7 @@ const DataService = (function() {
             processedData.meta = {
                 fetchTime: Date.now(),
                 processedAt: new Date().toISOString(),
-                apiEndpoint: config.apiEndpoint
+                apiEndpoint: config.apiEndpoint || config.apiUrl
             };
             
             // Cache the data
@@ -122,6 +134,61 @@ const DataService = (function() {
         } catch (error) {
             Logger.error('Error processing data:', error);
             throw new Error(`Failed to process data: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Process data in localhost:8000/data format (with _meta field)
+     * @param {Object} data - Data with _meta property
+     * @returns {Object} Processed data
+     */
+    function processLocalData(data) {
+        try {
+            Logger.log('Processing localhost:8000/data format', data);
+            
+            // Extract current measurements
+            const processed = {
+                timestamp: new Date().toISOString(),
+                device: 'Local AirQuality Sensor',
+                location: config.location || 'Local Environment',
+                measurements: {}
+            };
+            
+            // Extract PM2.5 and other measurements from current data
+            if (data.current && data.current.pm25) {
+                processed.measurements.pm25 = Number(data.current.pm25.aqicn);
+            }
+            
+            if (data.current && data.current.pm10) {
+                processed.measurements.pm10 = Number(data.current.pm10.aqicn);
+            }
+            
+            if (data.current && data.current.humidity) {
+                processed.measurements.humidity = Number(data.current.humidity);
+            }
+            
+            if (data.current && data.current.temperature) {
+                processed.measurements.temperature = Number(data.current.temperature);
+            }
+            
+            // Calculate AQI based on PM2.5 if available
+            if (processed.measurements.pm25 !== undefined) {
+                processed.aqi = processed.measurements.pm25; // Assume PM2.5 as AQI for this format
+                processed.aqiStatus = getAQIStatus(processed.aqi);
+            }
+            
+            // Also collect historical data if available
+            if (data.historical && Array.isArray(data.historical.daily)) {
+                updateHistoricalData(data.historical.daily.map(item => ({
+                    timestamp: item.ts,
+                    aqi: item.pm25 ? Number(item.pm25.aqicn) : 0
+                })));
+            }
+            
+            return processed;
+        } catch (error) {
+            Logger.error('Error processing local data format:', error);
+            throw error;
         }
     }
     
@@ -412,6 +479,46 @@ const DataService = (function() {
             isStale: dataAge > config.staleness.warningThreshold,
             isCritical: dataAge > config.staleness.criticalThreshold,
             age: dataAge
+        };
+    }
+    
+    /**
+     * Get AQI status based on the AQI value and configured thresholds
+     * @param {number} aqi - The AQI value
+     * @returns {Object} AQI status object with label, class, and color
+     */
+    function getAQIStatus(aqi) {
+        // Default categories if config not provided
+        const defaultCategories = [
+            { min: 0, max: 50, label: 'Good', class: 'aqi-good', color: 'green' },
+            { min: 51, max: 100, label: 'Moderate', class: 'aqi-moderate', color: 'yellow' },
+            { min: 101, max: 150, label: 'Unhealthy for Sensitive Groups', class: 'aqi-unhealthy-sensitive', color: 'orange' },
+            { min: 151, max: 200, label: 'Unhealthy', class: 'aqi-unhealthy', color: 'red' },
+            { min: 201, max: 300, label: 'Very Unhealthy', class: 'aqi-very-unhealthy', color: 'purple' },
+            { min: 301, max: 500, label: 'Hazardous', class: 'aqi-hazardous', color: 'maroon' }
+        ];
+        
+        // Use config categories if available, otherwise use defaults
+        const categories = (config.aqiCategories && Array.isArray(config.aqiCategories)) ? 
+            config.aqiCategories : defaultCategories;
+        
+        // Find the matching category
+        for (const category of categories) {
+            if (aqi >= category.min && aqi <= category.max) {
+                return {
+                    label: category.label,
+                    class: category.class || `aqi-${category.label.toLowerCase().replace(/\s+/g, '-')}`,
+                    color: category.color
+                };
+            }
+        }
+        
+        // Default to highest category if no match
+        const highest = categories[categories.length - 1];
+        return {
+            label: highest.label,
+            class: highest.class || `aqi-${highest.label.toLowerCase().replace(/\s+/g, '-')}`,
+            color: highest.color
         };
     }
     
