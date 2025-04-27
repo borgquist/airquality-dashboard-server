@@ -1,6 +1,6 @@
 {
-  "apiUrl": "https://device.iqair.com/v2/REPLACE_WITH_YOUR_API_KEY",
-  "refreshIntervalSec": 600,
+  "apiUrl": "/api/airquality", 
+  "refreshIntervalSec": 5,
   "aqiThresholds": {
     "good": 50,
     "moderate": 100,
@@ -20,6 +20,7 @@
   "displayOptions": {
     "showChart": true,
     "showWeather": true,
-    "showTime": true
+    "showTime": true,
+    "showLastUpdated": true
   }
 } 

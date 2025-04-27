@@ -1,0 +1,170 @@
+:root {
+  --color-bg: #f5f7fa;
+  --color-text: #333;
+  --color-primary: #3498db;
+  --color-secondary: #2ecc71;
+  --color-card-bg: #fff;
+  --color-border: #e1e5e9;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-primary);
+}
+
+#lastUpdated {
+  font-size: 1rem;
+  color: #666;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card h2 {
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.main-aqi {
+  text-align: center;
+}
+
+.aqi-value {
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin: 1rem 0;
+}
+
+.aqi-category {
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  display: inline-block;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.main-pollutant {
+  font-size: 1.1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+th {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.weather-data {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.weather-item {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.label {
+  font-weight: bold;
+}
+
+/* AQI category colors */
+.good {
+  background-color: green;
+  color: white;
+}
+
+.moderate {
+  background-color: #8cd211;
+  color: black;
+}
+
+.unhealthy-sensitive {
+  background-color: yellow;
+  color: black;
+}
+
+.unhealthy {
+  background-color: orange;
+  color: black;
+}
+
+.very-unhealthy {
+  background-color: red;
+  color: white;
+}
+
+.hazardous {
+  background-color: darkred;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  
+  .aqi-value {
+    font-size: 2.5rem;
+  }
+} 

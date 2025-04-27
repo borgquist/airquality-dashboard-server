@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Air Quality Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Air Quality Dashboard</h1>
+      <div id="lastUpdated">Last updated: <span id="lastUpdatedTime">-</span></div>
+    </header>
+    
+    <div class="dashboard">
+      <div class="card main-aqi">
+        <h2>Current AQI</h2>
+        <div id="aqiDisplay" class="aqi-value">-</div>
+        <div id="aqiCategory" class="aqi-category">-</div>
+        <div id="mainPollutant" class="main-pollutant">Main pollutant: <span id="mainPollutantValue">-</span></div>
+      </div>
+      
+      <div class="card pollutants">
+        <h2>Pollutants</h2>
+        <table>
+          <tr>
+            <th>Pollutant</th>
+            <th>AQI</th>
+            <th>Concentration</th>
+          </tr>
+          <tr>
+            <td>PM1</td>
+            <td id="pm1Aqi">-</td>
+            <td id="pm1Conc">-</td>
+          </tr>
+          <tr>
+            <td>PM2.5</td>
+            <td id="pm25Aqi">-</td>
+            <td id="pm25Conc">-</td>
+          </tr>
+          <tr>
+            <td>PM10</td>
+            <td id="pm10Aqi">-</td>
+            <td id="pm10Conc">-</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="card weather">
+        <h2>Weather</h2>
+        <div class="weather-data">
+          <div class="weather-item">
+            <span class="label">Temperature:</span>
+            <span id="temperature" class="value">-</span>
+          </div>
+          <div class="weather-item">
+            <span class="label">Humidity:</span>
+            <span id="humidity" class="value">-</span>
+          </div>
+          <div class="weather-item">
+            <span class="label">Pressure:</span>
+            <span id="pressure" class="value">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html> 

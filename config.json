@@ -1,6 +1,5 @@
 {
-  "apiUrl": "http://localhost:8000/data",
-  "location": "Your Location",
+  "apiUrl": "http://192.168.0.114:8000/data", 
   "refreshIntervalSec": 600,
   "aqiThresholds": {
     "good": 50,
