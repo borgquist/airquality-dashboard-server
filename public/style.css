@@ -26,8 +26,10 @@ body {
 
 .container {
   max-width: 1000px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem;
+  box-sizing: border-box;
 }
 
 header {
@@ -59,6 +61,8 @@ h1 {
   box-shadow: var(--shadow);
   padding: 1.5rem;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card:hover {
@@ -269,6 +273,7 @@ body.bg-hazardous {
     grid-template-rows: auto auto;
     height: calc(100vh - 250px);
     min-height: 400px;
+    max-height: 800px;
   }
   
   .main-aqi {
@@ -315,11 +320,45 @@ body.bg-hazardous {
   .aqi-value {
     font-size: 12rem;
   }
+  
+  .dashboard {
+    min-height: 350px;
+  }
 }
 
 @media (max-width: 767px) {
   .container {
     padding: 1rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .dashboard {
+    min-height: unset;
+    height: auto;
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  .card {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    transform: none !important;
+    width: 100%;
+  }
+  
+  .card:hover {
+    transform: none !important;
+    box-shadow: var(--shadow);
+  }
+  
+  header {
+    margin-bottom: 1rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
   }
   
   .aqi-value {
@@ -330,9 +369,61 @@ body.bg-hazardous {
     font-size: 3.5rem;
   }
   
-  .dashboard {
-    min-height: unset;
-    height: auto;
+  .aqi-category, .uv-category {
+    font-size: 1.2rem;
+    padding: 0.4rem 1rem;
+  }
+  
+  .uv-graph-container {
+    height: 150px;
+  }
+  
+  .card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.7rem;
+  }
+  
+  .info-data {
+    gap: 0.8rem;
+  }
+  
+  .label {
+    font-size: 1rem;
+  }
+  
+  .value {
+    font-size: 1.2rem;
+  }
+}
+
+/* Additional breakpoint for very small screens */
+@media (max-width: 480px) {
+  .container {
+    padding: 0.5rem;
+  }
+  
+  body {
+    overflow-x: hidden;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  .aqi-value {
+    font-size: 5rem;
+  }
+  
+  .uv-value {
+    font-size: 3rem;
+  }
+  
+  .card {
+    padding: 0.8rem;
+  }
+  
+  .uv-graph-container {
+    height: 120px;
   }
 }
 

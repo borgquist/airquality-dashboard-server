@@ -106,7 +106,12 @@ function updateAirQualityDisplay(data) {
   const aqiValue = data.current.aqius;
   
   document.getElementById('aqiDisplay').textContent = aqiValue;
-  document.getElementById('mainPollutant').textContent = formatPollutantName(mainPollutant);
+  
+  // Only update mainPollutant if the element exists
+  const mainPollutantElement = document.getElementById('mainPollutant');
+  if (mainPollutantElement) {
+    mainPollutantElement.textContent = formatPollutantName(mainPollutant);
+  }
   
   // Set AQI category and color
   const aqiCategory = getAQICategory(aqiValue);
