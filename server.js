@@ -324,6 +324,16 @@ app.get('/api/uvindex', async (req, res) => {
   const clientIP = req.headers['x-forwarded-for'] || req.ip;
   requestStats.trackRequest(clientIP);
   
+  // Check if UV API is configured
+  if (!serverConfig.uvApi || !serverConfig.uvApi.apiKey) {
+    logger.warn('UV API key not configured in config.json');
+    return res.json({
+      error: 'UV API not configured',
+      now: { uvi: null },
+      forecast: []
+    });
+  }
+  
   // If we have cached data, return it immediately
   if (lastUvData) {
     return res.json(lastUvData);
@@ -332,11 +342,6 @@ app.get('/api/uvindex', async (req, res) => {
   // If we don't have data yet, fetch it now
   try {
     if (!uvFetchPromise) {
-      // Check if UV API config is available
-      if (!serverConfig.uvApi || !serverConfig.uvApi.apiKey) {
-        throw new Error('UV API key not configured in config.json');
-      }
-      
       const lat = serverConfig.location.latitude;
       const lon = serverConfig.location.longitude;
       const apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
@@ -379,7 +384,13 @@ app.get('/api/uvindex', async (req, res) => {
   } catch (error) {
     logger.error('Error fetching UV index data', { error: error.message });
     uvFetchPromise = null;
-    res.status(500).json({ error: 'Failed to fetch UV index data' });
+    
+    // Return a valid but empty response structure instead of an error
+    return res.json({
+      error: error.message,
+      now: { uvi: null },
+      forecast: []
+    });
   }
 });
 

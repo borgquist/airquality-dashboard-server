@@ -653,6 +653,16 @@ body.bg-hazardous {
   color: #2e7d32;
 }
 
+/* Style for UV error message */
+.uv-error {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #c0392b;
+  font-weight: 600;
+  padding: 0.8rem;
+  text-align: center;
+  border-left: 3px solid #e74c3c;
+}
+
 /* Optimization for small screens like Raspberry Pi displays */
 @media (max-height: 800px) {
   body {

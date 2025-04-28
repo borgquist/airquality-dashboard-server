@@ -56,7 +56,15 @@ async function fetchUvIndexData() {
     updateUvIndexDisplay(data);
   } catch (error) {
     console.error('Error fetching UV index data:', error);
-    document.getElementById('uvIndexValue').textContent = 'Error';
+    
+    // Create error object to display to the user
+    const errorData = {
+      error: error.message || 'Network error',
+      now: { uvi: null },
+      forecast: []
+    };
+    
+    updateUvIndexDisplay(errorData);
   }
 }
 
@@ -153,13 +161,55 @@ function updateAirQualityDisplay(data) {
 
 // Update the UV index display
 function updateUvIndexDisplay(data) {
-  if (!data || !data.now) {
+  if (!data) {
     console.error('Invalid UV index data format');
+    document.getElementById('uvIndexValue').textContent = 'Error';
+    return;
+  }
+  
+  // Handle API configuration error
+  if (data.error) {
+    console.warn('UV API error:', data.error);
+    
+    // Update UI with error message
+    document.getElementById('uvIndexValue').textContent = 'Error';
+    document.getElementById('uvIndexCategory').textContent = '-';
+    
+    // Show specific message based on the error
+    const safetyElement = document.createElement('div');
+    safetyElement.className = 'uv-safety-info';
+    
+    if (data.error === 'UV API not configured') {
+      safetyElement.textContent = 'UV Index unavailable - API key not configured';
+      safetyElement.classList.add('uv-error');
+    } else {
+      safetyElement.textContent = 'UV Index data unavailable';
+      safetyElement.classList.add('uv-error');
+    }
+    
+    // Clear and update the forecast container
+    const forecastContainer = document.querySelector('.uv-forecast-container');
+    forecastContainer.innerHTML = '<h3>Forecast</h3>';
+    forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
+    
+    // Hide the graph
+    const graphContainer = document.getElementById('uvForecastGraph');
+    if (graphContainer) {
+      graphContainer.style.display = 'none';
+    }
+    
     return;
   }
   
   // Update current UV index value
-  const currentUvIndex = data.now.uvi;
+  const currentUvIndex = data.now?.uvi;
+  
+  if (currentUvIndex === null || currentUvIndex === undefined) {
+    document.getElementById('uvIndexValue').textContent = '-';
+    document.getElementById('uvIndexCategory').textContent = '-';
+    return;
+  }
+  
   document.getElementById('uvIndexValue').textContent = currentUvIndex;
   
   // Set UV category and color
@@ -177,10 +227,27 @@ function updateUvIndexDisplay(data) {
   categoryElement.classList.add(uvCategory.className);
   
   // Create or update the UV forecast graph
-  createUvForecastGraph(data.forecast);
-  
-  // Add safety time information
-  addUvSafetyTimes(data.forecast);
+  if (data.forecast && data.forecast.length > 0) {
+    createUvForecastGraph(data.forecast);
+    
+    // Add safety time information
+    addUvSafetyTimes(data.forecast);
+  } else {
+    // No forecast data available
+    const forecastContainer = document.querySelector('.uv-forecast-container');
+    forecastContainer.innerHTML = '<h3>Forecast</h3>';
+    
+    const safetyElement = document.createElement('div');
+    safetyElement.className = 'uv-safety-info';
+    safetyElement.textContent = 'Forecast data unavailable';
+    forecastContainer.appendChild(safetyElement);
+    
+    // Hide the graph
+    const graphContainer = document.getElementById('uvForecastGraph');
+    if (graphContainer) {
+      graphContainer.style.display = 'none';
+    }
+  }
 }
 
 // Add UV safety times information
