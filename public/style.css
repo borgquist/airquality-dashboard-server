@@ -274,11 +274,9 @@ footer {
   border-top: 1px solid var(--color-border);
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
-}
-
-.version-info {
-  font-size: 0.8rem;
-  color: #999;
+  min-height: 24px;
+  display: flex;
+  justify-content: center;
 }
 
 /* UV Index category colors */
@@ -337,6 +335,14 @@ footer {
 /* Background colors for body */
 body.bg-good {
   background-color: rgba(0, 128, 0, 0.15);
+}
+
+body.bg-moderate {
+  background-color: rgba(255, 255, 0, 0.15);
+}
+
+body.bg-unhealthy-sensitive {
+  background-color: rgba(255, 165, 0, 0.15);
 }
 
 body.bg-unhealthy {
@@ -699,5 +705,66 @@ body.bg-hazardous {
   .weather-item {
     margin-bottom: 0.2rem;
     padding: 0.3rem 0.2rem;
+  }
+}
+
+/* Live update indicator */
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 15px;
+  font-size: 0.8rem;
+  color: #4CAF50;
+  font-weight: 600;
+  vertical-align: middle;
+  transition: color 0.3s ease;
+}
+
+.live-indicator.disconnected {
+  color: #f44336;
+}
+
+.live-indicator.disconnected .pulse {
+  background: #f44336;
+  animation: pulse-error 1s infinite;
+}
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4CAF50;
+  margin-right: 5px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-error {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 } 

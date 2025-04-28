@@ -103,6 +103,46 @@ let fetchPromise = null;
 let externalApiTimer = null;
 const externalApiInterval = (serverConfig.pollingIntervalSec || 20) * 1000;
 
+// Keep track of connected SSE clients
+const sseClients = new Set();
+
+// SSE endpoint for real-time updates
+app.get('/api/events', (req, res) => {
+  // Set headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  // Send an initial ping
+  res.write('event: ping\ndata: connected\n\n');
+  
+  // Add this client to the set of connected clients
+  sseClients.add(res);
+  
+  const clientIp = getClientIp(req);
+  logger.info(`Client ${clientIp} connected to SSE`);
+  
+  // Remove client when connection closes
+  req.on('close', () => {
+    sseClients.delete(res);
+    logger.info(`Client ${clientIp} disconnected from SSE`);
+  });
+});
+
+// Function to notify all connected clients of a data update
+function notifyClients(eventType) {
+  const event = {
+    type: eventType,
+    timestamp: new Date().toISOString()
+  };
+  
+  sseClients.forEach(client => {
+    client.write(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
+  });
+  
+  logger.info(`Notified ${sseClients.size} clients of ${eventType} update`);
+}
+
 // Start the polling for external API
 function startExternalApiPolling() {
   if (serverConfig.externalApiUrl) {
@@ -112,6 +152,8 @@ function startExternalApiPolling() {
       .then(data => {
         lastFetchedData = data;
         console.log('Initial data fetched from external API');
+        // Notify clients on initial fetch
+        notifyClients('aqi-update');
       })
       .catch(error => {
         console.error('Failed to fetch initial data:', error.message);
@@ -123,6 +165,8 @@ function startExternalApiPolling() {
         .then(data => {
           lastFetchedData = data;
           console.log('Data updated from external API');
+          // Notify clients on each update
+          notifyClients('aqi-update');
         })
         .catch(error => {
           console.error('Failed to update data:', error.message);
@@ -289,6 +333,10 @@ async function fetchUvData() {
       timestamp: new Date().toISOString(),
       current_uvi: transformedData.now?.uvi
     });
+    
+    // Notify clients of new UV data
+    notifyClients('uv-update');
+    
   } catch (error) {
     logger.error('Error fetching from UV API', { 
       error: error.message,
@@ -523,4 +571,10 @@ app.listen(PORT, () => {
   // Start the polling timers
   startExternalApiPolling();
   startUvApiPolling();
+  
+  // Emit a server-started event after a delay to allow clients to connect
+  setTimeout(() => {
+    notifyClients('server-started');
+    logger.info('Sent server-started event to any connected clients');
+  }, 5000);
 }); 

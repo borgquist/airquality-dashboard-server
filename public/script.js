@@ -1,6 +1,7 @@
 // Load configuration
 let config;
 let uvChart;
+let eventSource;
 
 // Register Chart.js annotation plugin if available
 if (window.ChartAnnotation) {
@@ -15,10 +16,125 @@ async function loadConfig() {
     const response = await fetch('/config.json');
     config = await response.json();
     initDashboard();
+    setupEventSource();
   } catch (error) {
     console.error('Failed to load configuration:', error);
   }
 }
+
+// Set up server-sent events for real-time updates
+function setupEventSource() {
+  // Close existing connection if there is one
+  if (eventSource) {
+    eventSource.close();
+  }
+  
+  // Create a new event source
+  eventSource = new EventSource('/api/events');
+  
+  // Connection opened
+  eventSource.addEventListener('open', () => {
+    debugPrint('SSE connection established');
+    
+    // Clear any reconnection attempts if we're reconnecting after a server restart
+    if (window.serverReconnectAttempt) {
+      clearInterval(window.serverReconnectAttempt);
+      window.serverReconnectAttempt = null;
+      
+      // If this is a reconnection after a server restart, reload the page to get fresh code
+      if (window.serverWasDown) {
+        debugPrint('Reconnected after server restart, reloading page to get fresh code');
+        window.location.reload();
+      }
+    }
+    
+    // Update status indicator
+    const indicator = document.getElementById('liveIndicator');
+    if (indicator) {
+      indicator.classList.remove('disconnected');
+      indicator.innerHTML = '<span class="pulse"></span> Live Updates';
+    }
+  });
+  
+  // Listen for AQI updates
+  eventSource.addEventListener('aqi-update', (event) => {
+    const data = JSON.parse(event.data);
+    debugPrint(`Received AQI update from server: ${data.timestamp}`);
+    fetchAirQualityData();
+  });
+  
+  // Listen for UV updates
+  eventSource.addEventListener('uv-update', (event) => {
+    const data = JSON.parse(event.data);
+    debugPrint(`Received UV update from server: ${data.timestamp}`);
+    fetchUvIndexData();
+  });
+  
+  // Listen for server restart notifications
+  eventSource.addEventListener('server-started', (event) => {
+    const data = JSON.parse(event.data);
+    debugPrint(`Server has started/restarted at: ${data.timestamp}`);
+    
+    // Reload the page to get fresh code
+    debugPrint('Reloading page to get fresh code after server restart');
+    
+    // Brief delay to allow server to fully initialize
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  });
+  
+  // Connection error handling
+  eventSource.addEventListener('error', (error) => {
+    debugPrint('SSE connection error, attempting to reconnect...');
+    
+    // Close the connection
+    eventSource.close();
+    
+    // Update status indicator
+    const indicator = document.getElementById('liveIndicator');
+    if (indicator) {
+      indicator.classList.add('disconnected');
+      indicator.innerHTML = '<span class="pulse"></span> Connection lost, reconnecting...';
+    }
+    
+    // If we're not already attempting to reconnect
+    if (!window.serverReconnectAttempt) {
+      window.serverWasDown = true;
+      
+      // Try to reconnect every 2 seconds
+      window.serverReconnectAttempt = setInterval(() => {
+        debugPrint('Attempting to reconnect to server...');
+        
+        // Send a ping to check if server is back
+        fetch('/api/version?_=' + new Date().getTime())
+          .then(response => {
+            if (response.ok) {
+              debugPrint('Server is back online, reestablishing SSE connection');
+              clearInterval(window.serverReconnectAttempt);
+              window.serverReconnectAttempt = null;
+              setupEventSource();
+            }
+          })
+          .catch(err => {
+            debugPrint('Server still offline: ' + err.message);
+          });
+      }, 2000);
+    }
+  });
+  
+  // Ping to keep connection alive
+  eventSource.addEventListener('ping', () => {
+    debugPrint('SSE ping received');
+  });
+}
+
+// Cleanup event source on page unload
+window.addEventListener('beforeunload', () => {
+  if (eventSource) {
+    eventSource.close();
+  }
+});
 
 // Initialize the dashboard
 function initDashboard() {
@@ -37,7 +153,9 @@ function initDashboard() {
 // Fetch the air quality data from the server
 async function fetchAirQualityData() {
   try {
-    const response = await fetch('/api/airquality');
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`/api/airquality?_=${timestamp}`);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -54,7 +172,9 @@ async function fetchAirQualityData() {
 // Fetch UV index data
 async function fetchUvIndexData() {
   try {
-    const response = await fetch('/api/uvindex');
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`/api/uvindex?_=${timestamp}`);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -78,7 +198,9 @@ async function fetchUvIndexData() {
 // Fetch version information
 async function fetchVersionInfo() {
   try {
-    const response = await fetch('/api/version');
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`/api/version?_=${timestamp}`);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -93,15 +215,15 @@ async function fetchVersionInfo() {
 
 // Update the version display
 function updateVersionDisplay(data) {
-  if (!data || !data.version) {
-    return;
+  // Just add the live update indicator directly to the footer
+  const footerElement = document.querySelector('footer');
+  if (!document.getElementById('liveIndicator')) {
+    const liveIndicator = document.createElement('div');
+    liveIndicator.id = 'liveIndicator';
+    liveIndicator.className = 'live-indicator';
+    liveIndicator.innerHTML = '<span class="pulse"></span> Live Updates';
+    footerElement.appendChild(liveIndicator);
   }
-  
-  document.getElementById('appVersion').textContent = `v${data.version}`;
-  
-  // Add title attribute with more details
-  const versionInfo = document.getElementById('appVersion');
-  versionInfo.setAttribute('title', `${data.name} - Last updated: ${data.lastUpdated}`);
 }
 
 // Update the air quality dashboard with the latest data
@@ -140,7 +262,7 @@ function updateAirQualityDisplay(data) {
   if (aqiValue === null || aqiValue === undefined) {
     document.getElementById('aqiDisplay').textContent = '-';
   } else {
-    document.getElementById('aqiDisplay').textContent = aqiValue;
+    document.getElementById('aqiDisplay').textContent = Math.round(aqiValue);
   }
   
   // Only update mainPollutant if the element exists
@@ -541,19 +663,12 @@ function getUVCategory(uvi) {
 function updatePageBackground(aqi) {
   // Remove all background classes
   document.body.classList.remove(
-    'bg-good', 'bg-unhealthy', 'bg-very-unhealthy', 'bg-hazardous'
+    'bg-good', 'bg-moderate', 'bg-unhealthy-sensitive', 'bg-unhealthy', 'bg-very-unhealthy', 'bg-hazardous'
   );
   
-  // Add appropriate background class based on AQI
-  if (aqi <= 100) {
-    document.body.classList.add('bg-good');
-  } else if (aqi <= 200) {
-    document.body.classList.add('bg-unhealthy');
-  } else if (aqi <= 300) {
-    document.body.classList.add('bg-very-unhealthy');
-  } else {
-    document.body.classList.add('bg-hazardous');
-  }
+  // Get the AQI category and apply the matching background class
+  const aqiCategory = getAQICategory(aqi);
+  document.body.classList.add(`bg-${aqiCategory.className}`);
 }
 
 // Create or update the UV forecast graph
