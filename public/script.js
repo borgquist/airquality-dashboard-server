@@ -99,8 +99,25 @@ function updateVersionDisplay(data) {
 
 // Update the air quality dashboard with the latest data
 function updateAirQualityDisplay(data) {
-  if (!data || !data.current) {
+  if (!data) {
     console.error('Invalid data format');
+    return;
+  }
+  
+  // Handle API error
+  if (data.error) {
+    console.warn('Air quality API error:', data.error);
+    
+    // Update last updated time with error
+    document.getElementById('lastUpdatedTime').textContent = 
+      `Error: ${data.error}`;
+      
+    // Display dash for missing values
+    document.getElementById('aqiDisplay').textContent = '-';
+    document.getElementById('temperature').textContent = '-';
+    document.getElementById('humidity').textContent = '-';
+    document.getElementById('pressure').textContent = '-';
+    
     return;
   }
   
@@ -110,53 +127,61 @@ function updateAirQualityDisplay(data) {
     currentTime.toLocaleString();
   
   // Update AQI display
-  const mainPollutant = data.current.mainus;
-  const aqiValue = data.current.aqius;
+  const mainPollutant = data.current?.mainus;
+  const aqiValue = data.current?.aqius;
   
-  document.getElementById('aqiDisplay').textContent = aqiValue;
+  if (aqiValue === null || aqiValue === undefined) {
+    document.getElementById('aqiDisplay').textContent = '-';
+  } else {
+    document.getElementById('aqiDisplay').textContent = aqiValue;
+  }
   
   // Only update mainPollutant if the element exists
   const mainPollutantElement = document.getElementById('mainPollutant');
-  if (mainPollutantElement) {
+  if (mainPollutantElement && mainPollutant) {
     mainPollutantElement.textContent = formatPollutantName(mainPollutant);
   }
   
   // Set AQI category and color
-  const aqiCategory = getAQICategory(aqiValue);
-  const categoryElement = document.getElementById('aqiCategory');
-  categoryElement.textContent = aqiCategory.name;
-  
-  // Get the main AQI card
-  const mainAqiElement = document.querySelector('.main-aqi');
-  
-  // Remove all category classes from both elements
-  const categoryClasses = ['good', 'moderate', 'unhealthy-sensitive', 'unhealthy', 'very-unhealthy', 'hazardous'];
-  
-  categoryElement.classList.remove(...categoryClasses);
-  mainAqiElement.classList.remove(...categoryClasses);
-  
-  // Add the current category class to both elements
-  categoryElement.classList.add(aqiCategory.className);
-  mainAqiElement.classList.add(aqiCategory.className);
-  
-  // Apply custom color settings from config if available
-  const configKey = aqiCategory.className.replace('-', '').replace('-', '');
-  if (config.aqiColors && config.aqiColors[configKey]) {
-    const colorConfig = config.aqiColors[configKey];
-    mainAqiElement.style.backgroundColor = colorConfig.backgroundColor;
-    mainAqiElement.style.color = colorConfig.textColor;
+  if (aqiValue !== null && aqiValue !== undefined) {
+    const aqiCategory = getAQICategory(aqiValue);
+    const categoryElement = document.getElementById('aqiCategory');
+    categoryElement.textContent = aqiCategory.name;
+    
+    // Get the main AQI card
+    const mainAqiElement = document.querySelector('.main-aqi');
+    
+    // Remove all category classes from both elements
+    const categoryClasses = ['good', 'moderate', 'unhealthy-sensitive', 'unhealthy', 'very-unhealthy', 'hazardous'];
+    
+    categoryElement.classList.remove(...categoryClasses);
+    mainAqiElement.classList.remove(...categoryClasses);
+    
+    // Add the current category class to both elements
+    categoryElement.classList.add(aqiCategory.className);
+    mainAqiElement.classList.add(aqiCategory.className);
+    
+    // Apply custom color settings from config if available
+    const configKey = aqiCategory.className.replace('-', '').replace('-', '');
+    if (config.aqiColors && config.aqiColors[configKey]) {
+      const colorConfig = config.aqiColors[configKey];
+      mainAqiElement.style.backgroundColor = colorConfig.backgroundColor;
+      mainAqiElement.style.color = colorConfig.textColor;
+    }
+    
+    // Update page background based on AQI
+    updatePageBackground(aqiValue);
+  } else {
+    document.getElementById('aqiCategory').textContent = '-';
   }
-  
-  // Update page background based on AQI
-  updatePageBackground(aqiValue);
   
   // Update weather data
   document.getElementById('temperature').textContent = 
-    data.current.tp ? `${data.current.tp}°C` : '-';
+    data.current?.tp ? `${data.current.tp}°C` : '-';
   document.getElementById('humidity').textContent = 
-    data.current.hm ? `${data.current.hm}%` : '-';
+    data.current?.hm ? `${data.current.hm}%` : '-';
   document.getElementById('pressure').textContent = 
-    data.current.pr ? `${(data.current.pr / 100).toFixed(1)} hPa` : '-';
+    data.current?.pr ? `${(data.current.pr / 100).toFixed(1)} hPa` : '-';
 }
 
 // Update the UV index display
@@ -541,11 +566,11 @@ function createUvForecastGraph(forecastData) {
   const multipleDaysForecast = forecastData.filter(entry => {
     const entryTime = new Date(entry.time);
     return entryTime > currentTime && 
-           entryTime < new Date(currentTime.getTime() + 72 * 60 * 60 * 1000); // Show up to 3 days
+           entryTime < new Date(currentTime.getTime() + 24 * 60 * 60 * 1000); // Show only next 24 hours
   });
   
   if (multipleDaysForecast.length === 0) {
-    debugPrint('No UV forecast data available for the next 72 hours');
+    debugPrint('No UV forecast data available for the next 24 hours');
     document.getElementById('uvForecastGraph').style.display = 'none';
     return;
   }
@@ -567,18 +592,9 @@ function createUvForecastGraph(forecastData) {
     // Format the time only (without date)
     let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     
-    // Check which day this entry belongs to relative to today
-    const dayDiff = Math.floor((entryTime - currentTime) / (24 * 60 * 60 * 1000));
-    let dayLabel;
-    
-    if (dayDiff === 0) {
-      dayLabel = 'Today';
-    } else if (dayDiff === 1) {
-      dayLabel = 'Tomorrow';
-    } else {
-      // For days beyond tomorrow, use the weekday name
-      dayLabel = entryTime.toLocaleDateString(undefined, { weekday: 'long' });
-    }
+    // Check if entry is today or tomorrow
+    const isToday = entryTime.getDate() === currentTime.getDate();
+    const dayLabel = isToday ? 'Today' : 'Tomorrow';
     
     // Only add the day label when the day changes
     if (dayLabel !== previousDay) {
@@ -633,7 +649,7 @@ function createUvForecastGraph(forecastData) {
         x: {
           title: {
             display: true,
-            text: `Time (Local Time)`
+            text: `Next 24 Hours (Local Time)`
           },
           grid: {
             display: false

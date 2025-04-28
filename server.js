@@ -88,6 +88,11 @@ const requestStats = {
   }
 };
 
+// Helper function to get client IP
+function getClientIp(req) {
+  return req.headers['x-forwarded-for'] || req.ip || 'unknown';
+}
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -122,11 +127,23 @@ async function fetchExternalData() {
     return;
   }
   
-  logger.info(`Polling external API: ${serverConfig.externalApiUrl}`);
+  // Make sure the URL is properly formatted
+  let apiUrl = serverConfig.externalApiUrl;
+  
+  // Ensure URL has protocol
+  if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+    apiUrl = 'https://' + apiUrl;
+  }
+  
+  logger.info(`Polling external API: ${apiUrl}`);
   requestStats.trackApiCall();
   
   try {
-    fetchPromise = fetch(serverConfig.externalApiUrl);
+    if (!apiUrl) {
+      throw new Error('External API URL not configured');
+    }
+    
+    fetchPromise = fetch(apiUrl);
     const response = await fetchPromise;
     const data = await response.json();
     
@@ -142,49 +159,13 @@ async function fetchExternalData() {
   } catch (error) {
     logger.error('Error fetching from external API', { 
       error: error.message,
-      url: serverConfig.externalApiUrl
+      url: apiUrl
     });
   } finally {
     // Always clear the promise
     fetchPromise = null;
   }
 }
-
-// API endpoint to fetch air quality data
-app.get('/api/airquality', async (req, res) => {
-  const clientIP = req.headers['x-forwarded-for'] || req.ip;
-  requestStats.trackRequest(clientIP);
-  
-  // If we have cached data, return it immediately
-  if (lastFetchedData) {
-    return res.json(lastFetchedData);
-  }
-  
-  // If we don't have data yet, fetch it now
-  try {
-    if (!fetchPromise) {
-      logger.info(`First-time data fetch triggered by client ${clientIP}`);
-      fetchPromise = fetch(serverConfig.externalApiUrl);
-      requestStats.trackApiCall();
-    } else {
-      logger.debug(`Client ${clientIP} waiting for in-progress fetch`);
-    }
-    
-    const response = await fetchPromise;
-    const data = await response.json();
-    
-    // Update cache
-    lastFetchedData = data;
-    lastFetchTime = Date.now();
-    fetchPromise = null;
-    
-    return res.json(data);
-  } catch (error) {
-    logger.error('Error fetching air quality data', { error: error.message });
-    fetchPromise = null;
-    res.status(500).json({ error: 'Failed to fetch air quality data' });
-  }
-});
 
 // UV data cache
 let lastUvData = null;
@@ -225,7 +206,13 @@ async function fetchUvData() {
   
   const lat = serverConfig.location.latitude;
   const lon = serverConfig.location.longitude;
-  const apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
+  let apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
+  
+  // Ensure URL has protocol
+  if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+    apiUrl = 'https://' + apiUrl;
+  }
+  
   const url = `${apiUrl}?lat=${lat}&lng=${lon}`;
   
   logger.info(`Polling OpenUV API: ${url}`);
@@ -319,9 +306,87 @@ function transformOpenUvData(openUvData) {
   }
 }
 
+// API endpoint to fetch air quality data
+app.get('/api/airquality', async (req, res) => {
+  try {
+    const clientIp = getClientIp(req);
+    console.log(`[${clientIp}] Fetching air quality data`);
+
+    if (!serverConfig.externalApiUrl) {
+      console.warn('External API URL is not configured');
+      return res.json({ 
+        error: 'Air quality API not configured',
+        current: null
+      });
+    }
+
+    // Ensure the API URL has a protocol
+    let apiUrl = serverConfig.externalApiUrl;
+    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+      apiUrl = 'https://' + apiUrl;
+    }
+
+    // If lat and lon are provided, use them for specific location data
+    const lat = req.query.lat || serverConfig.defaultLatitude;
+    const lon = req.query.lon || serverConfig.defaultLongitude;
+    
+    // Check cache first
+    const cacheKey = `airquality-${lat}-${lon}`;
+    
+    // Check if we have cached data and it's not expired
+    if (dataCache[cacheKey] && Date.now() - dataCache[cacheKey].timestamp < CACHE_TTL) {
+      console.log(`[${clientIp}] Using cached air quality data`);
+      return res.json(dataCache[cacheKey].data);
+    }
+    
+    console.log(`[${clientIp}] First time fetch or cache expired, fetching new air quality data`);
+    
+    const data = await fetchExternalData(apiUrl, lat, lon);
+    
+    // Cache the response
+    dataCache[cacheKey] = {
+      timestamp: Date.now(),
+      data: data
+    };
+    
+    return res.json(data);
+  } catch (error) {
+    console.error('Error fetching air quality data:', error.message);
+    return res.json({ 
+      error: 'Failed to fetch air quality data: ' + error.message,
+      current: null 
+    });
+  }
+});
+
+// Function to fetch data from external API
+async function fetchExternalData(apiUrl, lat, lon) {
+  try {
+    // Ensure the API URL has a protocol
+    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+      apiUrl = 'https://' + apiUrl;
+    }
+    
+    const url = `${apiUrl}?lat=${lat}&lon=${lon}`;
+    console.log(`Fetching data from: ${url}`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in fetchExternalData:', error.message);
+    throw error;
+  }
+}
+
 // API endpoint to fetch UV index data
 app.get('/api/uvindex', async (req, res) => {
-  const clientIP = req.headers['x-forwarded-for'] || req.ip;
+  const clientIP = getClientIp(req);
   requestStats.trackRequest(clientIP);
   
   // Check if UV API is configured
@@ -344,7 +409,13 @@ app.get('/api/uvindex', async (req, res) => {
     if (!uvFetchPromise) {
       const lat = serverConfig.location.latitude;
       const lon = serverConfig.location.longitude;
-      const apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
+      let apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
+      
+      // Ensure URL has protocol
+      if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+        apiUrl = 'https://' + apiUrl;
+      }
+      
       const url = `${apiUrl}?lat=${lat}&lng=${lon}`;
       
       logger.info(`First-time UV data fetch triggered by client ${clientIP}`);
