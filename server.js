@@ -524,7 +524,8 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes default TTL
 app.get('/api/airquality', async (req, res) => {
   try {
     const clientIp = getClientIp(req);
-    console.log(`[${clientIp}] Fetching air quality data`);
+    const forceRefresh = req.query.force === '1';
+    console.log(`[${clientIp}] Fetching air quality data${forceRefresh ? ' (forced refresh)' : ''}`);
 
     if (!serverConfig.externalApiUrl) {
       console.warn('External API URL is not configured');
@@ -548,13 +549,13 @@ app.get('/api/airquality', async (req, res) => {
     // Create a simple cache key for the data
     const cacheKey = `airquality-data`;
     
-    // Check if we have cached data and it's not expired
-    if (dataCache[cacheKey] && Date.now() - dataCache[cacheKey].timestamp < CACHE_TTL) {
+    // Check if we have cached data and it's not expired (and not a forced refresh)
+    if (!forceRefresh && dataCache[cacheKey] && Date.now() - dataCache[cacheKey].timestamp < CACHE_TTL) {
       console.log(`[${clientIp}] Using cached air quality data`);
       return res.json(dataCache[cacheKey].data);
     }
     
-    console.log(`[${clientIp}] First time fetch or cache expired, fetching new air quality data`);
+    console.log(`[${clientIp}] ${forceRefresh ? 'Forced refresh' : 'First time fetch or cache expired'}, fetching new air quality data`);
     
     // Fetch data directly from the API without appending lat/lon
     const data = await fetchExternalData(apiUrl);

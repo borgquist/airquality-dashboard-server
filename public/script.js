@@ -66,6 +66,8 @@ function setupEventSource() {
     const data = JSON.parse(event.data);
     debugPrint(`Received AQI update from server: ${data.timestamp}`);
     // Force a fresh fetch of AQI data when we receive an update event
+    // Add cache-busting parameter and force refresh
+    console.log('SSE event received - forcing fresh AQI data fetch');
     fetchAirQualityData(true);
   });
   
@@ -170,12 +172,27 @@ async function fetchAirQualityData(forceRefresh = false) {
   try {
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();
-    const response = await fetch(`/api/airquality?_=${timestamp}`);
+    const url = `/api/airquality?_=${timestamp}${forceRefresh ? '&force=1' : ''}`;
+    console.log(`Fetching air quality data with${forceRefresh ? ' forced refresh' : ' normal request'}: ${url}`);
+    
+    const response = await fetch(url, {
+      cache: forceRefresh ? 'no-store' : 'default',
+      headers: {
+        'Cache-Control': forceRefresh ? 'no-cache' : 'default',
+        'Pragma': forceRefresh ? 'no-cache' : 'default'
+      }
+    });
+    
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     
     const data = await response.json();
+    
+    // Log exactly what we received for PM2.5
+    if (data && data.current && data.current.pm25) {
+      console.log(`CLIENT RECEIVED PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc}) at ${new Date().toLocaleTimeString()}`);
+    }
     
     // Store the data for comparison
     lastAqiData = data;
@@ -279,6 +296,11 @@ function updateAirQualityDisplay(data) {
   if (!data) {
     console.error('Invalid data format');
     return;
+  }
+  
+  // Log what data we're displaying
+  if (data.current && data.current.pm25) {
+    console.log(`DISPLAYING PM2.5 AQI US: ${data.current.pm25.aqius}`);
   }
   
   // Handle API error
