@@ -581,7 +581,7 @@ body.bg-hazardous {
   .dashboard {
     display: grid;
     grid-template-columns: 50% 50%;
-    grid-template-rows: none;
+    grid-template-rows: 346px; /* Force exact height */
     gap: 6px;
   }
   
@@ -589,6 +589,8 @@ body.bg-hazardous {
   .card {
     margin-bottom: 0;
     padding: 8px;
+    height: 346px !important; /* Force exact same height on all cards */
+    overflow: hidden;
   }
   
   /* Left column layout */
@@ -600,6 +602,15 @@ body.bg-hazardous {
   
   .left-column .main-aqi {
     height: 346px; /* Now full height to match UV card */
+  }
+  
+  /* Right column/UV Index card */
+  .right-column {
+    height: 346px; /* Same explicit height */
+  }
+  
+  .uv-index {
+    height: 346px !important; /* Force exact height */
   }
   
   /* Weather items in small format */
@@ -623,15 +634,6 @@ body.bg-hazardous {
   .aqi-value {
     font-size: 10rem; /* Even larger now that we have more space */
     margin: 15px 0;
-  }
-  
-  /* Right column/UV Index card */
-  .right-column {
-    height: 346px; /* Same explicit height */
-  }
-  
-  .uv-index {
-    height: 346px;
   }
   
   /* Content adjustments */
