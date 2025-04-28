@@ -587,7 +587,7 @@ body.bg-hazardous {
   
   /* Set specific heights for the cards */
   .card {
-    margin-bottom: 6px;
+    margin-bottom: 0;
     padding: 8px;
   }
   
@@ -595,16 +595,18 @@ body.bg-hazardous {
   .left-column {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 0; /* Remove gap from flex container */
     height: 346px; /* Explicit height for left column */
   }
   
-  .main-aqi {
-    height: 230px; /* Increased height */
+  .left-column .main-aqi {
+    height: 214px; /* Adjusted to account for margin */
+    margin-bottom: 20px; /* Explicit margin between cards */
   }
   
-  .info-box {
-    height: 110px; /* Reduced height since pressure is removed */
+  .left-column .info-box {
+    height: 110px;
+    margin-bottom: 0;
   }
   
   /* Right column/UV Index card */
@@ -634,7 +636,7 @@ body.bg-hazardous {
   
   .aqi-value {
     font-size: 7.5rem; /* Slightly larger font for AQI value */
-    margin: 8px 0;
+    margin: 15px 0; /* Increased margins above and below AQI value */
   }
   
   .uv-value {
