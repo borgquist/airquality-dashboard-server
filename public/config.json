@@ -12,6 +12,32 @@
     "veryUnhealthy": 300,
     "hazardous": 500
   },
+  "aqiColors": {
+    "good": {
+      "backgroundColor": "green",
+      "textColor": "white"
+    },
+    "moderate": {
+      "backgroundColor": "#8cd211",
+      "textColor": "white"
+    },
+    "unhealthySensitive": {
+      "backgroundColor": "yellow",
+      "textColor": "black"
+    },
+    "unhealthy": {
+      "backgroundColor": "orange",
+      "textColor": "black"
+    },
+    "veryUnhealthy": {
+      "backgroundColor": "red",
+      "textColor": "white"
+    },
+    "hazardous": {
+      "backgroundColor": "darkred",
+      "textColor": "white"
+    }
+  },
   "displayOptions": {
     "showChart": true,
     "showWeather": true,

@@ -118,14 +118,26 @@ function updateAirQualityDisplay(data) {
   const categoryElement = document.getElementById('aqiCategory');
   categoryElement.textContent = aqiCategory.name;
   
-  // Remove all category classes
-  categoryElement.classList.remove(
-    'good', 'moderate', 'unhealthy-sensitive', 
-    'unhealthy', 'very-unhealthy', 'hazardous'
-  );
+  // Get the main AQI card
+  const mainAqiElement = document.querySelector('.main-aqi');
   
-  // Add the current category class
+  // Remove all category classes from both elements
+  const categoryClasses = ['good', 'moderate', 'unhealthy-sensitive', 'unhealthy', 'very-unhealthy', 'hazardous'];
+  
+  categoryElement.classList.remove(...categoryClasses);
+  mainAqiElement.classList.remove(...categoryClasses);
+  
+  // Add the current category class to both elements
   categoryElement.classList.add(aqiCategory.className);
+  mainAqiElement.classList.add(aqiCategory.className);
+  
+  // Apply custom color settings from config if available
+  const configKey = aqiCategory.className.replace('-', '').replace('-', '');
+  if (config.aqiColors && config.aqiColors[configKey]) {
+    const colorConfig = config.aqiColors[configKey];
+    mainAqiElement.style.backgroundColor = colorConfig.backgroundColor;
+    mainAqiElement.style.color = colorConfig.textColor;
+  }
   
   // Update page background based on AQI
   updatePageBackground(aqiValue);

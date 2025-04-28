@@ -22,14 +22,17 @@ body {
   line-height: 1.6;
   transition: background-color 1s ease;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 .container {
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 header {
@@ -53,6 +56,8 @@ h1 {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card {
@@ -63,6 +68,7 @@ h1 {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .card:hover {
@@ -94,6 +100,13 @@ h1 {
   justify-content: center;
   align-items: center;
   height: 100%;
+  color: white;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+.main-aqi h2 {
+  color: inherit;
+  border-bottom-color: rgba(255, 255, 255, 0.3);
 }
 
 .aqi-value {
@@ -111,6 +124,9 @@ h1 {
   font-weight: bold;
   margin: 1rem 0;
   font-size: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .main-pollutant {
@@ -219,35 +235,31 @@ footer {
   color: white;
 }
 
-/* AQI category colors */
-.good {
+/* AQI category colors for card backgrounds */
+.main-aqi.good {
   background-color: green;
-  color: white;
 }
 
-.moderate {
+.main-aqi.moderate {
   background-color: #8cd211;
-  color: black;
 }
 
-.unhealthy-sensitive {
+.main-aqi.unhealthy-sensitive {
   background-color: yellow;
   color: black;
 }
 
-.unhealthy {
+.main-aqi.unhealthy {
   background-color: orange;
   color: black;
 }
 
-.very-unhealthy {
+.main-aqi.very-unhealthy {
   background-color: red;
-  color: white;
 }
 
-.hazardous {
+.main-aqi.hazardous {
   background-color: darkred;
-  color: white;
 }
 
 /* Background colors for body */
@@ -267,13 +279,16 @@ body.bg-hazardous {
   background-color: rgba(139, 0, 0, 0.15);
 }
 
+/* Media queries for responsive layout */
 @media (min-width: 768px) {
   .dashboard {
+    display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    height: calc(100vh - 250px);
     min-height: 400px;
-    max-height: 800px;
+    max-height: 80vh;
+    overflow: visible;
+    margin-bottom: 1rem;
   }
   
   .main-aqi {
@@ -283,6 +298,7 @@ body.bg-hazardous {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    padding: 1.5rem;
   }
   
   .main-aqi h2 {
@@ -297,7 +313,6 @@ body.bg-hazardous {
   .info-box {
     grid-column: 2 / 3;
     grid-row: 1 / 2;
-    align-self: start;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -315,67 +330,97 @@ body.bg-hazardous {
   }
 }
 
-/* Responsive adjustments for various screen sizes */
-@media (max-width: 1024px) and (min-width: 768px) {
-  .aqi-value {
-    font-size: 12rem;
+/* Landscape mode specific styling */
+@media (orientation: landscape) and (max-height: 600px) {
+  .container {
+    padding: 0.5rem 1rem;
+  }
+  
+  header {
+    margin-bottom: 0.5rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0;
+  }
+  
+  #lastUpdated {
+    margin-bottom: 0.5rem;
   }
   
   .dashboard {
-    min-height: 350px;
+    gap: 0.8rem;
+    max-height: none;
+  }
+  
+  .card {
+    padding: 0.8rem;
+  }
+  
+  .main-aqi, .info-box {
+    height: auto;
+  }
+  
+  .aqi-value {
+    font-size: 7rem;
+    margin: 0;
+  }
+  
+  .uv-index {
+    padding: 0.8rem;
+  }
+  
+  .uv-graph-container {
+    height: 120px;
+  }
+  
+  footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
   }
 }
 
-@media (max-width: 767px) {
+/* Medium screens */
+@media (max-width: 767px) and (min-width: 480px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 1rem;
+    height: auto;
+  }
+  
   .container {
     padding: 1rem;
-    width: 100%;
     max-width: 100%;
     overflow-x: hidden;
   }
   
-  .dashboard {
-    min-height: unset;
-    height: auto;
-    gap: 1rem;
-    width: 100%;
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    height: 100%;
+  }
+  
+  .aqi-value {
+    font-size: 6rem;
+    line-height: 1;
+  }
+  
+  .info-box {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+  }
+  
+  .uv-index {
+    grid-column: 1 / -1;
+    grid-row: 2 / 3;
   }
   
   .card {
     padding: 1rem;
     margin-bottom: 0.5rem;
-    transform: none !important;
-    width: 100%;
-  }
-  
-  .card:hover {
-    transform: none !important;
-    box-shadow: var(--shadow);
-  }
-  
-  header {
-    margin-bottom: 1rem;
-  }
-  
-  h1 {
-    font-size: 2rem;
-  }
-  
-  .aqi-value {
-    font-size: 7rem;
-  }
-  
-  .uv-value {
-    font-size: 3.5rem;
-  }
-  
-  .aqi-category, .uv-category {
-    font-size: 1.2rem;
-    padding: 0.4rem 1rem;
-  }
-  
-  .uv-graph-container {
-    height: 150px;
   }
   
   .card h2 {
@@ -384,30 +429,94 @@ body.bg-hazardous {
   }
   
   .info-data {
-    gap: 0.8rem;
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-bottom: 0.5rem;
   }
   
   .label {
-    font-size: 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
   }
   
   .value {
+    font-size: 1.1rem;
+  }
+  
+  .aqi-category, .uv-category {
     font-size: 1.2rem;
+    padding: 0.4rem 1rem;
+    margin: 0.5rem 0;
+  }
+  
+  .uv-graph-container {
+    height: 150px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  .uv-value {
+    font-size: 3.5rem;
   }
 }
 
-/* Additional breakpoint for very small screens */
-@media (max-width: 480px) {
-  .container {
-    padding: 0.5rem;
+/* Small screens - stacked layout */
+@media (max-width: 479px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
   }
   
-  body {
+  .container {
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
+  }
+  
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    width: 100%;
+  }
+  
+  .info-box {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    width: 100%;
+  }
+  
+  .uv-index {
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+    width: 100%;
   }
   
   h1 {
     font-size: 1.8rem;
+  }
+  
+  .card {
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    overflow: hidden;
   }
   
   .aqi-value {
@@ -418,12 +527,31 @@ body.bg-hazardous {
     font-size: 3rem;
   }
   
-  .card {
-    padding: 0.8rem;
-  }
-  
   .uv-graph-container {
     height: 120px;
+  }
+  
+  .card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .label {
+    font-size: 0.9rem;
+  }
+  
+  .value {
+    font-size: 1.1rem;
+  }
+  
+  .aqi-category, .uv-category {
+    font-size: 1rem;
+    padding: 0.3rem 0.8rem;
+    margin: 0.5rem 0;
   }
 }
 
