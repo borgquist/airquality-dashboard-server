@@ -596,19 +596,20 @@ body.bg-hazardous {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    height: 346px; /* Explicit height for left column */
   }
   
   .main-aqi {
-    height: 210px;
+    height: 230px; /* Increased height */
   }
   
   .info-box {
-    height: 130px;
+    height: 110px; /* Reduced height since pressure is removed */
   }
   
   /* Right column/UV Index card */
   .right-column {
-    height: 346px; /* Exactly matches main-aqi + info-box + gap (210 + 130 + 6) */
+    height: 346px; /* Same explicit height */
   }
   
   .uv-index {
@@ -632,8 +633,8 @@ body.bg-hazardous {
   }
   
   .aqi-value {
-    font-size: 7rem;
-    margin: 0;
+    font-size: 7.5rem; /* Slightly larger font for AQI value */
+    margin: 8px 0;
   }
   
   .uv-value {

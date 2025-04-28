@@ -237,7 +237,11 @@ function updateAirQualityDisplay(data) {
     document.getElementById('aqiDisplay').textContent = '-';
     document.getElementById('temperature').textContent = '-';
     document.getElementById('humidity').textContent = '-';
-    document.getElementById('pressure').textContent = '-';
+    // Pressure element may not exist
+    const pressureElement = document.getElementById('pressure');
+    if (pressureElement) {
+      pressureElement.textContent = '-';
+    }
     
     return;
   }
@@ -306,8 +310,11 @@ function updateAirQualityDisplay(data) {
     data.current?.tp ? `${data.current.tp}°C` : '-';
   document.getElementById('humidity').textContent = 
     data.current?.hm ? `${data.current.hm}%` : '-';
-  document.getElementById('pressure').textContent = 
-    data.current?.pr ? `${(data.current.pr / 100).toFixed(1)} hPa` : '-';
+  // Update pressure only if element exists
+  const pressureElement = document.getElementById('pressure');
+  if (pressureElement && data.current?.pr) {
+    pressureElement.textContent = `${(data.current.pr / 100).toFixed(1)} hPa`;
+  }
 }
 
 // Update the UV index display
