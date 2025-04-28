@@ -580,7 +580,7 @@ body.bg-hazardous {
   /* Ensure the dashboard has a fixed layout */
   .dashboard {
     display: grid;
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 65% 35%; /* Adjust to make AQI card larger */
     grid-template-rows: 346px; /* Force exact height */
     gap: 6px;
   }
@@ -597,20 +597,41 @@ body.bg-hazardous {
   .left-column {
     display: flex;
     flex-direction: column;
-    height: 346px; /* Explicit height for left column */
+    height: 346px;
   }
   
   .left-column .main-aqi {
-    height: 346px; /* Now full height to match UV card */
+    height: 346px; 
   }
   
   /* Right column/UV Index card */
   .right-column {
-    height: 346px; /* Same explicit height */
+    height: 346px;
   }
   
   .uv-index {
     height: 346px !important; /* Force exact height */
+    padding: 8px;
+  }
+  
+  .uv-index h2 {
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+    font-size: 1.2rem;
+  }
+  
+  .uv-current {
+    margin: 5px 0; /* Reduced margin */
+  }
+  
+  .uv-value-container {
+    margin: 5px 0; /* Reduced margin */
+    gap: 5px;
+  }
+  
+  .uv-safety-info {
+    margin: 2px 0;
+    padding: 3px;
   }
   
   /* Weather items in small format */
@@ -632,13 +653,15 @@ body.bg-hazardous {
   }
   
   .aqi-value {
-    font-size: 10rem; /* Even larger now that we have more space */
-    margin: 15px 0;
+    font-size: 11rem; /* Even larger AQI value */
+    margin: 10px 0;
+    line-height: 0.9;
   }
   
   /* Content adjustments */
   .uv-graph-container {
-    height: 120px; /* Slightly taller graph */
+    height: 120px;
+    margin-top: 3px;
   }
   
   /* Text size adjustments */
@@ -653,18 +676,13 @@ body.bg-hazardous {
   }
   
   .uv-value {
-    font-size: 5rem;
+    font-size: 4.5rem; /* Smaller UV value */
+    line-height: 0.9;
   }
   
   .uv-category {
-    font-size: 1.1rem;
-    padding: 4px 8px;
-  }
-  
-  .uv-safety-info {
-    margin: 4px 0;
-    padding: 4px;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    padding: 3px 6px;
   }
 }
 
