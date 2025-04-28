@@ -396,7 +396,8 @@ function updateUvIndexDisplay(data) {
     return;
   }
   
-  document.getElementById('uvIndexValue').textContent = currentUvIndex.toFixed(1);
+  // Show more decimal places for better visibility of changes
+  document.getElementById('uvIndexValue').textContent = currentUvIndex.toFixed(4);
   
   // Set UV category and color
   const uvCategory = getUVCategory(currentUvIndex);
@@ -915,7 +916,7 @@ function updateInterpolatedUvIndex() {
     // Update the display with the interpolated value
     updateUvIndexDisplay(dataCopy);
     
-    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(1)}`);
+    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(3)}`);
   }
 }
 
