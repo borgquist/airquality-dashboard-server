@@ -215,15 +215,7 @@ async function fetchVersionInfo() {
 
 // Update the version display
 function updateVersionDisplay(data) {
-  // Add the live update indicator next to the last updated time
-  const lastUpdatedElement = document.getElementById('lastUpdated');
-  if (!document.getElementById('liveIndicator')) {
-    const liveIndicator = document.createElement('div');
-    liveIndicator.id = 'liveIndicator';
-    liveIndicator.className = 'live-indicator';
-    liveIndicator.innerHTML = '<span class="pulse"></span> Live Updates';
-    lastUpdatedElement.appendChild(liveIndicator);
-  }
+  // Empty function - removed duplicate live indicator code
 }
 
 // Update the air quality dashboard with the latest data
