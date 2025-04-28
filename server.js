@@ -103,67 +103,87 @@ let fetchPromise = null;
 let externalApiTimer = null;
 const externalApiInterval = (serverConfig.pollingIntervalSec || 20) * 1000;
 
-// Start timed polling of external API
+// Start the polling for external API
 function startExternalApiPolling() {
-  // Clear any existing timer
+  if (serverConfig.externalApiUrl) {
+    console.log(`Starting polling of external API at interval ${serverConfig.pollingIntervalSec || 20} seconds`);
+    // Initial fetch
+    fetchExternalData(
+      serverConfig.externalApiUrl, 
+      serverConfig.location.latitude, 
+      serverConfig.location.longitude
+    )
+      .then(data => {
+        lastFetchedData = data;
+        console.log('Initial data fetched from external API');
+      })
+      .catch(error => {
+        console.error('Failed to fetch initial data:', error.message);
+      });
+
+    // Set up interval for polling
+    externalApiTimer = setInterval(() => {
+      fetchExternalData(
+        serverConfig.externalApiUrl, 
+        serverConfig.location.latitude, 
+        serverConfig.location.longitude
+      )
+        .then(data => {
+          lastFetchedData = data;
+          console.log('Data updated from external API');
+        })
+        .catch(error => {
+          console.error('Failed to update data:', error.message);
+        });
+    }, externalApiInterval);
+  } else {
+    console.log('External API URL not configured, polling disabled');
+  }
+}
+
+// Stop polling for external API
+function stopExternalApiPolling() {
   if (externalApiTimer) {
     clearInterval(externalApiTimer);
+    externalApiTimer = null;
+    logger.info('Stopped external API polling');
   }
-  
-  // Initial fetch
-  fetchExternalData();
-  
-  // Set up recurring timer
-  externalApiTimer = setInterval(fetchExternalData, externalApiInterval);
-  
-  logger.info(`Started external API polling every ${externalApiInterval/1000} seconds`);
 }
 
 // Fetch data from external API
-async function fetchExternalData() {
-  // If a fetch is already in progress, don't start another one
-  if (fetchPromise) {
-    logger.debug('Skipping scheduled API poll - previous fetch still in progress');
-    return;
-  }
-  
-  // Make sure the URL is properly formatted
-  let apiUrl = serverConfig.externalApiUrl;
-  
-  // Ensure URL has protocol
-  if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-    apiUrl = 'https://' + apiUrl;
-  }
-  
-  logger.info(`Polling external API: ${apiUrl}`);
-  requestStats.trackApiCall();
-  
+async function fetchExternalData(apiUrl, lat, lon) {
   try {
+    // Handle the case when apiUrl is not provided
     if (!apiUrl) {
-      throw new Error('External API URL not configured');
+      apiUrl = serverConfig.externalApiUrl;
+      if (!apiUrl) {
+        throw new Error('External API URL not configured');
+      }
     }
     
-    fetchPromise = fetch(apiUrl);
-    const response = await fetchPromise;
+    // Ensure the API URL has a protocol
+    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+      apiUrl = 'https://' + apiUrl;
+    }
+    
+    // Use default location if not provided
+    if (!lat) lat = serverConfig.location.latitude;
+    if (!lon) lon = serverConfig.location.longitude;
+    
+    const url = `${apiUrl}?lat=${lat}&lon=${lon}`;
+    console.log(`Fetching data from: ${url}`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+    
     const data = await response.json();
-    
-    // Update cache
-    lastFetchedData = data;
-    lastFetchTime = Date.now();
-    
-    logger.info('External API data refreshed successfully', {
-      timestamp: new Date().toISOString(),
-      mainus: data.current?.mainus,
-      aqius: data.current?.aqius
-    });
+    return data;
   } catch (error) {
-    logger.error('Error fetching from external API', { 
-      error: error.message,
-      url: apiUrl
-    });
-  } finally {
-    // Always clear the promise
-    fetchPromise = null;
+    console.error('Error in fetchExternalData:', error.message);
+    throw error;
   }
 }
 
@@ -209,7 +229,7 @@ async function fetchUvData() {
   let apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
   
   // Ensure URL has protocol
-  if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+  if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
     apiUrl = 'https://' + apiUrl;
   }
   
@@ -306,6 +326,10 @@ function transformOpenUvData(openUvData) {
   }
 }
 
+// Cache for API requests
+const dataCache = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes default TTL
+
 // API endpoint to fetch air quality data
 app.get('/api/airquality', async (req, res) => {
   try {
@@ -359,31 +383,6 @@ app.get('/api/airquality', async (req, res) => {
   }
 });
 
-// Function to fetch data from external API
-async function fetchExternalData(apiUrl, lat, lon) {
-  try {
-    // Ensure the API URL has a protocol
-    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-      apiUrl = 'https://' + apiUrl;
-    }
-    
-    const url = `${apiUrl}?lat=${lat}&lon=${lon}`;
-    console.log(`Fetching data from: ${url}`);
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error in fetchExternalData:', error.message);
-    throw error;
-  }
-}
-
 // API endpoint to fetch UV index data
 app.get('/api/uvindex', async (req, res) => {
   const clientIP = getClientIp(req);
@@ -412,7 +411,7 @@ app.get('/api/uvindex', async (req, res) => {
       let apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
       
       // Ensure URL has protocol
-      if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+      if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
         apiUrl = 'https://' + apiUrl;
       }
       

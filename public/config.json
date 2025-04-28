@@ -43,5 +43,13 @@
     "showWeather": true,
     "showTime": true,
     "showLastUpdated": true
+  },
+  "location": {
+    "cityName": "Abu Dhabi",
+    "latitude": 24.4539,
+    "longitude": 54.3773,
+    "timeZone": {
+      "name": "UTC+4"
+    }
   }
-} 
+}
