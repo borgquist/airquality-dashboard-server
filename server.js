@@ -103,6 +103,13 @@ let fetchPromise = null;
 let externalApiTimer = null;
 const externalApiInterval = (serverConfig.pollingIntervalSec || 20) * 1000;
 
+// UV API variables
+let lastUvData = null;
+let lastUvFetchTime = 0;
+let uvFetchPromise = null;
+let uvApiTimer = null;
+const uvApiInterval = (serverConfig.uvRefreshIntervalSec || 1800) * 1000;
+
 // Keep track of connected SSE clients
 const sseClients = new Set();
 
@@ -255,13 +262,6 @@ async function fetchExternalData(apiUrl) {
     throw error;
   }
 }
-
-// UV data cache
-let lastUvData = null;
-let lastUvFetchTime = 0;
-let uvFetchPromise = null;
-let uvApiTimer = null;
-const uvApiInterval = (serverConfig.uvRefreshIntervalSec || 1800) * 1000;
 
 // Start timed polling of UV API
 function startUvApiPolling() {
