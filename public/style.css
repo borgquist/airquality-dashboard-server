@@ -621,15 +621,20 @@ body.bg-hazardous {
     flex: 0 0 auto;
   }
   
+  .right-column {
+    margin-bottom: 6px; /* Trim a few pixels to match exactly */
+  }
+  
   .uv-index {
     flex: 1;
-    height: 100% !important;
+    height: calc(100% - 6px) !important; /* Subtract the same amount as the margin */
     display: flex;
     flex-direction: column;
   }
   
   .uv-graph-container {
-    height: 120px;
+    height: 110px;
+    margin-bottom: 0;
   }
   
   h1 {
