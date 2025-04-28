@@ -215,14 +215,14 @@ async function fetchVersionInfo() {
 
 // Update the version display
 function updateVersionDisplay(data) {
-  // Just add the live update indicator directly to the footer
-  const footerElement = document.querySelector('footer');
+  // Add the live update indicator next to the last updated time
+  const lastUpdatedElement = document.getElementById('lastUpdated');
   if (!document.getElementById('liveIndicator')) {
     const liveIndicator = document.createElement('div');
     liveIndicator.id = 'liveIndicator';
     liveIndicator.className = 'live-indicator';
     liveIndicator.innerHTML = '<span class="pulse"></span> Live Updates';
-    footerElement.appendChild(liveIndicator);
+    lastUpdatedElement.appendChild(liveIndicator);
   }
 }
 
@@ -248,6 +248,11 @@ function updateAirQualityDisplay(data) {
     document.getElementById('pressure').textContent = '-';
     
     return;
+  }
+  
+  // Update station name in header if available
+  if (data.name) {
+    document.querySelector('h1').textContent = data.name;
   }
   
   // Update last updated time
