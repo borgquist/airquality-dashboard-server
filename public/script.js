@@ -225,7 +225,7 @@ async function fetchUvIndexData() {
         lastInterpolatedUvi = interpolatedUvi;
         dataCopy.now = { uvi: interpolatedUvi };
         updateUvIndexDisplay(dataCopy);
-        debugPrint(`Initial UV index interpolated value: ${interpolatedUvi.toFixed(4)}`);
+        debugPrint(`Initial UV index interpolated value: ${interpolatedUvi.toFixed(2)}`);
       } else {
         updateUvIndexDisplay(data);
       }
@@ -419,8 +419,8 @@ function updateUvIndexDisplay(data) {
     return;
   }
   
-  // Show more decimal places for better visibility of changes
-  document.getElementById('uvIndexValue').textContent = currentUvIndex.toFixed(4);
+  // Show two decimal places for better visibility of changes
+  document.getElementById('uvIndexValue').textContent = currentUvIndex.toFixed(2);
   
   // Set UV category and color
   const uvCategory = getUVCategory(currentUvIndex);
