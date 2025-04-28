@@ -783,6 +783,89 @@ function updatePageBackground(aqi) {
   document.body.classList.add(`bg-${aqiCategory.className}`);
 }
 
+// Function to generate a complete 24-hour timeline by interpolating between sparse data points
+function generateCompleteTimelineData(forecastData, currentTime) {
+  // If we have no data, return empty array
+  if (!forecastData || forecastData.length === 0) {
+    return [];
+  }
+  
+  const result = [];
+  
+  // Sort all forecast data by time first
+  const sortedForecast = [...forecastData].sort((a, b) => 
+    new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
+  
+  // Find earliest and latest times in the data
+  const earliestTime = new Date(sortedForecast[0].time);
+  const latestTime = new Date(sortedForecast[sortedForecast.length - 1].time);
+  
+  // Use the original data points
+  for (const point of sortedForecast) {
+    result.push({
+      time: new Date(point.time),
+      uvi: point.uvi
+    });
+  }
+  
+  // Add the current time data point if we have a valid UV reading
+  if (lastInterpolatedUvi !== null) {
+    // Check if we need to add current time (if it's not already close to an existing point)
+    let needToAddCurrentTime = true;
+    for (const point of result) {
+      const timeDiff = Math.abs(point.time.getTime() - currentTime.getTime());
+      if (timeDiff < 30 * 60 * 1000) { // Within 30 minutes
+        needToAddCurrentTime = false;
+        break;
+      }
+    }
+    
+    if (needToAddCurrentTime) {
+      result.push({
+        time: new Date(currentTime),
+        uvi: lastInterpolatedUvi,
+        isCurrent: true
+      });
+    }
+  }
+  
+  // Sort all points by time
+  result.sort((a, b) => a.time.getTime() - b.time.getTime());
+  
+  // Ensure we have nice coverage by adding more interpolated points
+  const morePoints = [];
+  for (let i = 0; i < result.length - 1; i++) {
+    const curr = result[i];
+    const next = result[i+1];
+    
+    // Calculate time difference in hours
+    const timeDiffHours = (next.time.getTime() - curr.time.getTime()) / (1000 * 60 * 60);
+    
+    // If points are more than 1 hour apart, add interpolated points
+    if (timeDiffHours > 1) {
+      const numPointsToAdd = Math.floor(timeDiffHours);
+      
+      for (let j = 1; j <= numPointsToAdd; j++) {
+        const ratio = j / (numPointsToAdd + 1);
+        const interpTime = new Date(curr.time.getTime() + ratio * (next.time.getTime() - curr.time.getTime()));
+        const interpUvi = curr.uvi + ratio * (next.uvi - curr.uvi);
+        
+        morePoints.push({
+          time: interpTime,
+          uvi: interpUvi
+        });
+      }
+    }
+  }
+  
+  // Add interpolated points and sort again
+  result.push(...morePoints);
+  result.sort((a, b) => a.time.getTime() - b.time.getTime());
+  
+  return result;
+}
+
 // Create or update the UV forecast graph
 function createUvForecastGraph(data) {
   const forecastData = data.forecast;
@@ -791,35 +874,20 @@ function createUvForecastGraph(data) {
     return;
   }
   
-  // Get the current time and create date ranges for today and tomorrow
+  // Get the current time
   const currentTime = new Date();
-  const tomorrow = new Date(currentTime);
-  tomorrow.setDate(tomorrow.getDate() + 1);
   
-  // Get timezone information from config
-  const cityName = config.location?.cityName || 'Abu Dhabi';
-  const timezoneName = config.location?.timeZone?.name || 'UTC+4';
+  // Filter for data that has valid UV readings (daytime)
+  const dayTimeForecast = forecastData.filter(entry => entry.uvi > 0);
   
-  // Filter for next 24 hours of data
-  const multipleDaysForecast = forecastData.filter(entry => {
-    const entryTime = new Date(entry.time);
-    return entryTime > currentTime && 
-           entryTime < new Date(currentTime.getTime() + 24 * 60 * 60 * 1000); // Show only next 24 hours
-  });
-  
-  if (multipleDaysForecast.length === 0) {
-    debugPrint('No UV forecast data available for the next 24 hours');
+  if (dayTimeForecast.length === 0) {
+    debugPrint('No daytime UV forecast data available');
     document.getElementById('uvForecastGraph').style.display = 'none';
     return;
   }
   
-  // Sort forecast data by time
-  multipleDaysForecast.sort((a, b) => {
-    return new Date(a.time) - new Date(b.time);
-  });
-  
-  // Check if we need to add more data points for a complete 24-hour view
-  const enhancedForecast = generateCompleteTimelineData(multipleDaysForecast, currentTime);
+  // Check if we need to add more data points
+  const enhancedForecast = generateCompleteTimelineData(dayTimeForecast, currentTime);
   
   // Create arrays for labels (times) and data
   const times = [];
@@ -829,15 +897,24 @@ function createUvForecastGraph(data) {
   // Use the same threshold as in the safety message
   const uvSafetyThreshold = 4;
   
+  // Find the current time index
+  let currentTimeIndex = -1;
+  
   // Process each entry for the chart
-  enhancedForecast.forEach(entry => {
+  enhancedForecast.forEach((entry, index) => {
     const entryTime = new Date(entry.time);
     
-    // Format the time to show the full hour only (no Today/Tomorrow label)
+    // Format the time to show the hour only
     let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit'});
     
     times.push(timeLabel);
     uviValues.push(entry.uvi);
+    
+    // Check if this is current time
+    if (entry.isCurrent || 
+        (Math.abs(entryTime.getTime() - currentTime.getTime()) < 30 * 60 * 1000)) {
+      currentTimeIndex = index;
+    }
     
     // Create data point with color based on threshold
     dataPoints.push({
@@ -869,7 +946,17 @@ function createUvForecastGraph(data) {
         },
         pointBackgroundColor: function(context) {
           const index = context.dataIndex;
+          
+          // If this is the current time point, make it larger and darker
+          if (index === currentTimeIndex) {
+            return 'rgb(41, 128, 185)';  // Blue for current time
+          }
+          
           return uviValues[index] <= uvSafetyThreshold ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
+        },
+        pointRadius: function(context) {
+          // Make current time point larger
+          return context.dataIndex === currentTimeIndex ? 6 : 3;
         },
         borderWidth: 3,
         tension: 0.2,
@@ -902,7 +989,7 @@ function createUvForecastGraph(data) {
         x: {
           title: {
             display: true,
-            text: `Daylight Hours (Local Time)`
+            text: 'Daylight Hours (Local Time)'
           },
           grid: {
             display: false
@@ -922,7 +1009,14 @@ function createUvForecastGraph(data) {
             label: function(context) {
               const value = context.raw;
               const category = getUVCategory(value).name;
-              return `UV Index: ${value.toFixed(1)} (${category})`;
+              let label = `UV Index: ${value.toFixed(1)} (${category})`;
+              
+              // Indicate current time in tooltip
+              if (context.dataIndex === currentTimeIndex) {
+                label += ' - Current Time';
+              }
+              
+              return label;
             }
           }
         }
@@ -930,109 +1024,50 @@ function createUvForecastGraph(data) {
     }
   });
   
-  // Add a horizontal line for the safety threshold if annotation plugin is available
+  // Add annotations for the safe threshold and current time
   try {
     if (Chart.Annotation) {
-      uvChart.options.plugins.annotation = {
-        annotations: {
-          line1: {
-            type: 'line',
-            yMin: uvSafetyThreshold,
-            yMax: uvSafetyThreshold,
-            borderColor: 'rgba(0, 150, 0, 0.7)',
-            borderWidth: 2,
-            borderDash: [5, 5],
-            label: {
-              content: 'Safe level',
-              enabled: true,
-              position: 'start'
-            }
+      const annotations = {
+        thresholdLine: {
+          type: 'line',
+          yMin: uvSafetyThreshold,
+          yMax: uvSafetyThreshold,
+          borderColor: 'rgba(0, 150, 0, 0.7)',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          label: {
+            content: 'Safe level',
+            enabled: true,
+            position: 'start'
           }
         }
       };
+      
+      // Add current time vertical line if we found it
+      if (currentTimeIndex >= 0) {
+        annotations.currentTimeLine = {
+          type: 'line',
+          xMin: currentTimeIndex,
+          xMax: currentTimeIndex,
+          borderColor: 'rgba(41, 128, 185, 0.7)',
+          borderWidth: 2,
+          label: {
+            content: 'Now',
+            enabled: true,
+            position: 'top'
+          }
+        };
+      }
+      
+      uvChart.options.plugins.annotation = {
+        annotations: annotations
+      };
+      
       uvChart.update();
     }
   } catch (e) {
-    console.warn('Could not add safety threshold line:', e);
+    console.warn('Could not add annotation lines:', e);
   }
-}
-
-// Function to generate a complete 24-hour timeline by interpolating between sparse data points
-function generateCompleteTimelineData(forecastData, currentTime) {
-  // If we have enough data points (at least 8 covering the 24 hours), no need to interpolate
-  if (forecastData.length >= 8) {
-    return forecastData;
-  }
-  
-  const result = [];
-  
-  // Insert current time data point if we have a valid UV reading
-  if (lastInterpolatedUvi !== null) {
-    result.push({
-      time: new Date(currentTime),
-      uvi: lastInterpolatedUvi
-    });
-  }
-  
-  // Add the original forecast data points
-  for (const point of forecastData) {
-    result.push({
-      time: new Date(point.time),
-      uvi: point.uvi
-    });
-  }
-  
-  // Ensure we have a minimum of 8 points to make a nice graph
-  // If we have data for the next 24 hours but it's sparse, add more interpolated points
-  if (forecastData.length > 0 && forecastData.length < 8) {
-    const lastPoint = forecastData[forecastData.length - 1];
-    const endTime = new Date(lastPoint.time);
-    
-    // Check if we have less than 24 hours coverage
-    if (endTime.getTime() - currentTime.getTime() < 24 * 60 * 60 * 1000) {
-      // Add a zero point at exactly 24 hours from now
-      const dayLaterTime = new Date(currentTime.getTime() + 24 * 60 * 60 * 1000);
-      result.push({
-        time: dayLaterTime,
-        uvi: 0  // End with zero UV index (nighttime)
-      });
-    }
-    
-    // Sort all points by time
-    result.sort((a, b) => a.time.getTime() - b.time.getTime());
-    
-    // Now interpolate between points to create a smoother curve
-    const morePoints = [];
-    for (let i = 0; i < result.length - 1; i++) {
-      const curr = result[i];
-      const next = result[i+1];
-      
-      // Calculate time difference in hours
-      const timeDiffHours = (next.time.getTime() - curr.time.getTime()) / (1000 * 60 * 60);
-      
-      // If points are more than 3 hours apart, add interpolated points
-      if (timeDiffHours > 3) {
-        const numPointsToAdd = Math.floor(timeDiffHours / 3);
-        
-        for (let j = 1; j <= numPointsToAdd; j++) {
-          const ratio = j / (numPointsToAdd + 1);
-          const interpTime = new Date(curr.time.getTime() + ratio * (next.time.getTime() - curr.time.getTime()));
-          const interpUvi = curr.uvi + ratio * (next.uvi - curr.uvi);
-          
-          morePoints.push({
-            time: interpTime,
-            uvi: interpUvi
-          });
-        }
-      }
-    }
-    
-    // Add interpolated points and sort again
-    result.push(...morePoints);
-    result.sort((a, b) => a.time.getTime() - b.time.getTime());
-  }
-  
-  return result;
 }
 
 // Helper function for safe logging
