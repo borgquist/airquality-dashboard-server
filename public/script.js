@@ -343,7 +343,7 @@ function updateUvIndexDisplay(data) {
     
     // Clear and update the forecast container
     const forecastContainer = document.querySelector('.uv-forecast-container');
-    forecastContainer.innerHTML = '<h3>Forecast</h3>';
+    forecastContainer.innerHTML = '<h3></h3>';
     forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
     
     // Hide the graph
@@ -389,7 +389,7 @@ function updateUvIndexDisplay(data) {
   } else {
     // No forecast data available
     const forecastContainer = document.querySelector('.uv-forecast-container');
-    forecastContainer.innerHTML = '<h3>Forecast</h3>';
+    forecastContainer.innerHTML = '<h3></h3>';
     
     const safetyElement = document.createElement('div');
     safetyElement.className = 'uv-safety-info';
@@ -513,6 +513,12 @@ function addUvSafetyTimes(data) {
   // Add the safety message to the page
   const safetyElement = document.createElement('div');
   safetyElement.className = 'uv-safety-info';
+  
+  // Add unsafe class for red background with white text when UV is unsafe
+  if (!isCurrentUvSafe) {
+    safetyElement.classList.add('unsafe');
+  }
+  
   safetyElement.textContent = safetyMessage;
   
   const forecastContainer = document.querySelector('.uv-forecast-container');
@@ -768,10 +774,13 @@ function createUvForecastGraph(data) {
         },
         borderWidth: 3,
         tension: 0.2,
-        fill: {
-          target: 'origin',
-          above: 'rgba(231, 76, 60, 0.1)',  // Red above threshold
-          below: 'rgba(46, 204, 113, 0.1)'  // Green below threshold
+        fill: true,
+        backgroundColor: function(context) {
+          // Use green for safe values, red for unsafe
+          const index = context.dataIndex;
+          return uviValues[index] <= uvSafetyThreshold ? 
+                 'rgba(46, 204, 113, 0.2)' : // Green area when safe
+                 'rgba(231, 76, 60, 0.1)';   // Red area when unsafe
         }
       }]
     },

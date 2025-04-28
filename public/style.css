@@ -244,18 +244,26 @@ h1 {
   margin: 1rem 0;
 }
 
+.uv-value-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
 .uv-value {
-  font-size: 5rem;
+  font-size: 6rem;
   font-weight: bold;
   line-height: 1;
 }
 
 .uv-category {
-  margin-top: 0.5rem;
   padding: 0.5rem 1rem;
   border-radius: var(--border-radius);
   display: inline-block;
   font-weight: bold;
+  font-size: 1.3rem;
 }
 
 .uv-forecast-container {
@@ -263,7 +271,7 @@ h1 {
 }
 
 .uv-graph-container {
-  height: 180px;
+  height: 250px;
   margin-top: 0.5rem;
 }
 
@@ -408,6 +416,14 @@ body.bg-hazardous {
     grid-row: 2 / 3;
     height: 100%;
   }
+  
+  .uv-value {
+    font-size: 7rem;
+  }
+  
+  .uv-category {
+    font-size: 1.5rem;
+  }
 }
 
 /* Landscape mode specific styling */
@@ -451,10 +467,6 @@ body.bg-hazardous {
   
   .uv-index {
     padding: 0.8rem;
-  }
-  
-  .uv-graph-container {
-    height: 120px;
   }
   
   footer {
@@ -530,22 +542,17 @@ body.bg-hazardous {
     font-size: 1rem;
   }
   
-  .aqi-category, .uv-category {
-    font-size: 1.2rem;
-    padding: 0.4rem 1rem;
-    margin: 0.5rem 0;
+  .uv-value {
+    font-size: 5rem;
   }
   
-  .uv-graph-container {
-    height: 150px;
+  .uv-category {
+    font-size: 1.1rem;
+    padding: 0.4rem 0.8rem;
   }
   
   h1 {
     font-size: 2rem;
-  }
-  
-  .uv-value {
-    font-size: 3.5rem;
   }
 }
 
@@ -606,12 +613,17 @@ body.bg-hazardous {
     font-size: 5rem;
   }
   
-  .uv-value {
-    font-size: 3rem;
+  .uv-value-container {
+    gap: 0.5rem;
   }
   
-  .uv-graph-container {
-    height: 120px;
+  .uv-value {
+    font-size: 4rem;
+  }
+  
+  .uv-category {
+    font-size: 1.1rem;
+    padding: 0.4rem 0.8rem;
   }
   
   .card h2 {
@@ -641,12 +653,6 @@ body.bg-hazardous {
   .value {
     font-size: 1.1rem;
   }
-  
-  .aqi-category, .uv-category {
-    font-size: 1rem;
-    padding: 0.3rem 0.8rem;
-    margin: 0.5rem 0;
-  }
 }
 
 .uv-safety-info {
@@ -657,6 +663,12 @@ body.bg-hazardous {
   font-size: 0.9rem;
   font-weight: 500;
   color: #2e7d32;
+}
+
+.uv-safety-info.unsafe {
+  background-color: #E53210;
+  color: white;
+  font-weight: 600;
 }
 
 /* Style for UV error message */
@@ -687,10 +699,6 @@ body.bg-hazardous {
   
   .uv-forecast-container {
     margin-top: 0.5rem;
-  }
-  
-  .uv-graph-container {
-    height: 150px;
   }
   
   footer {
