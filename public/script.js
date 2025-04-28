@@ -294,6 +294,13 @@ function updateAirQualityDisplay(data) {
       pressureElement.textContent = '-';
     }
     
+    // Update new measurement values next to AQI
+    document.getElementById('particleCountValue').textContent = '-';
+    document.getElementById('pm1Value').textContent = '-';
+    document.getElementById('pm10Value').textContent = '-';
+    document.getElementById('pm25Value').textContent = '-';
+    document.getElementById('co2Value').textContent = '-';
+    
     return;
   }
   
@@ -366,6 +373,18 @@ function updateAirQualityDisplay(data) {
   if (pressureElement && data.current?.pr) {
     pressureElement.textContent = `${(data.current.pr / 100).toFixed(1)} hPa`;
   }
+  
+  // Update new measurement values next to AQI
+  document.getElementById('particleCountValue').textContent =
+    data.current?.particles !== undefined && data.current?.particles !== null ? `${data.current.particles} /L` : '-';
+  document.getElementById('pm1Value').textContent =
+    data.current?.pm1 !== undefined && data.current?.pm1 !== null ? `${data.current.pm1} μg/m³` : '-';
+  document.getElementById('pm10Value').textContent =
+    data.current?.pm10 !== undefined && data.current?.pm10 !== null ? `${data.current.pm10} μg/m³` : '-';
+  document.getElementById('pm25Value').textContent =
+    data.current?.pm25 !== undefined && data.current?.pm25 !== null ? `${data.current.pm25} μg/m³` : '-';
+  document.getElementById('co2Value').textContent =
+    data.current?.co2 !== undefined && data.current?.co2 !== null ? `${data.current.co2} ppm` : '-';
 }
 
 // Update the UV index display

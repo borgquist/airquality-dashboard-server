@@ -365,7 +365,7 @@ async function fetchUvData() {
       if (hasChanged) {
         logger.info('UV API data refreshed successfully', {
           timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now?.uvi,
+          current_uvi: transformedData.now && transformedData.now.uvi,
           source: 'cached server'
         });
         
@@ -374,7 +374,7 @@ async function fetchUvData() {
       } else {
         logger.info('UV API data unchanged', {
           timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now?.uvi,
+          current_uvi: transformedData.now && transformedData.now.uvi,
           source: 'cached server'
         });
       }
@@ -437,7 +437,7 @@ async function fetchUvData() {
       if (hasChanged) {
         logger.info('UV API data refreshed successfully', {
           timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now?.uvi,
+          current_uvi: transformedData.now && transformedData.now.uvi,
           source: 'OpenUV API'
         });
         
@@ -446,7 +446,7 @@ async function fetchUvData() {
       } else {
         logger.info('UV API data unchanged', {
           timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now?.uvi,
+          current_uvi: transformedData.now && transformedData.now.uvi,
           source: 'OpenUV API'
         });
       }

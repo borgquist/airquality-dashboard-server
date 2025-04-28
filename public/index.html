@@ -22,7 +22,34 @@
       <div class="left-column">
         <div class="card main-aqi">
           <h2>Current AQI</h2>
-          <div id="aqiDisplay" class="aqi-value">-</div>
+          <div class="aqi-measurements-row">
+            <div class="aqi-side-values">
+              <div class="aqi-measurement-container">
+                <div class="aqi-measurement" id="particleCountValue">-</div>
+                <div class="measurement-label">Particles/L</div>
+              </div>
+              <div class="aqi-measurement-container">
+                <div class="aqi-measurement" id="pm10Value">-</div>
+                <div class="measurement-label">PM10</div>
+              </div>
+              <div class="aqi-measurement-container">
+                <div class="aqi-measurement" id="pm1Value">-</div>
+                <div class="measurement-label">PM1</div>
+              </div>
+            </div>
+            <div id="aqiDisplay" class="aqi-value">-</div>
+            <div class="aqi-side-values">
+              <div class="aqi-measurement-container">
+                <div class="aqi-measurement" id="pm25Value">-</div>
+                <div class="measurement-label">PM2.5</div>
+              </div>
+              <div class="aqi-measurement-container">
+                <div class="aqi-measurement" id="co2Value">-</div>
+                <div class="measurement-label">CO₂</div>
+              </div>
+            </div>
+          </div>
+          
           <div id="aqiCategory" class="aqi-category">-</div>
           
           <div class="weather-data-small">

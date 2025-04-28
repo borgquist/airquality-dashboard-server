@@ -880,4 +880,73 @@ body.bg-hazardous {
 .weather-data-small .label::before {
   display: inline;
   margin-right: 4px;
+}
+
+.aqi-measurement-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0.2rem 0;
+}
+
+.measurement-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Update existing styles to accommodate labels */
+.aqi-side-values {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 4rem;
+  margin: 0 0.5rem;
+}
+
+.aqi-measurement {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .aqi-side-values {
+    min-width: 3rem;
+    gap: 0.2rem;
+    margin: 0 0.3rem;
+  }
+  
+  .aqi-measurement {
+    font-size: 0.95rem;
+    min-width: 2.8rem;
+    padding: 0.1rem 0.3rem;
+  }
+  
+  .measurement-label {
+    font-size: 0.7rem;
+  }
+  
+  .aqi-measurement-container {
+    gap: 0.1rem;
+    margin: 0.1rem 0;
+  }
+}
+
+.aqi-measurements-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
 } 
