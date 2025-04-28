@@ -6,7 +6,8 @@ const winston = require('winston');
 const cors = require('cors');
 
 // Load configuration
-const serverConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+const configPath = path.join(__dirname, 'config.json');
+const serverConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 // Configure logger
 const logger = winston.createLogger({
@@ -16,7 +17,7 @@ const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: 'airquality.log' })
+    new winston.transports.File({ filename: path.join(__dirname, 'airquality.log') })
   ]
 });
 
@@ -31,11 +32,12 @@ const app = express();
 const PORT = serverConfig.port || process.env.PORT || 3000;
 
 // Create client config with necessary server config included
-const clientConfig = JSON.parse(fs.readFileSync('./public/config.json', 'utf8'));
+const clientConfigPath = path.join(__dirname, 'public', 'config.json');
+const clientConfig = JSON.parse(fs.readFileSync(clientConfigPath, 'utf8'));
 clientConfig.location = serverConfig.location;
 
 // Write updated client config
-fs.writeFileSync('./public/config.json', JSON.stringify(clientConfig, null, 2));
+fs.writeFileSync(clientConfigPath, JSON.stringify(clientConfig, null, 2));
 
 // Enable CORS
 app.use(cors());
@@ -275,7 +277,8 @@ app.get('/api/uvindex', async (req, res) => {
 // API endpoint to fetch version information
 app.get('/api/version', (req, res) => {
   try {
-    const versionInfo = JSON.parse(fs.readFileSync('./version.json', 'utf8'));
+    const versionPath = path.join(__dirname, 'version.json');
+    const versionInfo = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
     res.json(versionInfo);
   } catch (error) {
     logger.error('Error reading version information', { error: error.message });
