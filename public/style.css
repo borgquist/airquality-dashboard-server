@@ -86,12 +86,6 @@ h1 {
   margin-bottom: 0;
 }
 
-.left-column, .right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .card {
   background-color: var(--color-card-bg);
   border-radius: var(--border-radius);
@@ -403,19 +397,6 @@ body.bg-hazardous {
     margin-bottom: 1rem;
   }
   
-  .left-column {
-    grid-column: 1 / 2;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  
-  .right-column {
-    grid-column: 2 / 3;
-    display: flex;
-    flex-direction: column;
-  }
-  
   .main-aqi {
     grid-column: 1 / 2;
     grid-row: 1 / 2;
@@ -592,87 +573,82 @@ body.bg-hazardous {
     height: 150px;
     margin-top: 0.5rem;
   }
-  
-  .left-column, .right-column {
-    gap: 0.8rem;
-  }
 }
 
-/* Special media query for 7" Raspberry Pi screens in landscape */
-@media (orientation: landscape) and (min-width: 800px) and (max-height: 480px) {
+/* Special media query specifically for the 7" Raspberry Pi display in landscape */
+@media (orientation: landscape) and (max-height: 480px) {
+  /* Ensure the dashboard has a fixed layout */
   .dashboard {
     display: grid;
     grid-template-columns: 50% 50%;
-    gap: 0.6rem;
-    margin-bottom: 0.2rem;
-    max-height: 360px; /* Set a maximum height for the entire dashboard */
-    overflow: hidden;
+    grid-template-rows: none;
+    gap: 6px;
   }
   
-  .left-column, .right-column {
+  /* Set specific heights for the cards */
+  .card {
+    margin-bottom: 6px;
+    padding: 8px;
+  }
+  
+  /* Left column layout */
+  .left-column {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    height: 100%; /* Fill the container */
-    max-height: 360px; /* Ensure matching height */
-    overflow: hidden;
-  }
-  
-  .card {
-    margin: 0;
-    box-shadow: var(--shadow);
+    gap: 6px;
   }
   
   .main-aqi {
-    flex: 2; /* Take more space */
+    height: 210px;
   }
   
   .info-box {
-    flex: 1; /* Take less space */
+    height: 130px;
+  }
+  
+  /* Right column/UV Index card */
+  .right-column {
+    height: 346px; /* Exactly matches main-aqi + info-box + gap (210 + 130 + 6) */
   }
   
   .uv-index {
-    height: 100%; /* Fill the container height */
-    max-height: 360px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    height: 346px;
   }
   
-  .uv-current {
-    margin-top: 0;
-  }
-  
-  .uv-value-container {
-    margin: 0.5rem 0;
-  }
-  
-  .uv-safety-info {
-    margin: 0.3rem 0;
-    padding: 0.4rem;
-  }
-  
-  .uv-forecast-container {
-    flex: 1; /* Fill remaining space */
-    overflow: hidden;
-    margin-top: 0.3rem;
-  }
-  
+  /* Content adjustments */
   .uv-graph-container {
-    height: 105px;
-    margin-bottom: 0;
+    height: 100px;
   }
   
+  /* Text size adjustments */
   h1 {
     font-size: 1.6rem;
   }
   
-  #lastUpdated {
-    font-size: 0.75rem;
+  .card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
   }
   
-  .live-indicator {
-    font-size: 0.75rem;
+  .aqi-value {
+    font-size: 7rem;
+    margin: 0;
+  }
+  
+  .uv-value {
+    font-size: 5rem;
+  }
+  
+  .uv-category {
+    font-size: 1.1rem;
+    padding: 4px 8px;
+  }
+  
+  .uv-safety-info {
+    margin: 4px 0;
+    padding: 4px;
+    font-size: 0.9rem;
   }
 }
 
