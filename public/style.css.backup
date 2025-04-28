@@ -86,12 +86,6 @@ h1 {
   margin-bottom: 0;
 }
 
-.left-column, .right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .card {
   background-color: var(--color-card-bg);
   border-radius: var(--border-radius);
@@ -403,19 +397,6 @@ body.bg-hazardous {
     margin-bottom: 1rem;
   }
   
-  .left-column {
-    grid-column: 1 / 2;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  
-  .right-column {
-    grid-column: 2 / 3;
-    display: flex;
-    flex-direction: column;
-  }
-  
   .main-aqi {
     grid-column: 1 / 2;
     grid-row: 1 / 2;
@@ -592,10 +573,6 @@ body.bg-hazardous {
     height: 150px;
     margin-top: 0.5rem;
   }
-  
-  .left-column, .right-column {
-    gap: 0.8rem;
-  }
 }
 
 /* Special media query for 7" Raspberry Pi screens in landscape */
@@ -607,23 +584,24 @@ body.bg-hazardous {
     margin-bottom: 0.2rem;
   }
   
-  .left-column, .right-column {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+  .card {
+    margin-bottom: 0.6rem;
   }
   
   .main-aqi {
-    flex: 1 0 auto;
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
   }
   
   .info-box {
-    flex: 0 0 auto;
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
   }
   
   .uv-index {
-    flex: 1;
-    height: 100% !important;
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    height: 373px !important; /* Fixed height to match the combined height of AQI and weather cards */
     display: flex;
     flex-direction: column;
   }

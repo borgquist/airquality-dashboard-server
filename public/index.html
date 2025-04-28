@@ -19,42 +19,46 @@
     </header>
     
     <div class="dashboard">
-      <div class="card main-aqi">
-        <h2>Current AQI</h2>
-        <div id="aqiDisplay" class="aqi-value">-</div>
-        <div id="aqiCategory" class="aqi-category">-</div>
-      </div>
-      
-      <div class="card info-box">
-        <h2>Weather Data</h2>
-        <div class="info-data">
-          <div class="weather-item temperature">
-            <span class="label">Temperature:</span>
-            <span id="temperature" class="value">-</span>
-          </div>
-          <div class="weather-item humidity">
-            <span class="label">Humidity:</span>
-            <span id="humidity" class="value">-</span>
-          </div>
-          <div class="weather-item pressure">
-            <span class="label">Pressure:</span>
-            <span id="pressure" class="value">-</span>
+      <div class="left-column">
+        <div class="card main-aqi">
+          <h2>Current AQI</h2>
+          <div id="aqiDisplay" class="aqi-value">-</div>
+          <div id="aqiCategory" class="aqi-category">-</div>
+        </div>
+        
+        <div class="card info-box">
+          <h2>Weather Data</h2>
+          <div class="info-data">
+            <div class="weather-item temperature">
+              <span class="label">Temperature:</span>
+              <span id="temperature" class="value">-</span>
+            </div>
+            <div class="weather-item humidity">
+              <span class="label">Humidity:</span>
+              <span id="humidity" class="value">-</span>
+            </div>
+            <div class="weather-item pressure">
+              <span class="label">Pressure:</span>
+              <span id="pressure" class="value">-</span>
+            </div>
           </div>
         </div>
       </div>
       
-      <div class="card uv-index">
-        <h2>UV Index</h2>
-        <div class="uv-current">
-          <div class="uv-value-container">
-            <div id="uvIndexValue" class="uv-value">-</div>
-            <div id="uvIndexCategory" class="uv-category">-</div>
+      <div class="right-column">
+        <div class="card uv-index">
+          <h2>UV Index</h2>
+          <div class="uv-current">
+            <div class="uv-value-container">
+              <div id="uvIndexValue" class="uv-value">-</div>
+              <div id="uvIndexCategory" class="uv-category">-</div>
+            </div>
           </div>
-        </div>
-        <div id="uvSafetyInfo" class="uv-safety-info"></div>
-        <div class="uv-forecast-container">
-          <div class="uv-graph-container">
-            <canvas id="uvForecastGraph"></canvas>
+          <div id="uvSafetyInfo" class="uv-safety-info"></div>
+          <div class="uv-forecast-container">
+            <div class="uv-graph-container">
+              <canvas id="uvForecastGraph"></canvas>
+            </div>
           </div>
         </div>
       </div>
