@@ -340,36 +340,34 @@ function addUvSafetyTimes(forecastData) {
   if (currentUvi <= uvSafetyThreshold && morningUnsafeTime && morningUnsafeTime > now) {
     const morningTimeStr = formatTimeForDisplay(morningUnsafeTime);
     safetyMessage = `UV is fine until ${morningTimeStr}`;
-    
-    // Add evening information if available
-    if (eveningSafeTime && eveningSafeTime > morningUnsafeTime) {
-      const eveningTimeStr = formatTimeForDisplay(eveningSafeTime);
-      safetyMessage += ` and after ${eveningTimeStr}`;
-    }
   }
   // Current time is during high UV hours
   else if (currentUvi > uvSafetyThreshold && eveningSafeTime && eveningSafeTime > now) {
     const eveningTimeStr = formatTimeForDisplay(eveningSafeTime);
     safetyMessage = `UV will be fine after ${eveningTimeStr}`;
-    
-    // Add tomorrow morning information if available
-    if (tomorrowMorningUnsafeTime) {
-      const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
-      safetyMessage += ` until ${tomorrowMorningTimeStr} tomorrow`;
-    }
   }
   // Current time is evening after UV drops, show tomorrow's info
-  else if (currentUvi <= uvSafetyThreshold && tomorrowMorningUnsafeTime) {
-    const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
-    safetyMessage = `UV is fine now and until ${tomorrowMorningTimeStr} tomorrow`;
-  }
-  // Fallback if we can't determine specific times
-  else {
-    if (currentUvi <= uvSafetyThreshold) {
-      safetyMessage = 'UV is currently fine';
+  else if (currentUvi <= uvSafetyThreshold && eveningSafeTime && eveningSafeTime < now) {
+    if (tomorrowMorningUnsafeTime) {
+      const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
+      safetyMessage = `UV is fine until ${tomorrowMorningTimeStr} tomorrow`;
     } else {
-      safetyMessage = 'UV protection recommended';
+      safetyMessage = `UV is currently fine`;
     }
+  }
+  // If it's currently fine but no future unsafe time found (very late evening)
+  else if (currentUvi <= uvSafetyThreshold) {
+    safetyMessage = `UV is currently fine`;
+    
+    // Try to find next day's unsafe time
+    if (tomorrowMorningUnsafeTime) {
+      const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
+      safetyMessage = `UV is fine until ${tomorrowMorningTimeStr} tomorrow`;
+    }
+  }
+  // Fallback if we can't determine specific times but UV is high
+  else {
+    safetyMessage = 'UV protection recommended';
   }
   
   // Remove any existing safety info
