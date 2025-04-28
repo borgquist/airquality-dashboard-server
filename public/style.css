@@ -591,6 +591,14 @@ body.bg-hazardous {
     padding: 8px;
   }
   
+  /* Card spacer in landscape mode */
+  .card-spacer {
+    height: 20px;
+    min-height: 20px;
+    width: 100%;
+    background: transparent;
+  }
+  
   /* Left column layout */
   .left-column {
     display: flex;
@@ -600,8 +608,8 @@ body.bg-hazardous {
   }
   
   .left-column .main-aqi {
-    height: 214px; /* Adjusted to account for margin */
-    margin-bottom: 20px; /* Explicit margin between cards */
+    height: 200px; /* Adjusted to account for spacer */
+    margin-bottom: 0;
   }
   
   .left-column .info-box {
@@ -973,4 +981,10 @@ body.bg-hazardous {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Card spacer */
+.card-spacer {
+  height: 20px;
+  width: 100%;
 } 
