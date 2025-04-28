@@ -791,7 +791,7 @@ function createUvForecastGraph(data) {
   const cityName = config.location?.cityName || 'Abu Dhabi';
   const timezoneName = config.location?.timeZone?.name || 'UTC+4';
   
-  // Filter for multiple days of data
+  // Filter for next 24 hours of data
   const multipleDaysForecast = forecastData.filter(entry => {
     const entryTime = new Date(entry.time);
     return entryTime > currentTime && 
@@ -809,6 +809,9 @@ function createUvForecastGraph(data) {
     return new Date(a.time) - new Date(b.time);
   });
   
+  // Check if we need to add more data points for a complete 24-hour view
+  const enhancedForecast = generateCompleteTimelineData(multipleDaysForecast, currentTime);
+  
   // Create arrays for labels (times) and data
   const times = [];
   const uviValues = [];
@@ -819,7 +822,7 @@ function createUvForecastGraph(data) {
   
   // Process each entry for the chart
   let previousDay = null;
-  multipleDaysForecast.forEach(entry => {
+  enhancedForecast.forEach(entry => {
     const entryTime = new Date(entry.time);
     
     // Format the time to show the full hour
@@ -953,6 +956,84 @@ function createUvForecastGraph(data) {
   } catch (e) {
     console.warn('Could not add safety threshold line:', e);
   }
+}
+
+// Function to generate a complete 24-hour timeline by interpolating between sparse data points
+function generateCompleteTimelineData(forecastData, currentTime) {
+  // If we have enough data points (at least 8 covering the 24 hours), no need to interpolate
+  if (forecastData.length >= 8) {
+    return forecastData;
+  }
+  
+  const result = [];
+  
+  // Insert current time data point if we have a valid UV reading
+  if (lastInterpolatedUvi !== null) {
+    result.push({
+      time: new Date(currentTime),
+      uvi: lastInterpolatedUvi
+    });
+  }
+  
+  // Add the original forecast data points
+  for (const point of forecastData) {
+    result.push({
+      time: new Date(point.time),
+      uvi: point.uvi
+    });
+  }
+  
+  // Ensure we have a minimum of 8 points to make a nice graph
+  // If we have data for the next 24 hours but it's sparse, add more interpolated points
+  if (forecastData.length > 0 && forecastData.length < 8) {
+    const lastPoint = forecastData[forecastData.length - 1];
+    const endTime = new Date(lastPoint.time);
+    
+    // Check if we have less than 24 hours coverage
+    if (endTime.getTime() - currentTime.getTime() < 24 * 60 * 60 * 1000) {
+      // Add a zero point at exactly 24 hours from now
+      const dayLaterTime = new Date(currentTime.getTime() + 24 * 60 * 60 * 1000);
+      result.push({
+        time: dayLaterTime,
+        uvi: 0  // End with zero UV index (nighttime)
+      });
+    }
+    
+    // Sort all points by time
+    result.sort((a, b) => a.time.getTime() - b.time.getTime());
+    
+    // Now interpolate between points to create a smoother curve
+    const morePoints = [];
+    for (let i = 0; i < result.length - 1; i++) {
+      const curr = result[i];
+      const next = result[i+1];
+      
+      // Calculate time difference in hours
+      const timeDiffHours = (next.time.getTime() - curr.time.getTime()) / (1000 * 60 * 60);
+      
+      // If points are more than 3 hours apart, add interpolated points
+      if (timeDiffHours > 3) {
+        const numPointsToAdd = Math.floor(timeDiffHours / 3);
+        
+        for (let j = 1; j <= numPointsToAdd; j++) {
+          const ratio = j / (numPointsToAdd + 1);
+          const interpTime = new Date(curr.time.getTime() + ratio * (next.time.getTime() - curr.time.getTime()));
+          const interpUvi = curr.uvi + ratio * (next.uvi - curr.uvi);
+          
+          morePoints.push({
+            time: interpTime,
+            uvi: interpUvi
+          });
+        }
+      }
+    }
+    
+    // Add interpolated points and sort again
+    result.push(...morePoints);
+    result.sort((a, b) => a.time.getTime() - b.time.getTime());
+  }
+  
+  return result;
 }
 
 // Helper function for safe logging
