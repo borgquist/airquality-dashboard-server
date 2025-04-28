@@ -605,35 +605,61 @@ body.bg-hazardous {
     grid-template-columns: 50% 50%;
     gap: 0.6rem;
     margin-bottom: 0.2rem;
+    max-height: 360px; /* Set a maximum height for the entire dashboard */
+    overflow: hidden;
   }
   
   .left-column, .right-column {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
+    height: 100%; /* Fill the container */
+    max-height: 360px; /* Ensure matching height */
+    overflow: hidden;
+  }
+  
+  .card {
+    margin: 0;
+    box-shadow: var(--shadow);
   }
   
   .main-aqi {
-    flex: 1 0 auto;
+    flex: 2; /* Take more space */
   }
   
   .info-box {
-    flex: 0 0 auto;
-  }
-  
-  .right-column {
-    margin-bottom: 6px; /* Trim a few pixels to match exactly */
+    flex: 1; /* Take less space */
   }
   
   .uv-index {
-    flex: 1;
-    height: calc(100% - 6px) !important; /* Subtract the same amount as the margin */
+    height: 100%; /* Fill the container height */
+    max-height: 360px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
   
+  .uv-current {
+    margin-top: 0;
+  }
+  
+  .uv-value-container {
+    margin: 0.5rem 0;
+  }
+  
+  .uv-safety-info {
+    margin: 0.3rem 0;
+    padding: 0.4rem;
+  }
+  
+  .uv-forecast-container {
+    flex: 1; /* Fill remaining space */
+    overflow: hidden;
+    margin-top: 0.3rem;
+  }
+  
   .uv-graph-container {
-    height: 110px;
+    height: 105px;
     margin-bottom: 0;
   }
   
