@@ -942,7 +942,7 @@ function updateInterpolatedUvIndex() {
     // Update the display with the interpolated value
     updateUvIndexDisplay(dataCopy);
     
-    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(4)}`);
+    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(2)}`);
   }
 }
 
