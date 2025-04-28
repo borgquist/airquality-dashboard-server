@@ -143,11 +143,22 @@ function notifyClients(eventType) {
     timestamp: new Date().toISOString()
   };
   
+  // Log the number of connected clients
+  logger.info(`Notifying ${sseClients.size} clients of ${eventType} update`);
+  
+  // Send the event to all connected clients
   sseClients.forEach(client => {
-    client.write(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
+    try {
+      client.write(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
+    } catch (error) {
+      // If there's an error sending to a client, remove it from the set
+      logger.error(`Error sending ${eventType} event to client: ${error.message}`);
+      sseClients.delete(client);
+    }
   });
   
-  logger.info(`Notified ${sseClients.size} clients of ${eventType} update`);
+  // Log the event details
+  logger.info(`Sent ${eventType} event to ${sseClients.size} clients`);
 }
 
 // Start the polling for external API
@@ -170,10 +181,19 @@ function startExternalApiPolling() {
     externalApiTimer = setInterval(() => {
       fetchExternalData(serverConfig.externalApiUrl)
         .then(data => {
+          // Check if the data has changed
+          const hasChanged = JSON.stringify(data) !== JSON.stringify(lastFetchedData);
+          
+          // Update the cached data
           lastFetchedData = data;
-          console.log('Data updated from external API');
-          // Notify clients on each update
-          notifyClients('aqi-update');
+          
+          if (hasChanged) {
+            console.log('Data updated from external API');
+            // Notify clients on each update
+            notifyClients('aqi-update');
+          } else {
+            console.log('Data unchanged from external API');
+          }
         })
         .catch(error => {
           console.error('Failed to update data:', error.message);
@@ -335,18 +355,29 @@ async function fetchUvData() {
       // Transform the data to match our expected format
       const transformedData = transformOpenUvData(data);
       
+      // Check if the data has changed
+      const hasChanged = JSON.stringify(transformedData) !== JSON.stringify(lastUvData);
+      
       // Update cache
       lastUvData = transformedData;
       lastUvFetchTime = Date.now();
       
-      logger.info('UV API data refreshed successfully', {
-        timestamp: new Date().toISOString(),
-        current_uvi: transformedData.now?.uvi,
-        source: 'cached server'
-      });
-      
-      // Notify clients of new UV data
-      notifyClients('uv-update');
+      if (hasChanged) {
+        logger.info('UV API data refreshed successfully', {
+          timestamp: new Date().toISOString(),
+          current_uvi: transformedData.now?.uvi,
+          source: 'cached server'
+        });
+        
+        // Notify clients of new UV data
+        notifyClients('uv-update');
+      } else {
+        logger.info('UV API data unchanged', {
+          timestamp: new Date().toISOString(),
+          current_uvi: transformedData.now?.uvi,
+          source: 'cached server'
+        });
+      }
       
     } catch (error) {
       logger.error('Error fetching from cached UV API server', { 
@@ -396,18 +427,29 @@ async function fetchUvData() {
       // Transform the OpenUV API data format to match our expected format
       const transformedData = transformOpenUvData(data);
       
+      // Check if the data has changed
+      const hasChanged = JSON.stringify(transformedData) !== JSON.stringify(lastUvData);
+      
       // Update cache
       lastUvData = transformedData;
       lastUvFetchTime = Date.now();
       
-      logger.info('UV API data refreshed successfully', {
-        timestamp: new Date().toISOString(),
-        current_uvi: transformedData.now?.uvi,
-        source: 'OpenUV API'
-      });
-      
-      // Notify clients of new UV data
-      notifyClients('uv-update');
+      if (hasChanged) {
+        logger.info('UV API data refreshed successfully', {
+          timestamp: new Date().toISOString(),
+          current_uvi: transformedData.now?.uvi,
+          source: 'OpenUV API'
+        });
+        
+        // Notify clients of new UV data
+        notifyClients('uv-update');
+      } else {
+        logger.info('UV API data unchanged', {
+          timestamp: new Date().toISOString(),
+          current_uvi: transformedData.now?.uvi,
+          source: 'OpenUV API'
+        });
+      }
       
     } catch (error) {
       logger.error('Error fetching from UV API', { 

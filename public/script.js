@@ -2,6 +2,9 @@
 let config;
 let uvChart;
 let eventSource;
+let uvForecastData = null; // Store UV forecast data for interpolation
+let uvInterpolationTimer = null; // Timer for interpolating UV values
+let lastAqiData = null; // Store the last AQI data received
 
 // Register Chart.js annotation plugin if available
 if (window.ChartAnnotation) {
@@ -60,7 +63,8 @@ function setupEventSource() {
   eventSource.addEventListener('aqi-update', (event) => {
     const data = JSON.parse(event.data);
     debugPrint(`Received AQI update from server: ${data.timestamp}`);
-    fetchAirQualityData();
+    // Force a fresh fetch of AQI data when we receive an update event
+    fetchAirQualityData(true);
   });
   
   // Listen for UV updates
@@ -148,10 +152,16 @@ function initDashboard() {
   
   setInterval(fetchAirQualityData, refreshIntervalAqi);
   setInterval(fetchUvIndexData, refreshIntervalUv);
+  
+  // Set up UV interpolation timer (update every minute)
+  if (uvInterpolationTimer) {
+    clearInterval(uvInterpolationTimer);
+  }
+  uvInterpolationTimer = setInterval(updateInterpolatedUvIndex, 60000); // Update every minute
 }
 
 // Fetch the air quality data from the server
-async function fetchAirQualityData() {
+async function fetchAirQualityData(forceRefresh = false) {
   try {
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();
@@ -161,7 +171,19 @@ async function fetchAirQualityData() {
     }
     
     const data = await response.json();
+    
+    // Store the data for comparison
+    lastAqiData = data;
+    
+    // Update the display
     updateAirQualityDisplay(data);
+    
+    // Update the last updated time
+    const currentTime = new Date();
+    document.getElementById('lastUpdatedTime').textContent = 
+      `Last updated: ${currentTime.toLocaleTimeString()}`;
+      
+    debugPrint(`AQI data updated: ${JSON.stringify(data.current)}`);
   } catch (error) {
     console.error('Error fetching air quality data:', error);
     document.getElementById('lastUpdatedTime').textContent = 
@@ -180,6 +202,12 @@ async function fetchUvIndexData() {
     }
     
     const data = await response.json();
+    
+    // Store the forecast data for interpolation
+    if (data && data.forecast && data.forecast.length > 0) {
+      uvForecastData = data;
+    }
+    
     updateUvIndexDisplay(data);
   } catch (error) {
     console.error('Error fetching UV index data:', error);
@@ -865,6 +893,30 @@ function createUvForecastGraph(data) {
 // Helper function for safe logging
 function debugPrint(message) {
   console.log(message);
+}
+
+// Update UV index display with interpolated value
+function updateInterpolatedUvIndex() {
+  if (!uvForecastData || !uvForecastData.forecast || uvForecastData.forecast.length === 0) {
+    return; // No forecast data available
+  }
+  
+  // Create a copy of the data to avoid modifying the original
+  const dataCopy = JSON.parse(JSON.stringify(uvForecastData));
+  
+  // Interpolate the current UV index value
+  const adjustedForecast = interpolateAndAdjustTimes(dataCopy.forecast);
+  const interpolatedUvi = getCurrentInterpolatedUvi(adjustedForecast);
+  
+  if (interpolatedUvi >= 0) {
+    // Update the current UV index value
+    dataCopy.now = { uvi: interpolatedUvi };
+    
+    // Update the display with the interpolated value
+    updateUvIndexDisplay(dataCopy);
+    
+    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(1)}`);
+  }
 }
 
 // Start the dashboard
