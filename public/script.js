@@ -235,7 +235,7 @@ function updateUvIndexDisplay(data) {
     return;
   }
   
-  document.getElementById('uvIndexValue').textContent = currentUvIndex;
+  document.getElementById('uvIndexValue').textContent = currentUvIndex.toFixed(1);
   
   // Set UV category and color
   const uvCategory = getUVCategory(currentUvIndex);
@@ -667,7 +667,7 @@ function createUvForecastGraph(forecastData) {
             label: function(context) {
               const value = context.raw;
               const category = getUVCategory(value).name;
-              return `UV Index: ${value} (${category})`;
+              return `UV Index: ${value.toFixed(1)} (${category})`;
             }
           }
         }
