@@ -2,8 +2,12 @@
 let config;
 let uvChart;
 
-// Register Chart.js annotation plugin
-Chart.register(ChartAnnotation);
+// Register Chart.js annotation plugin if available
+if (window.ChartAnnotation) {
+  Chart.register(window.ChartAnnotation);
+} else {
+  console.warn('Chart.js annotation plugin not found');
+}
 
 // Fetch configuration and initialize
 async function loadConfig() {
@@ -340,7 +344,7 @@ function addUvSafetyTimes(data) {
   // Build the safety message based on current time and UV level
   let safetyMessage = '';
   
-  // Current UV is from the API, not our calculation - need to use the API value
+  // Get the current UV value from the API response
   const apiCurrentUvi = data.now?.uvi || -1;
   const isCurrentUvSafe = apiCurrentUvi <= uvSafetyThreshold;
   
@@ -630,57 +634,31 @@ function createUvForecastGraph(data) {
     uvChart.destroy();
   }
   
-  // Add horizontal line at UV safety threshold
-  const safeUvLine = {
-    type: 'line',
-    label: 'Safe UV Level',
-    data: dataPoints.map(point => ({
-      x: point.x,
-      y: uvSafetyThreshold
-    })),
-    borderColor: 'rgba(0, 150, 0, 0.5)',
-    borderWidth: 2,
-    borderDash: [5, 5],
-    pointRadius: 0,
-    fill: false,
-    tension: 0
-  };
-  
-  // Create gradient to highlight safe/unsafe areas
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, 'rgba(231, 76, 60, 0.3)'); // Unsafe - Red
-  gradient.addColorStop(0.5, 'rgba(231, 76, 60, 0.1)');
-  
+  // Create line graph with basic configuration
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
-      datasets: [
-        {
-          label: 'UV Index',
-          data: dataPoints,
-          parsing: {
-            xAxisKey: 'x',
-            yAxisKey: 'y'
-          },
-          borderColor: function(context) {
-            // Use green for safe values, red for unsafe
-            const index = context.dataIndex;
-            return dataPoints[index]?.safe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
-          },
-          pointBackgroundColor: function(context) {
-            const index = context.dataIndex;
-            return dataPoints[index]?.safe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
-          },
-          borderWidth: 3,
-          tension: 0.2,
-          fill: {
-            target: 'origin',
-            above: 'rgba(231, 76, 60, 0.1)',  // Red above threshold
-            below: 'rgba(46, 204, 113, 0.1)'  // Green below threshold
-          }
+      labels: times,
+      datasets: [{
+        label: 'UV Index',
+        data: uviValues,
+        borderColor: function(context) {
+          // Use green for safe values, red for unsafe
+          const index = context.dataIndex;
+          return uviValues[index] <= uvSafetyThreshold ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
         },
-        safeUvLine
-      ]
+        pointBackgroundColor: function(context) {
+          const index = context.dataIndex;
+          return uviValues[index] <= uvSafetyThreshold ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
+        },
+        borderWidth: 3,
+        tension: 0.2,
+        fill: {
+          target: 'origin',
+          above: 'rgba(231, 76, 60, 0.1)',  // Red above threshold
+          below: 'rgba(46, 204, 113, 0.1)'  // Green below threshold
+        }
+      }]
     },
     options: {
       responsive: true,
@@ -699,14 +677,6 @@ function createUvForecastGraph(data) {
           }
         },
         x: {
-          type: 'time',
-          time: {
-            unit: 'hour',
-            displayFormats: {
-              hour: 'ha'
-            },
-            tooltipFormat: 'ha'
-          },
           title: {
             display: true,
             text: `Next 24 Hours (Local Time)`
@@ -727,32 +697,41 @@ function createUvForecastGraph(data) {
         tooltip: {
           callbacks: {
             label: function(context) {
-              const value = context.raw.y;
+              const value = context.raw;
               const category = getUVCategory(value).name;
               return `UV Index: ${value.toFixed(1)} (${category})`;
-            }
-          }
-        },
-        annotation: {
-          annotations: {
-            safetyThreshold: {
-              type: 'line',
-              yMin: uvSafetyThreshold,
-              yMax: uvSafetyThreshold,
-              borderColor: 'rgba(0, 150, 0, 0.7)',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              label: {
-                content: 'Safe level',
-                enabled: true,
-                position: 'start'
-              }
             }
           }
         }
       }
     }
   });
+  
+  // Add a horizontal line for the safety threshold if annotation plugin is available
+  try {
+    if (Chart.Annotation) {
+      uvChart.options.plugins.annotation = {
+        annotations: {
+          line1: {
+            type: 'line',
+            yMin: uvSafetyThreshold,
+            yMax: uvSafetyThreshold,
+            borderColor: 'rgba(0, 150, 0, 0.7)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+              content: 'Safe level',
+              enabled: true,
+              position: 'start'
+            }
+          }
+        }
+      };
+      uvChart.update();
+    }
+  } catch (e) {
+    console.warn('Could not add safety threshold line:', e);
+  }
 }
 
 // Helper function for safe logging

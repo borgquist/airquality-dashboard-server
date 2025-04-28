@@ -108,11 +108,7 @@ function startExternalApiPolling() {
   if (serverConfig.externalApiUrl) {
     console.log(`Starting polling of external API at interval ${serverConfig.pollingIntervalSec || 20} seconds`);
     // Initial fetch
-    fetchExternalData(
-      serverConfig.externalApiUrl, 
-      serverConfig.location.latitude, 
-      serverConfig.location.longitude
-    )
+    fetchExternalData(serverConfig.externalApiUrl)
       .then(data => {
         lastFetchedData = data;
         console.log('Initial data fetched from external API');
@@ -123,11 +119,7 @@ function startExternalApiPolling() {
 
     // Set up interval for polling
     externalApiTimer = setInterval(() => {
-      fetchExternalData(
-        serverConfig.externalApiUrl, 
-        serverConfig.location.latitude, 
-        serverConfig.location.longitude
-      )
+      fetchExternalData(serverConfig.externalApiUrl)
         .then(data => {
           lastFetchedData = data;
           console.log('Data updated from external API');
@@ -151,7 +143,7 @@ function stopExternalApiPolling() {
 }
 
 // Fetch data from external API
-async function fetchExternalData(apiUrl, lat, lon) {
+async function fetchExternalData(apiUrl) {
   try {
     // Handle the case when apiUrl is not provided
     if (!apiUrl) {
@@ -163,24 +155,57 @@ async function fetchExternalData(apiUrl, lat, lon) {
     
     // Ensure the API URL has a protocol
     if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-      apiUrl = 'https://' + apiUrl;
+      // For local network addresses, default to http
+      if (apiUrl.includes('192.168.') || apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost')) {
+        apiUrl = 'http://' + apiUrl;
+      } else {
+        apiUrl = 'https://' + apiUrl;
+      }
     }
     
-    // Use default location if not provided
-    if (!lat) lat = serverConfig.location.latitude;
-    if (!lon) lon = serverConfig.location.longitude;
+    // Use the API URL directly without appending lat/lon parameters
+    const url = apiUrl;
+    console.log(`Attempting to connect to: ${url} at ${new Date().toISOString()}`);
     
-    const url = `${apiUrl}?lat=${lat}&lon=${lon}`;
-    console.log(`Fetching data from: ${url}`);
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
+    try {
+      // Log DNS lookup attempt
+      console.log(`Performing DNS lookup for: ${url.replace('http://', '').replace('https://', '').split('/')[0]}`);
+      
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'AirQualityDashboard/1.0',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        },
+        timeout: 10000,
+        size: 0, // No size limit
+        follow: 5, // Follow up to 5 redirects
+        agent: null // Use the default agent (important for Node.js connections)
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log(`Received response with status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log(`Successfully parsed JSON data from: ${url}`);
+      return data;
+    } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        throw new Error('API request timed out after 10 seconds');
+      }
+      throw fetchError;
     }
-    
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.error('Error in fetchExternalData:', error.message);
     throw error;
@@ -347,15 +372,16 @@ app.get('/api/airquality', async (req, res) => {
     // Ensure the API URL has a protocol
     let apiUrl = serverConfig.externalApiUrl;
     if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-      apiUrl = 'https://' + apiUrl;
+      // For local network addresses, default to http
+      if (apiUrl.includes('192.168.') || apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost')) {
+        apiUrl = 'http://' + apiUrl;
+      } else {
+        apiUrl = 'https://' + apiUrl;
+      }
     }
-
-    // If lat and lon are provided, use them for specific location data
-    const lat = req.query.lat || serverConfig.defaultLatitude;
-    const lon = req.query.lon || serverConfig.defaultLongitude;
     
-    // Check cache first
-    const cacheKey = `airquality-${lat}-${lon}`;
+    // Create a simple cache key for the data
+    const cacheKey = `airquality-data`;
     
     // Check if we have cached data and it's not expired
     if (dataCache[cacheKey] && Date.now() - dataCache[cacheKey].timestamp < CACHE_TTL) {
@@ -365,7 +391,8 @@ app.get('/api/airquality', async (req, res) => {
     
     console.log(`[${clientIp}] First time fetch or cache expired, fetching new air quality data`);
     
-    const data = await fetchExternalData(apiUrl, lat, lon);
+    // Fetch data directly from the API without appending lat/lon
+    const data = await fetchExternalData(apiUrl);
     
     // Cache the response
     dataCache[cacheKey] = {
