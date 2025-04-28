@@ -454,6 +454,8 @@ body.bg-hazardous {
     display: grid;
     grid-template-columns: 60% 40%; /* AQI takes 60%, UV takes 40% */
     gap: 6px;
+    margin-top: -5px;
+    margin-bottom: 5px;
   }
   
   .aqi-value {

@@ -6,7 +6,9 @@
   "externalApiUrl": "YOUR_API_URL_HERE",
   "uvApi": {
     "url": "https://api.openuv.io/api/v1/forecast",
-    "apiKey": "YOUR_OPENUV_API_KEY_HERE"
+    "apiKey": "YOUR_OPENUV_API_KEY_HERE",
+    "useCachedServer": false,
+    "cachedServerUrl": "http://hostname:8001/data"
   },
   "location": {
     "cityName": "Abu Dhabi",
