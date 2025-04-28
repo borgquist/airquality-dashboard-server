@@ -49,10 +49,10 @@ function setupEventSource() {
     }
     
     // Update status indicator
-    const indicator = document.getElementById('liveIndicator');
+    const indicator = document.querySelector('.live-indicator');
     if (indicator) {
       indicator.classList.remove('disconnected');
-      indicator.innerHTML = '<span class="pulse"></span> Live Updates';
+      indicator.innerHTML = '<span class="pulse"></span>Live Updates';
     }
   });
   
@@ -92,10 +92,10 @@ function setupEventSource() {
     eventSource.close();
     
     // Update status indicator
-    const indicator = document.getElementById('liveIndicator');
+    const indicator = document.querySelector('.live-indicator');
     if (indicator) {
       indicator.classList.add('disconnected');
-      indicator.innerHTML = '<span class="pulse"></span> Connection lost, reconnecting...';
+      indicator.innerHTML = '<span class="pulse"></span>Connection lost, reconnecting...';
     }
     
     // If we're not already attempting to reconnect
