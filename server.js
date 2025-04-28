@@ -146,6 +146,16 @@ function notifyClients(eventType) {
   // Log the number of connected clients
   logger.info(`Notifying ${sseClients.size} clients of ${eventType} update`);
   
+  // Log specific data being sent in notifications
+  if (eventType === 'aqi-update' && lastFetchedData && lastFetchedData.current && lastFetchedData.current.pm25) {
+    console.log(`SSE EVENT NOTIFICATION - Current PM2.5 AQI US: ${lastFetchedData.current.pm25.aqius} (conc: ${lastFetchedData.current.pm25.conc})`);
+    logger.info(`SSE ${eventType} notification data`, {
+      pm25_aqius: lastFetchedData.current.pm25.aqius,
+      pm25_conc: lastFetchedData.current.pm25.conc,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
   // Send the event to all connected clients
   sseClients.forEach(client => {
     try {
@@ -552,6 +562,18 @@ app.get('/api/airquality', async (req, res) => {
     // Check if we have cached data and it's not expired (and not a forced refresh)
     if (!forceRefresh && dataCache[cacheKey] && Date.now() - dataCache[cacheKey].timestamp < CACHE_TTL) {
       console.log(`[${clientIp}] Using cached air quality data`);
+      
+      // Log what we're sending to client from cache
+      if (dataCache[cacheKey].data && dataCache[cacheKey].data.current && dataCache[cacheKey].data.current.pm25) {
+        console.log(`SENDING TO CLIENT [${clientIp}] (CACHED): PM2.5 AQI US: ${dataCache[cacheKey].data.current.pm25.aqius} (conc: ${dataCache[cacheKey].data.current.pm25.conc})`);
+        logger.info(`Sent cached data to client ${clientIp}`, {
+          pm25_aqius: dataCache[cacheKey].data.current.pm25.aqius,
+          pm25_conc: dataCache[cacheKey].data.current.pm25.conc,
+          cached: true,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       return res.json(dataCache[cacheKey].data);
     }
     
@@ -563,6 +585,13 @@ app.get('/api/airquality', async (req, res) => {
     // Log PM2.5 AQI US value when responding to API request
     if (data && data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
       console.log(`[${clientIp}] PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc})`);
+      console.log(`SENDING TO CLIENT [${clientIp}] (FRESH): PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc})`);
+      logger.info(`Sent fresh data to client ${clientIp}`, {
+        pm25_aqius: data.current.pm25.aqius,
+        pm25_conc: data.current.pm25.conc,
+        cached: false,
+        timestamp: new Date().toISOString()
+      });
     }
     
     // Cache the response
