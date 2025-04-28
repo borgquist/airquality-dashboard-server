@@ -238,47 +238,29 @@ async function fetchExternalData(apiUrl) {
     const url = apiUrl;
     console.log(`Attempting to connect to: ${url} at ${new Date().toISOString()}`);
     
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    // Log DNS lookup attempt
+    console.log(`Performing DNS lookup for: ${url.replace('http://', '').replace('https://', '').split('/')[0]}`);
     
-    try {
-      // Log DNS lookup attempt
-      console.log(`Performing DNS lookup for: ${url.replace('http://', '').replace('https://', '').split('/')[0]}`);
-      
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'AirQualityDashboard/1.0',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
-        },
-        timeout: 10000,
-        size: 0, // No size limit
-        follow: 5, // Follow up to 5 redirects
-        agent: null // Use the default agent (important for Node.js connections)
-      });
-      
-      clearTimeout(timeoutId);
-      
-      console.log(`Received response with status: ${response.status}`);
-      
-      if (!response.ok) {
-        throw new Error(`API responded with status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`Successfully parsed JSON data from: ${url}`);
-      return data;
-    } catch (fetchError) {
-      if (fetchError.name === 'AbortError') {
-        throw new Error('API request timed out after 10 seconds');
-      }
-      throw fetchError;
+    // Use a simple timeout approach instead of AbortController
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000);
+    });
+    
+    // Race the fetch against the timeout
+    const response = await Promise.race([
+      fetch(url),
+      timeoutPromise
+    ]);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
+    
+    const data = await response.json();
+    console.log(`Successfully fetched data from: ${url}`);
+    return data;
   } catch (error) {
-    console.error('Error in fetchExternalData:', error.message);
+    console.error(`Error in fetchExternalData: ${error.message}`);
     throw error;
   }
 }
