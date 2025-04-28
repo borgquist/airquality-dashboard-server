@@ -5,8 +5,22 @@ const fetch = require('node-fetch');
 const winston = require('winston');
 const cors = require('cors');
 
-// Load configuration
+// Check if config.json exists, if not, copy from example
 const configPath = path.join(__dirname, 'config.json');
+const configExamplePath = path.join(__dirname, 'config.json.example');
+
+// Create config.json from example if it doesn't exist
+if (!fs.existsSync(configPath) && fs.existsSync(configExamplePath)) {
+  try {
+    fs.copyFileSync(configExamplePath, configPath);
+    console.log('Created new config.json from example template');
+  } catch (error) {
+    console.error('Error creating config.json from template:', error);
+    process.exit(1);
+  }
+}
+
+// Load configuration
 const serverConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 // Configure logger

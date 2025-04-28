@@ -19,17 +19,29 @@ A simple web server that displays real-time air quality data from an external AP
 ## Installation
 
 1. Clone this repository
-2. Update the `config.json` file with your API endpoint
+2. The server will automatically create a `config.json` file from the template on first run
+3. Update the `config.json` file with your specific settings (API endpoint, location, etc.)
 
 ## Configuration
 
-The `config.json` file contains the following settings:
+The server uses a `config.json` file for settings. If it doesn't exist, it will be created automatically from `config.json.example`.
 
-- `apiUrl`: The URL to fetch air quality data from
-- `refreshIntervalSec`: How often the dashboard should refresh (in seconds)
-- `aqiThresholds`: Threshold values for different AQI categories
-- `colors`: Color scheme for different AQI categories
-- `displayOptions`: Toggle visibility of different dashboard components
+The configuration includes:
+
+- `port`: The port number the server runs on (default: 3000)
+- `logLevel`: Logging level (info, debug, error, etc.)
+- `pollingIntervalSec`: How often to fetch data from external API (in seconds)
+- `uvRefreshIntervalSec`: How often to fetch UV index data (in seconds)
+- `externalApiUrl`: The URL to fetch air quality data from **(REQUIRED - you must set this)**
+- `location`: Geographic coordinates for your location **(REQUIRED for UV index)**
+  - `latitude`: Your location's latitude
+  - `longitude`: Your location's longitude
+  - `cityName`: Your city name (for display purposes)
+  - `timeZone`: Time zone information
+
+### Important Note About Configuration
+
+The `config.json` file is not tracked by Git to prevent overwriting your personal settings during updates. After pulling updates from the repository, your configuration will remain unchanged.
 
 ## Running the application
 
@@ -41,7 +53,7 @@ Simply execute the start script:
 
 This will:
 1. Install any missing dependencies
-2. Start the server on port 3000
+2. Start the server on port 3000 (or your configured port)
 3. Log server activity to `airquality.log`
 4. Log startup information to `startup.log`
 
@@ -60,5 +72,5 @@ http://localhost:3000
 You can modify the `config.json` file to:
 - Change the refresh interval
 - Adjust AQI thresholds
-- Change the color scheme
+- Configure the color scheme for AQI levels
 - Toggle display options 

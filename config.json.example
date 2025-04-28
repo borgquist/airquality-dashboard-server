@@ -1,0 +1,15 @@
+{
+  "port": 3000,
+  "logLevel": "info",
+  "pollingIntervalSec": 20,
+  "uvRefreshIntervalSec": 1800,
+  "externalApiUrl": "YOUR_API_URL_HERE",
+  "location": {
+    "cityName": "Abu Dhabi",
+    "latitude": 24.4539,
+    "longitude": 54.3773,
+    "timeZone": {
+      "name": "UTC+4"
+    }
+  }
+} 
