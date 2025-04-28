@@ -183,6 +183,11 @@ async function fetchAirQualityData(forceRefresh = false) {
     // Update the display
     updateAirQualityDisplay(data);
     
+    // Log PM2.5 AQI US value
+    if (data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
+      console.log(`PM2.5 AQI US: ${data.current.pm25.aqius}`, data.current.pm25);
+    }
+    
     // Update the last updated time
     const currentTime = new Date();
     document.getElementById('lastUpdatedTime').textContent = 
