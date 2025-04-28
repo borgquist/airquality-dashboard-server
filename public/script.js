@@ -5,6 +5,7 @@ let eventSource;
 let uvForecastData = null; // Store UV forecast data for interpolation
 let uvInterpolationTimer = null; // Timer for interpolating UV values
 let lastAqiData = null; // Store the last AQI data received
+let lastInterpolatedUvi = null; // Store the last interpolated UV value
 
 // Register Chart.js annotation plugin if available
 if (window.ChartAnnotation) {
@@ -206,6 +207,34 @@ async function fetchUvIndexData() {
     // Store the forecast data for interpolation
     if (data && data.forecast && data.forecast.length > 0) {
       uvForecastData = data;
+      
+      // Check if we have a stored interpolated value
+      try {
+        const storedUvi = localStorage.getItem('lastInterpolatedUvi');
+        const storedTime = localStorage.getItem('lastUvUpdateTime');
+        
+        if (storedUvi && storedTime) {
+          const lastUpdateTime = parseInt(storedTime);
+          const now = new Date().getTime();
+          const timeDiff = now - lastUpdateTime;
+          
+          // If the stored value is less than 5 minutes old, use it
+          if (timeDiff < 5 * 60 * 1000) {
+            lastInterpolatedUvi = parseFloat(storedUvi);
+            
+            // Create a copy of the data with the interpolated value
+            const dataCopy = JSON.parse(JSON.stringify(data));
+            dataCopy.now = { uvi: lastInterpolatedUvi };
+            
+            // Update the display with the interpolated value
+            updateUvIndexDisplay(dataCopy);
+            debugPrint(`Restored UV index from localStorage: ${lastInterpolatedUvi.toFixed(4)}`);
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error reading from localStorage: ' + e.message);
+      }
     }
     
     updateUvIndexDisplay(data);
@@ -910,13 +939,24 @@ function updateInterpolatedUvIndex() {
   const interpolatedUvi = getCurrentInterpolatedUvi(adjustedForecast);
   
   if (interpolatedUvi >= 0) {
+    // Store the interpolated value
+    lastInterpolatedUvi = interpolatedUvi;
+    
+    // Save to localStorage for persistence between page reloads
+    try {
+      localStorage.setItem('lastInterpolatedUvi', interpolatedUvi.toString());
+      localStorage.setItem('lastUvUpdateTime', new Date().getTime().toString());
+    } catch (e) {
+      debugPrint('Error saving to localStorage: ' + e.message);
+    }
+    
     // Update the current UV index value
     dataCopy.now = { uvi: interpolatedUvi };
     
     // Update the display with the interpolated value
     updateUvIndexDisplay(dataCopy);
     
-    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(3)}`);
+    debugPrint(`Updated UV index with interpolated value: ${interpolatedUvi.toFixed(4)}`);
   }
 }
 
