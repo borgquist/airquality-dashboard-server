@@ -384,31 +384,25 @@ function updateAirQualityDisplay(data) {
   document.getElementById('particleCountValue').textContent =
     data.current?.particles !== undefined && data.current?.particles !== null ? `${data.current.particles} /L` : '-';
   
-  // More robust display for PM1 that falls back to multiple possible property names
+  // Use the specific .conc property for PM1
   document.getElementById('pm1Value').textContent =
     data.current?.pm1 !== undefined && data.current?.pm1 !== null ?
       (typeof data.current.pm1 === 'object' ? 
-        (data.current.pm1.value !== undefined ? `${data.current.pm1.value} μg/m³` : 
-         data.current.pm1.concentration !== undefined ? `${data.current.pm1.concentration} μg/m³` : 
-         data.current.pm1.v !== undefined ? `${data.current.pm1.v} μg/m³` : `- μg/m³`) 
+        (data.current.pm1.conc !== undefined ? `${data.current.pm1.conc} μg/m³` : `- μg/m³`) 
         : `${data.current.pm1} μg/m³`) : '-';
   
-  // More robust display for PM10 that falls back to multiple possible property names  
+  // Use the specific .conc property for PM10
   document.getElementById('pm10Value').textContent =
     data.current?.pm10 !== undefined && data.current?.pm10 !== null ?
       (typeof data.current.pm10 === 'object' ? 
-        (data.current.pm10.value !== undefined ? `${data.current.pm10.value} μg/m³` : 
-         data.current.pm10.concentration !== undefined ? `${data.current.pm10.concentration} μg/m³` : 
-         data.current.pm10.v !== undefined ? `${data.current.pm10.v} μg/m³` : `- μg/m³`) 
+        (data.current.pm10.conc !== undefined ? `${data.current.pm10.conc} μg/m³` : `- μg/m³`) 
         : `${data.current.pm10} μg/m³`) : '-';
   
-  // More robust display for PM2.5 that falls back to multiple possible property names
+  // Use the specific .conc property for PM2.5
   document.getElementById('pm25Value').textContent =
     data.current?.pm25 !== undefined && data.current?.pm25 !== null ?
       (typeof data.current.pm25 === 'object' ? 
-        (data.current.pm25.value !== undefined ? `${data.current.pm25.value} μg/m³` : 
-         data.current.pm25.concentration !== undefined ? `${data.current.pm25.concentration} μg/m³` : 
-         data.current.pm25.v !== undefined ? `${data.current.pm25.v} μg/m³` : `- μg/m³`) 
+        (data.current.pm25.conc !== undefined ? `${data.current.pm25.conc} μg/m³` : `- μg/m³`) 
         : `${data.current.pm25} μg/m³`) : '-';
   
   document.getElementById('co2Value').textContent =
