@@ -168,6 +168,16 @@ function startExternalApiPolling() {
     // Initial fetch
     fetchExternalData(serverConfig.externalApiUrl)
       .then(data => {
+        // Log PM2.5 AQI US value if present (for initial fetch)
+        if (data && data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
+          console.log(`PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc}) at ${new Date().toISOString()}`);
+          logger.info('Initial PM2.5 AQI US value', {
+            aqius: data.current.pm25.aqius,
+            concentration: data.current.pm25.conc,
+            timestamp: new Date().toISOString()
+          });
+        }
+        
         lastFetchedData = data;
         console.log('Initial data fetched from external API');
         // Notify clients on initial fetch
@@ -183,6 +193,16 @@ function startExternalApiPolling() {
         .then(data => {
           // Check if the data has changed
           const hasChanged = JSON.stringify(data) !== JSON.stringify(lastFetchedData);
+          
+          // Log PM2.5 AQI US value if present
+          if (data && data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
+            console.log(`PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc}) at ${new Date().toISOString()}`);
+            logger.info('PM2.5 AQI US value', {
+              aqius: data.current.pm25.aqius,
+              concentration: data.current.pm25.conc,
+              timestamp: new Date().toISOString()
+            });
+          }
           
           // Update the cached data
           lastFetchedData = data;
@@ -538,6 +558,11 @@ app.get('/api/airquality', async (req, res) => {
     
     // Fetch data directly from the API without appending lat/lon
     const data = await fetchExternalData(apiUrl);
+    
+    // Log PM2.5 AQI US value when responding to API request
+    if (data && data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
+      console.log(`[${clientIp}] PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc})`);
+    }
     
     // Cache the response
     dataCache[cacheKey] = {
