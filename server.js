@@ -217,25 +217,45 @@ async function fetchUvData() {
     return;
   }
   
+  // Check if UV API config is available
+  if (!serverConfig.uvApi || !serverConfig.uvApi.apiKey) {
+    logger.error('UV API key not configured in config.json');
+    return;
+  }
+  
   const lat = serverConfig.location.latitude;
   const lon = serverConfig.location.longitude;
-  const url = `https://currentuvindex.com/api/v1/uvi?latitude=${lat}&longitude=${lon}`;
+  const apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
+  const url = `${apiUrl}?lat=${lat}&lng=${lon}`;
   
-  logger.info(`Polling UV API: ${url}`);
+  logger.info(`Polling OpenUV API: ${url}`);
   requestStats.trackApiCall();
   
   try {
-    uvFetchPromise = fetch(url);
+    uvFetchPromise = fetch(url, {
+      headers: {
+        'x-access-token': serverConfig.uvApi.apiKey
+      }
+    });
+    
     const response = await uvFetchPromise;
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
     const data = await response.json();
     
+    // Transform the OpenUV API data format to match our expected format
+    const transformedData = transformOpenUvData(data);
+    
     // Update cache
-    lastUvData = data;
+    lastUvData = transformedData;
     lastUvFetchTime = Date.now();
     
     logger.info('UV API data refreshed successfully', {
       timestamp: new Date().toISOString(),
-      current_uvi: data.now?.uvi
+      current_uvi: transformedData.now?.uvi
     });
   } catch (error) {
     logger.error('Error fetching from UV API', { 
@@ -245,6 +265,57 @@ async function fetchUvData() {
   } finally {
     // Always clear the promise
     uvFetchPromise = null;
+  }
+}
+
+// Transform OpenUV API data to our expected format
+function transformOpenUvData(openUvData) {
+  if (!openUvData || !openUvData.result || !Array.isArray(openUvData.result) || openUvData.result.length === 0) {
+    logger.error('Invalid or empty data from OpenUV API');
+    return null;
+  }
+  
+  try {
+    // Sort the forecast data by time
+    const sortedForecast = [...openUvData.result].sort((a, b) => {
+      return new Date(a.uv_time) - new Date(b.uv_time);
+    });
+    
+    // Find the current UV index (closest to current time)
+    const now = new Date();
+    let closestIndex = 0;
+    let minTimeDiff = Infinity;
+    
+    for (let i = 0; i < sortedForecast.length; i++) {
+      const forecastTime = new Date(sortedForecast[i].uv_time);
+      const timeDiff = Math.abs(forecastTime - now);
+      
+      if (timeDiff < minTimeDiff) {
+        minTimeDiff = timeDiff;
+        closestIndex = i;
+      }
+    }
+    
+    const currentUvi = sortedForecast[closestIndex].uv;
+    
+    // Create a forecast array in the format our frontend expects
+    const forecast = sortedForecast.map(item => {
+      return {
+        uvi: item.uv,
+        time: item.uv_time
+      };
+    });
+    
+    // Return in the format expected by our frontend
+    return {
+      now: {
+        uvi: currentUvi
+      },
+      forecast: forecast
+    };
+  } catch (error) {
+    logger.error('Error transforming OpenUV data', { error: error.message });
+    return null;
   }
 }
 
@@ -261,26 +332,50 @@ app.get('/api/uvindex', async (req, res) => {
   // If we don't have data yet, fetch it now
   try {
     if (!uvFetchPromise) {
+      // Check if UV API config is available
+      if (!serverConfig.uvApi || !serverConfig.uvApi.apiKey) {
+        throw new Error('UV API key not configured in config.json');
+      }
+      
       const lat = serverConfig.location.latitude;
       const lon = serverConfig.location.longitude;
-      const url = `https://currentuvindex.com/api/v1/uvi?latitude=${lat}&longitude=${lon}`;
+      const apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
+      const url = `${apiUrl}?lat=${lat}&lng=${lon}`;
       
       logger.info(`First-time UV data fetch triggered by client ${clientIP}`);
-      uvFetchPromise = fetch(url);
+      
+      uvFetchPromise = fetch(url, {
+        headers: {
+          'x-access-token': serverConfig.uvApi.apiKey
+        }
+      });
+      
       requestStats.trackApiCall();
     } else {
       logger.debug(`Client ${clientIP} waiting for in-progress UV fetch`);
     }
     
     const response = await uvFetchPromise;
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
     const data = await response.json();
     
+    // Transform the OpenUV API data format to match our expected format
+    const transformedData = transformOpenUvData(data);
+    
+    if (!transformedData) {
+      throw new Error('Failed to transform UV data');
+    }
+    
     // Update cache
-    lastUvData = data;
+    lastUvData = transformedData;
     lastUvFetchTime = Date.now();
     uvFetchPromise = null;
     
-    return res.json(data);
+    return res.json(transformedData);
   } catch (error) {
     logger.error('Error fetching UV index data', { error: error.message });
     uvFetchPromise = null;
@@ -313,7 +408,8 @@ app.listen(PORT, () => {
   logger.info('Server configuration:', {
     apiUrl: serverConfig.externalApiUrl,
     pollingInterval: `${serverConfig.pollingIntervalSec || 20}s`,
-    uvPollingInterval: `${serverConfig.uvRefreshIntervalSec || 1800}s`
+    uvPollingInterval: `${serverConfig.uvRefreshIntervalSec || 1800}s`,
+    uvApi: serverConfig.uvApi ? 'Configured with OpenUV API' : 'Not configured'
   });
   
   // Start the polling timers
