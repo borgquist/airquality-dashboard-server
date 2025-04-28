@@ -324,6 +324,24 @@ function updateAirQualityDisplay(data) {
     document.getElementById('aqiDisplay').textContent = Math.round(aqiValue);
   }
   
+  // Hide or show particles display
+  const particlesContainer = document.querySelector('.aqi-measurement-container:has(#particleCountValue)');
+  if (particlesContainer && (data.current?.particles === undefined || data.current?.particles === null)) {
+    particlesContainer.style.display = 'none';
+  } else if (particlesContainer) {
+    particlesContainer.style.display = '';
+    document.getElementById('particleCountValue').textContent = `${data.current.particles} /L`;
+  }
+  
+  // Hide or show CO2 display
+  const co2Container = document.querySelector('.aqi-measurement-container:has(#co2Value)');
+  if (co2Container && (data.current?.co2 === undefined || data.current?.co2 === null)) {
+    co2Container.style.display = 'none';
+  } else if (co2Container) {
+    co2Container.style.display = '';
+    document.getElementById('co2Value').textContent = `${data.current.co2} ppm`;
+  }
+  
   // Only update mainPollutant if the element exists
   const mainPollutantElement = document.getElementById('mainPollutant');
   if (mainPollutantElement && mainPollutant) {
@@ -381,32 +399,23 @@ function updateAirQualityDisplay(data) {
     pm25: data.current?.pm25
   });
   
-  document.getElementById('particleCountValue').textContent =
-    data.current?.particles !== undefined && data.current?.particles !== null ? `${data.current.particles} /L` : '-';
-  
-  // Use the specific .conc property for PM1
   document.getElementById('pm1Value').textContent =
     data.current?.pm1 !== undefined && data.current?.pm1 !== null ?
       (typeof data.current.pm1 === 'object' ? 
         (data.current.pm1.conc !== undefined ? `${data.current.pm1.conc} μg/m³` : `- μg/m³`) 
         : `${data.current.pm1} μg/m³`) : '-';
   
-  // Use the specific .conc property for PM10
   document.getElementById('pm10Value').textContent =
     data.current?.pm10 !== undefined && data.current?.pm10 !== null ?
       (typeof data.current.pm10 === 'object' ? 
         (data.current.pm10.conc !== undefined ? `${data.current.pm10.conc} μg/m³` : `- μg/m³`) 
         : `${data.current.pm10} μg/m³`) : '-';
   
-  // Use the specific .conc property for PM2.5
   document.getElementById('pm25Value').textContent =
     data.current?.pm25 !== undefined && data.current?.pm25 !== null ?
       (typeof data.current.pm25 === 'object' ? 
         (data.current.pm25.conc !== undefined ? `${data.current.pm25.conc} μg/m³` : `- μg/m³`) 
         : `${data.current.pm25} μg/m³`) : '-';
-  
-  document.getElementById('co2Value').textContent =
-    data.current?.co2 !== undefined && data.current?.co2 !== null ? `${data.current.co2} ppm` : '-';
 }
 
 // Update the UV index display
@@ -821,23 +830,13 @@ function createUvForecastGraph(data) {
   const uvSafetyThreshold = 4;
   
   // Process each entry for the chart
-  let previousDay = null;
   enhancedForecast.forEach(entry => {
     const entryTime = new Date(entry.time);
     
-    // Format the time to show the full hour
+    // Format the time to show the full hour only (no Today/Tomorrow label)
     let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit'});
     
-    // Check if entry is today or tomorrow
-    const isToday = entryTime.getDate() === currentTime.getDate();
-    const dayLabel = isToday ? '' : 'Tomorrow ';
-    
-    // Only add the day label when the day changes
-    if (dayLabel !== previousDay) {
-      previousDay = dayLabel;
-    }
-    
-    times.push(dayLabel + timeLabel);
+    times.push(timeLabel);
     uviValues.push(entry.uvi);
     
     // Create data point with color based on threshold
@@ -903,7 +902,7 @@ function createUvForecastGraph(data) {
         x: {
           title: {
             display: true,
-            text: `Next 24 Hours (Local Time)`
+            text: `Daylight Hours (Local Time)`
           },
           grid: {
             display: false
