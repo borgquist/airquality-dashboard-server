@@ -378,11 +378,14 @@ function updateAirQualityDisplay(data) {
   document.getElementById('particleCountValue').textContent =
     data.current?.particles !== undefined && data.current?.particles !== null ? `${data.current.particles} /L` : '-';
   document.getElementById('pm1Value').textContent =
-    data.current?.pm1 !== undefined && data.current?.pm1 !== null ? `${data.current.pm1} μg/m³` : '-';
+    data.current?.pm1 !== undefined && data.current?.pm1 !== null ?
+      (typeof data.current.pm1 === 'object' ? `${data.current.pm1.value} μg/m³` : `${data.current.pm1} μg/m³`) : '-';
   document.getElementById('pm10Value').textContent =
-    data.current?.pm10 !== undefined && data.current?.pm10 !== null ? `${data.current.pm10} μg/m³` : '-';
+    data.current?.pm10 !== undefined && data.current?.pm10 !== null ?
+      (typeof data.current.pm10 === 'object' ? `${data.current.pm10.value} μg/m³` : `${data.current.pm10} μg/m³`) : '-';
   document.getElementById('pm25Value').textContent =
-    data.current?.pm25 !== undefined && data.current?.pm25 !== null ? `${data.current.pm25} μg/m³` : '-';
+    data.current?.pm25 !== undefined && data.current?.pm25 !== null ?
+      (typeof data.current.pm25 === 'object' ? `${data.current.pm25.value} μg/m³` : `${data.current.pm25} μg/m³`) : '-';
   document.getElementById('co2Value').textContent =
     data.current?.co2 !== undefined && data.current?.co2 !== null ? `${data.current.co2} ppm` : '-';
 }
