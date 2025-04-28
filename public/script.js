@@ -2,6 +2,9 @@
 let config;
 let uvChart;
 
+// Register Chart.js annotation plugin
+Chart.register(ChartAnnotation);
+
 // Fetch configuration and initialize
 async function loadConfig() {
   try {
@@ -253,10 +256,10 @@ function updateUvIndexDisplay(data) {
   
   // Create or update the UV forecast graph
   if (data.forecast && data.forecast.length > 0) {
-    createUvForecastGraph(data.forecast);
+    createUvForecastGraph(data);
     
     // Add safety time information
-    addUvSafetyTimes(data.forecast);
+    addUvSafetyTimes(data);
   } else {
     // No forecast data available
     const forecastContainer = document.querySelector('.uv-forecast-container');
@@ -276,7 +279,8 @@ function updateUvIndexDisplay(data) {
 }
 
 // Add UV safety times information
-function addUvSafetyTimes(forecastData) {
+function addUvSafetyTimes(data) {
+  const forecastData = data.forecast;
   if (!forecastData || !forecastData.length) {
     return;
   }
@@ -336,18 +340,22 @@ function addUvSafetyTimes(forecastData) {
   // Build the safety message based on current time and UV level
   let safetyMessage = '';
   
+  // Current UV is from the API, not our calculation - need to use the API value
+  const apiCurrentUvi = data.now?.uvi || -1;
+  const isCurrentUvSafe = apiCurrentUvi <= uvSafetyThreshold;
+  
   // Current time is early morning, before UV gets high
-  if (currentUvi <= uvSafetyThreshold && morningUnsafeTime && morningUnsafeTime > now) {
+  if (isCurrentUvSafe && morningUnsafeTime && morningUnsafeTime > now) {
     const morningTimeStr = formatTimeForDisplay(morningUnsafeTime);
     safetyMessage = `UV is fine until ${morningTimeStr}`;
   }
   // Current time is during high UV hours
-  else if (currentUvi > uvSafetyThreshold && eveningSafeTime && eveningSafeTime > now) {
+  else if (!isCurrentUvSafe && eveningSafeTime && eveningSafeTime > now) {
     const eveningTimeStr = formatTimeForDisplay(eveningSafeTime);
     safetyMessage = `UV will be fine after ${eveningTimeStr}`;
   }
   // Current time is evening after UV drops, show tomorrow's info
-  else if (currentUvi <= uvSafetyThreshold && eveningSafeTime && eveningSafeTime < now) {
+  else if (isCurrentUvSafe && eveningSafeTime && eveningSafeTime < now) {
     if (tomorrowMorningUnsafeTime) {
       const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
       safetyMessage = `UV is fine until ${tomorrowMorningTimeStr} tomorrow`;
@@ -356,7 +364,7 @@ function addUvSafetyTimes(forecastData) {
     }
   }
   // If it's currently fine but no future unsafe time found (very late evening)
-  else if (currentUvi <= uvSafetyThreshold) {
+  else if (isCurrentUvSafe) {
     safetyMessage = `UV is currently fine`;
     
     // Try to find next day's unsafe time
@@ -545,7 +553,8 @@ function updatePageBackground(aqi) {
 }
 
 // Create or update the UV forecast graph
-function createUvForecastGraph(forecastData) {
+function createUvForecastGraph(data) {
+  const forecastData = data.forecast;
   if (!forecastData || !forecastData.length) {
     console.error('No forecast data available');
     return;
@@ -573,11 +582,15 @@ function createUvForecastGraph(forecastData) {
     return;
   }
   
+  // Sort forecast data by time
+  multipleDaysForecast.sort((a, b) => {
+    return new Date(a.time) - new Date(b.time);
+  });
+  
   // Create arrays for labels (times) and data
   const times = [];
   const uviValues = [];
-  const backgroundColors = [];
-  const borderColors = [];
+  const dataPoints = [];
   
   // Use the same threshold as in the safety message
   const uvSafetyThreshold = 4;
@@ -587,26 +600,27 @@ function createUvForecastGraph(forecastData) {
   multipleDaysForecast.forEach(entry => {
     const entryTime = new Date(entry.time);
     
-    // Format the time only (without date)
-    let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    // Format the time to show the full hour
+    let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit'});
     
     // Check if entry is today or tomorrow
     const isToday = entryTime.getDate() === currentTime.getDate();
-    const dayLabel = isToday ? 'Today' : 'Tomorrow';
+    const dayLabel = isToday ? '' : 'Tomorrow ';
     
     // Only add the day label when the day changes
     if (dayLabel !== previousDay) {
-      timeLabel = dayLabel;
       previousDay = dayLabel;
     }
     
-    times.push(timeLabel);
+    times.push(dayLabel + timeLabel);
     uviValues.push(entry.uvi);
     
-    // Colors based on safety threshold - use same threshold as in safety message
-    const isSafe = entry.uvi <= uvSafetyThreshold;
-    backgroundColors.push(isSafe ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)');
-    borderColors.push(isSafe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)');
+    // Create data point with color based on threshold
+    dataPoints.push({
+      x: entryTime,
+      y: entry.uvi,
+      safe: entry.uvi <= uvSafetyThreshold
+    });
   });
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
@@ -616,18 +630,57 @@ function createUvForecastGraph(forecastData) {
     uvChart.destroy();
   }
   
+  // Add horizontal line at UV safety threshold
+  const safeUvLine = {
+    type: 'line',
+    label: 'Safe UV Level',
+    data: dataPoints.map(point => ({
+      x: point.x,
+      y: uvSafetyThreshold
+    })),
+    borderColor: 'rgba(0, 150, 0, 0.5)',
+    borderWidth: 2,
+    borderDash: [5, 5],
+    pointRadius: 0,
+    fill: false,
+    tension: 0
+  };
+  
+  // Create gradient to highlight safe/unsafe areas
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(231, 76, 60, 0.3)'); // Unsafe - Red
+  gradient.addColorStop(0.5, 'rgba(231, 76, 60, 0.1)');
+  
   uvChart = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
-      labels: times,
-      datasets: [{
-        label: 'UV Index',
-        data: uviValues,
-        backgroundColor: backgroundColors,
-        borderColor: borderColors,
-        borderWidth: 1,
-        borderRadius: 4
-      }]
+      datasets: [
+        {
+          label: 'UV Index',
+          data: dataPoints,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          },
+          borderColor: function(context) {
+            // Use green for safe values, red for unsafe
+            const index = context.dataIndex;
+            return dataPoints[index]?.safe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
+          },
+          pointBackgroundColor: function(context) {
+            const index = context.dataIndex;
+            return dataPoints[index]?.safe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)';
+          },
+          borderWidth: 3,
+          tension: 0.2,
+          fill: {
+            target: 'origin',
+            above: 'rgba(231, 76, 60, 0.1)',  // Red above threshold
+            below: 'rgba(46, 204, 113, 0.1)'  // Green below threshold
+          }
+        },
+        safeUvLine
+      ]
     },
     options: {
       responsive: true,
@@ -635,7 +688,8 @@ function createUvForecastGraph(forecastData) {
       scales: {
         y: {
           beginAtZero: true,
-          max: Math.max(Math.max(...uviValues) + 1, 5),
+          min: 0,
+          max: Math.max(Math.max(...uviValues) + 1, 6),
           title: {
             display: true,
             text: 'UV Index'
@@ -645,6 +699,14 @@ function createUvForecastGraph(forecastData) {
           }
         },
         x: {
+          type: 'time',
+          time: {
+            unit: 'hour',
+            displayFormats: {
+              hour: 'ha'
+            },
+            tooltipFormat: 'ha'
+          },
           title: {
             display: true,
             text: `Next 24 Hours (Local Time)`
@@ -665,9 +727,26 @@ function createUvForecastGraph(forecastData) {
         tooltip: {
           callbacks: {
             label: function(context) {
-              const value = context.raw;
+              const value = context.raw.y;
               const category = getUVCategory(value).name;
               return `UV Index: ${value.toFixed(1)} (${category})`;
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            safetyThreshold: {
+              type: 'line',
+              yMin: uvSafetyThreshold,
+              yMax: uvSafetyThreshold,
+              borderColor: 'rgba(0, 150, 0, 0.7)',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              label: {
+                content: 'Safe level',
+                enabled: true,
+                position: 'start'
+              }
             }
           }
         }
