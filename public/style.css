@@ -30,9 +30,12 @@ body {
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 1rem 0 1rem;
   box-sizing: border-box;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 10px);
 }
 
 header {
@@ -58,6 +61,8 @@ h1 {
   gap: 1.5rem;
   width: 100%;
   box-sizing: border-box;
+  flex: 1;
+  margin-bottom: 0.5rem;
 }
 
 .card {
@@ -198,10 +203,11 @@ h1 {
 
 /* Footer Styles */
 footer {
-  margin-top: 2rem;
+  margin-top: 0.5rem;
   text-align: center;
   border-top: 1px solid var(--color-border);
-  padding-top: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .version-info {
@@ -333,7 +339,8 @@ body.bg-hazardous {
 /* Landscape mode specific styling */
 @media (orientation: landscape) and (max-height: 600px) {
   .container {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1rem 0 1rem;
+    min-height: 100vh;
   }
   
   header {
@@ -352,6 +359,7 @@ body.bg-hazardous {
   .dashboard {
     gap: 0.8rem;
     max-height: none;
+    margin-bottom: 0.2rem;
   }
   
   .card {
@@ -376,8 +384,9 @@ body.bg-hazardous {
   }
   
   footer {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
+    margin-top: 0.2rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
   }
 }
 
@@ -563,4 +572,34 @@ body.bg-hazardous {
   font-size: 0.9rem;
   font-weight: 500;
   color: #2e7d32;
+}
+
+/* Optimization for small screens like Raspberry Pi displays */
+@media (max-height: 800px) {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .container {
+    padding: 0.5rem 1rem 0 1rem;
+  }
+  
+  .dashboard {
+    gap: 0.8rem;
+  }
+  
+  .uv-forecast-container {
+    margin-top: 0.5rem;
+  }
+  
+  .uv-graph-container {
+    height: 150px;
+  }
+  
+  footer {
+    margin-top: 0.2rem;
+    border-top: none;
+  }
 } 

@@ -208,48 +208,75 @@ function addUvSafetyTimes(forecastData) {
   // Interpolate and adjust for timezone
   const adjustedForecast = interpolateAndAdjustTimes(twoDaysForecast);
   
-  // Find next unsafe period (UV > 4)
+  // Set threshold at 4 - up to 4 is considered "fine" for UV safety
+  const uvSafetyThreshold = 4;
+  
+  // Find times when UV crosses the threshold
+  const todayForecasts = adjustedForecast.filter(entry => 
+    entry.time.getDate() === now.getDate()
+  );
+  
+  const tomorrowForecasts = adjustedForecast.filter(entry => 
+    entry.time.getDate() === tomorrow.getDate()
+  );
+  
+  // Find morning unsafe time (when UV rises above threshold)
+  let morningUnsafeTime = null;
+  if (todayForecasts.length > 0) {
+    morningUnsafeTime = findNextTransitionTime(todayForecasts, uvSafetyThreshold, true);
+  }
+  
+  // Find evening safe time (when UV drops below threshold)
+  let eveningSafeTime = null;
+  if (todayForecasts.length > 0) {
+    eveningSafeTime = findNextTransitionTime(todayForecasts, uvSafetyThreshold, false);
+  }
+  
+  // Find tomorrow's morning unsafe time
+  let tomorrowMorningUnsafeTime = null;
+  if (tomorrowForecasts.length > 0) {
+    tomorrowMorningUnsafeTime = findNextTransitionTime(tomorrowForecasts, uvSafetyThreshold, true);
+  }
+  
+  // Get current interpolated UV value
   const currentUvi = getCurrentInterpolatedUvi(adjustedForecast);
+  
+  // Build the safety message based on current time and UV level
   let safetyMessage = '';
   
-  if (currentUvi <= 4) {
-    // Currently safe - find when it becomes unsafe
-    const nextUnsafeTime = findNextTransitionTime(adjustedForecast, 4, true);
+  // Current time is early morning, before UV gets high
+  if (currentUvi <= uvSafetyThreshold && morningUnsafeTime && morningUnsafeTime > now) {
+    const morningTimeStr = formatTimeForDisplay(morningUnsafeTime);
+    safetyMessage = `UV is fine until ${morningTimeStr}`;
     
-    if (nextUnsafeTime) {
-      const isToday = nextUnsafeTime.getDate() === now.getDate();
-      const timeStr = formatTimeForDisplay(nextUnsafeTime);
-      
-      if (isToday) {
-        safetyMessage = `UV is fine now until ${timeStr} today`;
-      } else {
-        safetyMessage = `UV is fine for the rest of today and until ${timeStr} tomorrow`;
-      }
-    } else {
-      safetyMessage = 'UV is fine for the next 48 hours';
+    // Add evening information if available
+    if (eveningSafeTime && eveningSafeTime > morningUnsafeTime) {
+      const eveningTimeStr = formatTimeForDisplay(eveningSafeTime);
+      safetyMessage += ` and after ${eveningTimeStr}`;
     }
-  } else {
-    // Currently unsafe - find when it becomes safe
-    const nextSafeTime = findNextTransitionTime(adjustedForecast, 4, false);
+  }
+  // Current time is during high UV hours
+  else if (currentUvi > uvSafetyThreshold && eveningSafeTime && eveningSafeTime > now) {
+    const eveningTimeStr = formatTimeForDisplay(eveningSafeTime);
+    safetyMessage = `UV will be fine after ${eveningTimeStr}`;
     
-    if (nextSafeTime) {
-      const timeStr = formatTimeForDisplay(nextSafeTime);
-      safetyMessage = `UV will be fine after ${timeStr}`;
-      
-      // Also check when it becomes unsafe tomorrow
-      const tomorrowForecasts = adjustedForecast.filter(entry => 
-        entry.time.getDate() === tomorrow.getDate()
-      );
-      
-      if (tomorrowForecasts.length > 0) {
-        const nextUnsafeTime = findNextTransitionTime(tomorrowForecasts, 4, true);
-        if (nextUnsafeTime) {
-          const tomorrowTimeStr = formatTimeForDisplay(nextUnsafeTime);
-          safetyMessage += ` and until ${tomorrowTimeStr} tomorrow`;
-        }
-      }
+    // Add tomorrow morning information if available
+    if (tomorrowMorningUnsafeTime) {
+      const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
+      safetyMessage += ` until ${tomorrowMorningTimeStr} tomorrow`;
+    }
+  }
+  // Current time is evening after UV drops, show tomorrow's info
+  else if (currentUvi <= uvSafetyThreshold && tomorrowMorningUnsafeTime) {
+    const tomorrowMorningTimeStr = formatTimeForDisplay(tomorrowMorningUnsafeTime);
+    safetyMessage = `UV is fine now and until ${tomorrowMorningTimeStr} tomorrow`;
+  }
+  // Fallback if we can't determine specific times
+  else {
+    if (currentUvi <= uvSafetyThreshold) {
+      safetyMessage = 'UV is currently fine';
     } else {
-      safetyMessage = 'UV safety data unavailable';
+      safetyMessage = 'UV protection recommended';
     }
   }
   
@@ -462,6 +489,9 @@ function createUvForecastGraph(forecastData) {
   const backgroundColors = [];
   const borderColors = [];
   
+  // Use the same threshold as in the safety message
+  const uvSafetyThreshold = 4;
+  
   // Process each entry for the chart
   let previousDay = null;
   multipleDaysForecast.forEach(entry => {
@@ -492,8 +522,8 @@ function createUvForecastGraph(forecastData) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
-    // Colors based on safety threshold
-    const isSafe = entry.uvi <= 4;
+    // Colors based on safety threshold - use same threshold as in safety message
+    const isSafe = entry.uvi <= uvSafetyThreshold;
     backgroundColors.push(isSafe ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)');
     borderColors.push(isSafe ? 'rgb(46, 204, 113)' : 'rgb(231, 76, 60)');
   });
