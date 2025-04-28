@@ -601,28 +601,54 @@ body.bg-hazardous {
     height: auto;
     max-height: 357px;
     padding: 0.7rem;
+    display: flex;
+    flex-direction: column;
   }
   
   .uv-index h2 {
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.3rem;
+    margin-bottom: 0.3rem;
+    padding-bottom: 0.2rem;
+    font-size: 1.3rem;
   }
   
   .uv-current {
-    margin: 0.3rem 0;
+    margin: 0;
+    margin-top: 1rem;
   }
   
   .uv-value-container {
-    margin: 0.5rem 0;
+    margin: 0;
+    gap: 0.5rem;
+  }
+  
+  .uv-value {
+    font-size: 5.5rem;
+    line-height: 0.9;
+    margin-top: 0;
+  }
+  
+  .uv-category {
+    padding: 0.3rem 0.7rem;
+    font-size: 1.1rem;
   }
   
   .uv-safety-info {
     margin: 0.3rem 0;
-    padding: 0.4rem;
+    padding: 0.3rem;
+    font-size: 0.9rem;
   }
   
   .uv-forecast-container {
-    margin-top: 0.3rem;
+    margin-top: 0.2rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .uv-graph-container {
+    height: 110px;
+    margin-top: 0.2rem;
+    flex-grow: 1;
   }
   
   h1 {
@@ -637,17 +663,8 @@ body.bg-hazardous {
     font-size: 0.75rem;
   }
   
-  .info-box h2, .uv-index h2 {
+  .info-box h2 {
     font-size: 1.3rem;
-  }
-  
-  .uv-value {
-    font-size: 5.5rem;
-  }
-  
-  .uv-graph-container {
-    height: 120px;
-    margin-top: 0.3rem;
   }
 }
 
