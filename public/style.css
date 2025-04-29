@@ -712,19 +712,38 @@ body.bg-hazardous {
 }
 
 .uv-safety-info {
-  margin: 0.5rem 0 1rem;
-  padding: 0.5rem;
-  border-radius: var(--border-radius);
-  background-color: rgba(46, 204, 113, 0.1);
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #2e7d32;
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+  background-color: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+  border: 2px solid #27ae60;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.uv-safety-info::before {
+  content: '☀️ ';
 }
 
 .uv-safety-info.unsafe {
-  background-color: transparent;
-  color: #000;
-  font-weight: 600;
+  background-color: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+}
+
+.uv-safety-info.unsafe::before {
+  content: '⚠️ ';
+}
+
+.uv-safety-info .safe-threshold {
+  font-weight: bold;
+  background-color: rgba(46, 204, 113, 0.2);
+  padding: 2px 5px;
+  border-radius: 4px;
 }
 
 /* Style for UV error message */
