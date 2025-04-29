@@ -739,8 +739,8 @@ function findNextTransitionTime(forecast, threshold, findingUnsafe) {
     const next = forecast[i+1];
     
     if (findingUnsafe) {
-      // Looking for transition from <= threshold to > threshold
-      if (current.uvi <= threshold && next.uvi > threshold) {
+      // Looking for transition from < threshold to > threshold
+      if (current.uvi < threshold && next.uvi > threshold) {
         // Interpolate to find more precise time
         const time = interpolateTransitionTime(current, next, threshold);
         
@@ -750,8 +750,8 @@ function findNextTransitionTime(forecast, threshold, findingUnsafe) {
         }
       }
     } else {
-      // Looking for transition from > threshold to <= threshold
-      if (current.uvi > threshold && next.uvi <= threshold) {
+      // Looking for transition from > threshold to < threshold
+      if (current.uvi > threshold && next.uvi < threshold) {
         // Interpolate to find more precise time
         const time = interpolateTransitionTime(current, next, threshold);
         
@@ -781,10 +781,7 @@ function interpolateTransitionTime(before, after, threshold) {
   // Create exact interpolated time
   const result = new Date(before.time.getTime() + timeOffset);
   
-  // Round to nearest 5 minutes for better display
-  const minutes = result.getMinutes();
-  const roundedMinutes = Math.round(minutes / 5) * 5;
-  result.setMinutes(roundedMinutes);
+  // Round to nearest minute for better display
   result.setSeconds(0);
   
   return result;
@@ -792,6 +789,7 @@ function interpolateTransitionTime(before, after, threshold) {
 
 // Helper function to format time for display
 function formatTimeForDisplay(date) {
+  // More precise time display with hours and minutes
   return date.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
 }
 
@@ -901,6 +899,8 @@ function generateCompleteTimelineData(forecastData, currentTime) {
   
   // Ensure we have nice coverage by adding more interpolated points
   const morePoints = [];
+  const uvSafetyThreshold = 4.0; // Same threshold used throughout app
+
   for (let i = 0; i < result.length - 1; i++) {
     const curr = result[i];
     const next = result[i+1];
@@ -908,10 +908,10 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     // Calculate time difference in hours
     const timeDiffHours = (next.time.getTime() - curr.time.getTime()) / (1000 * 60 * 60);
     
-    // If points are more than 30 minutes apart, add interpolated points
-    if (timeDiffHours > 0.5) {
+    // Basic interpolation for regular gaps
+    if (timeDiffHours > 0.25) { // Increased density - points every 15min
       // Add more frequent interpolation points for smoother curves
-      const numPointsToAdd = Math.max(1, Math.floor(timeDiffHours * 2));
+      const numPointsToAdd = Math.max(2, Math.ceil(timeDiffHours * 4)); // At least 2 points
       
       for (let j = 1; j <= numPointsToAdd; j++) {
         const ratio = j / (numPointsToAdd + 1);
@@ -921,6 +921,53 @@ function generateCompleteTimelineData(forecastData, currentTime) {
         morePoints.push({
           time: interpTime,
           uvi: interpUvi
+        });
+      }
+    }
+    
+    // Special handling for transitions across the threshold 
+    // Add extra points around threshold crossings
+    if ((curr.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) || 
+        (curr.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold)) {
+      
+      // Calculate where the threshold crossing occurs
+      let ratio;
+      if (curr.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
+        ratio = (uvSafetyThreshold - curr.uvi) / (next.uvi - curr.uvi);
+      } else {
+        ratio = (curr.uvi - uvSafetyThreshold) / (curr.uvi - next.uvi);
+      }
+      
+      // Add points just before and after the threshold
+      const crossingTime = new Date(curr.time.getTime() + ratio * (next.time.getTime() - curr.time.getTime()));
+      
+      // Add 2 points before
+      for (let j = 1; j <= 2; j++) {
+        const beforeRatio = ratio * (j / 3);
+        const beforeTime = new Date(curr.time.getTime() + beforeRatio * (next.time.getTime() - curr.time.getTime()));
+        const beforeUvi = curr.uvi + beforeRatio * (next.uvi - curr.uvi);
+        
+        morePoints.push({
+          time: beforeTime,
+          uvi: beforeUvi
+        });
+      }
+      
+      // Add the exact threshold point
+      morePoints.push({
+        time: crossingTime,
+        uvi: uvSafetyThreshold
+      });
+      
+      // Add 2 points after
+      for (let j = 1; j <= 2; j++) {
+        const afterRatio = ratio + ((1 - ratio) * (j / 3));
+        const afterTime = new Date(curr.time.getTime() + afterRatio * (next.time.getTime() - curr.time.getTime()));
+        const afterUvi = curr.uvi + afterRatio * (next.uvi - curr.uvi);
+        
+        morePoints.push({
+          time: afterTime,
+          uvi: afterUvi
         });
       }
     }
@@ -1001,16 +1048,16 @@ function createUvForecastGraph(data) {
     const current = enhancedForecast[i];
     const next = enhancedForecast[i+1];
     
-    // If crossing from safe to unsafe (UV increasing)
-    if (current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
-      // Calculate exact crossing point
+    // If crossing from safe to unsafe (UV increasing above threshold)
+    if (current.uvi < uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
+      // Calculate exact crossing point (more precisely)
       const ratio = (uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi);
       const crossingTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       
       // Insert a connecting point at exactly the threshold
       const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
       
-      // Add the threshold point at the exact crossover
+      // Add the threshold point at the exact crossover - this ensures both datasets have the same point
       times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
       safeUviValues.splice(i+1, 0, uvSafetyThreshold);
@@ -1024,16 +1071,16 @@ function createUvForecastGraph(data) {
       i++; // Skip the newly inserted point in the next iteration
     }
     
-    // If crossing from unsafe to safe (UV decreasing)
-    else if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
-      // Calculate exact crossing point
+    // If crossing from unsafe to safe (UV decreasing below threshold)
+    else if (current.uvi > uvSafetyThreshold && next.uvi < uvSafetyThreshold) {
+      // Calculate exact crossing point (more precisely)
       const ratio = (current.uvi - uvSafetyThreshold) / (current.uvi - next.uvi);
       const crossingTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       
       // Insert a connecting point at exactly the threshold
       const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
       
-      // Add the threshold point at the exact crossover
+      // Add the threshold point at the exact crossover - this ensures both datasets have the same point
       times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
       unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
@@ -1046,14 +1093,37 @@ function createUvForecastGraph(data) {
       
       i++; // Skip the newly inserted point in the next iteration
     }
+    
+    // Handle exact threshold points
+    else if (current.uvi === uvSafetyThreshold || next.uvi === uvSafetyThreshold) {
+      // Ensure both datasets have values at exact threshold points
+      if (current.uvi === uvSafetyThreshold) {
+        const index = i;
+        safeUviValues[index] = uvSafetyThreshold;
+        unsafeUviValues[index] = uvSafetyThreshold;
+      }
+      if (next.uvi === uvSafetyThreshold) {
+        const index = i+1;
+        safeUviValues[index] = uvSafetyThreshold;
+        unsafeUviValues[index] = uvSafetyThreshold;
+      }
+    }
   }
   
-  // Now create proper null values to ensure gap filling works correctly
+  // Clear and recreate safe and unsafe datasets to ensure proper separation
   for (let i = 0; i < times.length; i++) {
-    if (safeUviValues[i] !== null && safeUviValues[i] > uvSafetyThreshold) {
-      safeUviValues[i] = null;
+    const value = uviValues[i];
+    
+    // Handle exact threshold values specially to ensure connections
+    if (value === uvSafetyThreshold) {
+      // Keep both values at the threshold to create a connection point
+      continue;
     }
-    if (unsafeUviValues[i] !== null && unsafeUviValues[i] <= uvSafetyThreshold) {
+    
+    // For all other points, ensure proper separation
+    if (value > uvSafetyThreshold) {
+      safeUviValues[i] = null;
+    } else {
       unsafeUviValues[i] = null;
     }
   }
@@ -1089,10 +1159,11 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(46, 204, 113, 1)',
           pointBorderColor: 'rgba(46, 204, 113, 1)',
           borderWidth: 3,
-          tension: 0.1, // Lower tension for more precise line
-          pointRadius: 0, // Hide all points except current time
+          tension: 0, // No tension for precise connections at threshold
+          pointRadius: 0, // Hide all points except special ones
           fill: 'origin',
-          spanGaps: false  // Don't connect across gaps
+          spanGaps: false,  // Don't connect across gaps
+          pointHoverRadius: 4
         },
         {
           // Unsafe zone - red line
@@ -1103,17 +1174,18 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(231, 76, 60, 1)',
           pointBorderColor: 'rgba(231, 76, 60, 1)',
           borderWidth: 3,
-          tension: 0.1, // Lower tension for more precise line
-          pointRadius: 0, // Hide all points except current time
+          tension: 0, // No tension for precise connections at threshold
+          pointRadius: 0, // Hide all points except special ones
           fill: 'origin',
-          spanGaps: false  // Don't connect across gaps
+          spanGaps: false,  // Don't connect across gaps
+          pointHoverRadius: 4
         },
         {
-          // Transition points at threshold value - make sure connections are visible
+          // Transition points at threshold value - make connections visible
           label: 'Transition',
           data: transitionPoints,
-          pointBackgroundColor: 'rgba(0, 0, 0, 0.5)',
-          pointBorderColor: 'rgba(0, 0, 0, 0.5)',
+          pointBackgroundColor: 'rgba(0, 0, 0, 0.6)',
+          pointBorderColor: 'rgba(0, 0, 0, 0.6)',
           pointRadius: 4,
           pointHoverRadius: 6,
           borderWidth: 0,
