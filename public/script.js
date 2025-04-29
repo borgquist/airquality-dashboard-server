@@ -945,7 +945,7 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     
     // Add interpolation points for smoother curves if points are more than 15 min apart
     if (timeDiffHours > 0.25) {
-      const numPointsToAdd = Math.ceil(timeDiffHours * 8); // More points for smoother curve
+      const numPointsToAdd = Math.ceil(timeDiffHours * 20); // Add many more points for extra smoothness
       
       for (let j = 1; j < numPointsToAdd; j++) {
         const ratio = j / numPointsToAdd;
@@ -1037,6 +1037,20 @@ function createUvForecastGraph(data) {
   if (morningTimeStr) cutoffTimes.push(morningTimeStr);
   if (eveningTimeStr) cutoffTimes.push(eveningTimeStr);
   
+  // Also add first and last times for context
+  if (times.length > 0) {
+    const firstTime = times[0];
+    const lastTime = times[times.length - 1];
+    
+    if (!cutoffTimes.includes(firstTime)) {
+      cutoffTimes.unshift(firstTime);
+    }
+    
+    if (!cutoffTimes.includes(lastTime)) {
+      cutoffTimes.push(lastTime);
+    }
+  }
+  
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
   // Destroy previous chart if it exists
@@ -1055,9 +1069,10 @@ function createUvForecastGraph(data) {
           data: uviValues,
           borderColor: '#000000',
           borderWidth: 3,
-          tension: 0.4,
+          tension: 0.6,
           pointRadius: 0,
           fill: false,
+          cubicInterpolationMode: 'monotone',
           spanGaps: false
         }
       ]
@@ -1167,12 +1182,12 @@ function createUvForecastGraph(data) {
     // Get the y-pixel position for the threshold
     const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
     
-    // Add a red semi-transparent overlay to the "unsafe zone" (ABOVE threshold)
-    ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+    // Add a red overlay to the "unsafe zone" (ABOVE threshold)
+    ctx.fillStyle = 'rgba(255, 200, 200, 1)';
     ctx.fillRect(xAxis.left, yAxis.top, xAxis.width, yPixel - yAxis.top);
     
-    // Add a green semi-transparent overlay to the "safe zone" (BELOW threshold)
-    ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
+    // Add a green overlay to the "safe zone" (BELOW threshold)
+    ctx.fillStyle = 'rgba(200, 255, 200, 1)';
     ctx.fillRect(xAxis.left, yPixel, xAxis.width, yAxis.bottom - yPixel);
     
     // Add "SAFE UV LEVELS" text centered in the safe area
