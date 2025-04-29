@@ -113,6 +113,44 @@ const uvApiInterval = (serverConfig.uvRefreshIntervalSec || 1800) * 1000;
 // Keep track of connected SSE clients
 const sseClients = new Set();
 
+// Start a heartbeat timer to keep SSE connections alive
+let heartbeatTimer = null;
+
+function startHeartbeat() {
+  // Clear any existing timer
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+  }
+  
+  // Send a ping every 10 seconds to all connected clients
+  heartbeatTimer = setInterval(() => {
+    if (sseClients.size > 0) {
+      console.log(`💓 Sending heartbeat ping to ${sseClients.size} clients`);
+      
+      // Create a ping event
+      const pingEvent = {
+        timestamp: new Date().toISOString()
+      };
+      
+      // Send the ping
+      let successCount = 0;
+      sseClients.forEach(client => {
+        try {
+          client.write(`event: ping\ndata: ${JSON.stringify(pingEvent)}\n\n`);
+          successCount++;
+        } catch (error) {
+          console.error(`❌ Error sending ping to client: ${error.message}`);
+          sseClients.delete(client);
+        }
+      });
+      
+      if (sseClients.size !== successCount) {
+        console.log(`💓 Heartbeat cleaned up stale connections, now ${sseClients.size} active clients`);
+      }
+    }
+  }, 10000); // Every 10 seconds
+}
+
 // SSE endpoint for real-time updates
 app.get('/api/events', (req, res) => {
   // Set headers for SSE
@@ -127,11 +165,13 @@ app.get('/api/events', (req, res) => {
   sseClients.add(res);
   
   const clientIp = getClientIp(req);
+  console.log(`👋 Client ${clientIp} connected to SSE, total clients: ${sseClients.size}`);
   logger.info(`Client ${clientIp} connected to SSE`);
   
   // Remove client when connection closes
   req.on('close', () => {
     sseClients.delete(res);
+    console.log(`👋 Client ${clientIp} disconnected from SSE, remaining clients: ${sseClients.size}`);
     logger.info(`Client ${clientIp} disconnected from SSE`);
   });
 });
@@ -144,11 +184,12 @@ function notifyClients(eventType) {
   };
   
   // Log the number of connected clients
+  console.log(`📢 Notifying ${sseClients.size} clients of ${eventType} update`);
   logger.info(`Notifying ${sseClients.size} clients of ${eventType} update`);
   
   // Log specific data being sent in notifications
   if (eventType === 'aqi-update' && lastFetchedData && lastFetchedData.current && lastFetchedData.current.pm25) {
-    console.log(`SSE EVENT NOTIFICATION - Current PM2.5 AQI US: ${lastFetchedData.current.pm25.aqius} (conc: ${lastFetchedData.current.pm25.conc})`);
+    console.log(`📊 SSE EVENT NOTIFICATION - Current PM2.5 AQI US: ${lastFetchedData.current.pm25.aqius} (conc: ${lastFetchedData.current.pm25.conc})`);
     logger.info(`SSE ${eventType} notification data`, {
       pm25_aqius: lastFetchedData.current.pm25.aqius,
       pm25_conc: lastFetchedData.current.pm25.conc,
@@ -157,17 +198,21 @@ function notifyClients(eventType) {
   }
   
   // Send the event to all connected clients
+  let successCount = 0;
   sseClients.forEach(client => {
     try {
       client.write(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
+      successCount++;
     } catch (error) {
       // If there's an error sending to a client, remove it from the set
+      console.error(`❌ Error sending ${eventType} event to client: ${error.message}`);
       logger.error(`Error sending ${eventType} event to client: ${error.message}`);
       sseClients.delete(client);
     }
   });
   
   // Log the event details
+  console.log(`✅ Successfully sent ${eventType} event to ${successCount}/${sseClients.size} clients`);
   logger.info(`Sent ${eventType} event to ${sseClients.size} clients`);
 }
 
@@ -607,6 +652,14 @@ app.get('/api/airquality', async (req, res) => {
       data: data
     };
     
+    // If this was a forced refresh, notify other clients about the update
+    if (forceRefresh) {
+      // Update the cached data and notify all clients
+      lastFetchedData = data;
+      console.log(`Forced refresh from client ${clientIp} triggered SSE notification`);
+      notifyClients('aqi-update');
+    }
+    
     return res.json(data);
   } catch (error) {
     console.error('Error fetching air quality data:', error.message);
@@ -767,6 +820,9 @@ app.listen(PORT, () => {
   // Start the polling timers
   startExternalApiPolling();
   startUvApiPolling();
+  
+  // Start the heartbeat
+  startHeartbeat();
   
   // Emit a server-started event after a delay to allow clients to connect
   setTimeout(() => {
