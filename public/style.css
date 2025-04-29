@@ -335,6 +335,14 @@ h1 {
 .uv-graph-container {
   height: 250px;
   margin-top: 0.5rem;
+  position: relative;
+}
+
+/* Ensure the canvas renders properly */
+.uv-graph-container canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 /* Footer Styles */
