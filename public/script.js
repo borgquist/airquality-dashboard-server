@@ -609,8 +609,8 @@ function addUvSafetyTimes(data) {
   // Interpolate and adjust for timezone
   const adjustedForecast = interpolateAndAdjustTimes(twoDaysForecast);
   
-  // Set threshold at 4 - up to 4 is considered "fine" for UV safety
-  const uvSafetyThreshold = 4;
+  // Use the exact same threshold as in the chart (4.0)
+  const uvSafetyThreshold = 4.0;
   
   // Find times when UV crosses the threshold
   const todayForecasts = adjustedForecast.filter(entry => 
@@ -637,14 +637,14 @@ function addUvSafetyTimes(data) {
   const morningTimeStr = morningUnsafeTime ? formatTimeForDisplay(morningUnsafeTime) : null;
   const eveningTimeStr = eveningSafeTime ? formatTimeForDisplay(eveningSafeTime) : null;
   
-  // Create the safety message - always show times regardless of current time
+  // Create the safety message
   let safetyMessage = '';
   
   // Get the current UV value from the API response
   const apiCurrentUvi = data.now?.uvi || -1;
   const isCurrentUvSafe = apiCurrentUvi <= uvSafetyThreshold;
   
-  // Always show the safe times regardless of current time
+  // Determine the appropriate message
   if (morningTimeStr && eveningTimeStr) {
     safetyMessage = `UV: safe before ${morningTimeStr} & after ${eveningTimeStr}`;
   } else if (morningTimeStr) {
@@ -652,9 +652,11 @@ function addUvSafetyTimes(data) {
   } else if (eveningTimeStr) {
     safetyMessage = `UV: safe after ${eveningTimeStr}`;
   } else if (isCurrentUvSafe) {
+    // If all UV values are safe today
     safetyMessage = 'UV levels currently safe';
   } else {
-    safetyMessage = 'UV protection recommended';
+    // If all UV values are unsafe today
+    safetyMessage = 'UV protection recommended today';
   }
   
   // Remove any existing safety info
@@ -730,6 +732,8 @@ function interpolateAndAdjustTimes(forecastData) {
 
 // Helper function to find the next time when UV transitions above/below the threshold
 function findNextTransitionTime(forecast, threshold, findingUnsafe) {
+  let bestTime = null;
+  
   for (let i = 0; i < forecast.length - 1; i++) {
     const current = forecast[i];
     const next = forecast[i+1];
@@ -738,17 +742,28 @@ function findNextTransitionTime(forecast, threshold, findingUnsafe) {
       // Looking for transition from <= threshold to > threshold
       if (current.uvi <= threshold && next.uvi > threshold) {
         // Interpolate to find more precise time
-        return interpolateTransitionTime(current, next, threshold);
+        const time = interpolateTransitionTime(current, next, threshold);
+        
+        // If this is the first transition found or earlier than previous, use it
+        if (bestTime === null || time < bestTime) {
+          bestTime = time;
+        }
       }
     } else {
       // Looking for transition from > threshold to <= threshold
       if (current.uvi > threshold && next.uvi <= threshold) {
-        return interpolateTransitionTime(current, next, threshold);
+        // Interpolate to find more precise time
+        const time = interpolateTransitionTime(current, next, threshold);
+        
+        // If this is the first transition found or later than previous, use it
+        if (bestTime === null || time > bestTime) {
+          bestTime = time;
+        }
       }
     }
   }
   
-  return null;
+  return bestTime;
 }
 
 // Helper function to interpolate the exact transition time
@@ -757,16 +772,20 @@ function interpolateTransitionTime(before, after, threshold) {
   const timeDiff = after.time.getTime() - before.time.getTime();
   
   // If the UVI doesn't change, we can't interpolate
-  if (uvDiff === 0) return after.time;
+  if (uvDiff === 0) return before.time;
   
   // Calculate the time at which the UV index equals the threshold
   const thresholdDiff = threshold - before.uvi;
   const timeOffset = (thresholdDiff / uvDiff) * timeDiff;
   
+  // Create exact interpolated time
   const result = new Date(before.time.getTime() + timeOffset);
   
-  // Round to nearest 15 minutes
-  result.setMinutes(Math.round(result.getMinutes() / 15) * 15);
+  // Round to nearest 5 minutes for better display
+  const minutes = result.getMinutes();
+  const roundedMinutes = Math.round(minutes / 5) * 5;
+  result.setMinutes(roundedMinutes);
+  result.setSeconds(0);
   
   return result;
 }
@@ -1041,8 +1060,8 @@ function createUvForecastGraph(data) {
   
   // Create data for transition points (threshold points)
   const transitionPoints = times.map((time, index) => {
-    if ((safeUviValues[index] === uvSafetyThreshold && (index === 0 || safeUviValues[index-1] === null || index === safeUviValues.length-1 || safeUviValues[index+1] === null)) ||
-        (unsafeUviValues[index] === uvSafetyThreshold && (index === 0 || unsafeUviValues[index-1] === null || index === unsafeUviValues.length-1 || unsafeUviValues[index+1] === null))) {
+    // Mark points as transition points where both safe and unsafe datasets have the threshold value
+    if (safeUviValues[index] === uvSafetyThreshold && unsafeUviValues[index] === uvSafetyThreshold) {
       return uvSafetyThreshold;
     }
     return null;
@@ -1070,13 +1089,10 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(46, 204, 113, 1)',
           pointBorderColor: 'rgba(46, 204, 113, 1)',
           borderWidth: 3,
-          tension: 0.2, // Reduced tension for more accurate line
+          tension: 0.1, // Lower tension for more precise line
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false,  // Don't connect across gaps
-          segment: {
-            borderColor: ctx => 'rgba(46, 204, 113, 1)'
-          }
+          spanGaps: false  // Don't connect across gaps
         },
         {
           // Unsafe zone - red line
@@ -1087,13 +1103,10 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(231, 76, 60, 1)',
           pointBorderColor: 'rgba(231, 76, 60, 1)',
           borderWidth: 3,
-          tension: 0.2, // Reduced tension for more accurate line
+          tension: 0.1, // Lower tension for more precise line
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false,  // Don't connect across gaps
-          segment: {
-            borderColor: ctx => 'rgba(231, 76, 60, 1)'
-          }
+          spanGaps: false  // Don't connect across gaps
         },
         {
           // Transition points at threshold value - make sure connections are visible
