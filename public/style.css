@@ -79,13 +79,13 @@ h1 {
 .dashboard {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
   width: 100%;
   box-sizing: border-box;
   flex: 1;
   margin-bottom: 0;
-  max-height: calc(100vh - 100px); /* Set maximum height based on viewport height minus header space */
-  overflow: auto; /* Allow scrolling if content exceeds max-height */
+  max-height: calc(100vh - 100px);
+  overflow: auto;
 }
 
 .card {
@@ -97,6 +97,7 @@ h1 {
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  margin-bottom: 1rem;
 }
 
 .card:hover {
@@ -127,10 +128,9 @@ h1 {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100%;
-  max-height: 90vh;
   color: white;
   transition: background-color 0.5s ease, color 0.5s ease;
+  max-height: 600px; /* Limit maximum height */
 }
 
 .main-aqi h2 {
@@ -430,15 +430,32 @@ body.bg-hazardous {
     grid-column: 1 / 2;
     grid-row: 1 / 2;
     height: 100%;
+    max-height: 500px; /* Even smaller height on mobile */
   }
   
   .aqi-value {
-    font-size: min(9rem, 20vmin);
+    font-size: min(8rem, 18vmin); /* Smaller font size */
+    margin: 0.3rem 0;
+  }
+  
+  .aqi-category {
+    margin: 0.3rem 0 0.8rem 0;
+    padding: 0.3rem 1rem;
+  }
+  
+  .measurements-grid {
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+  }
+  
+  .weather-data-grid {
+    margin-top: 0.8rem;
+    gap: 0.5rem;
   }
   
   .card {
     padding: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
   }
   
   .card h2 {
@@ -531,18 +548,14 @@ body.bg-hazardous {
   
   .card {
     padding: 0.8rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
     width: 100%;
     overflow: hidden;
   }
   
-  .aqi-value {
-    font-size: min(7rem, 18vmin);
-  }
-  
-  .card h2 {
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
+  .uv-box h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem;
   }
   
   .info-data {
@@ -829,8 +842,8 @@ body.bg-hazardous {
 .measurements-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin: 1rem 0;
+  gap: 0.7rem;
+  margin: 0.8rem 0;
   padding: 0 0.5rem;
   width: 100%;
 }
@@ -1189,5 +1202,187 @@ body.bg-hazardous {
   
   .weather-value {
     font-size: 1.2rem;
+  }
+}
+
+.uv-box-container {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.uv-box-container h3 {
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+  color: inherit;
+}
+
+.uv-box-container .uv-box {
+  padding: 1rem !important;
+  max-height: 450px !important;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: auto; /* Add scrolling if content exceeds height */
+}
+
+.uv-box-container .uv-chart-container {
+  width: 100%;
+  background-color: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 10px 0;
+  height: 180px; /* Reduce chart height */
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.uv-box-container .uv-crossing-times {
+  display: flex;
+  justify-content: space-around;
+  margin: 10px 0;
+  font-weight: bold;
+  font-size: 0.9rem; /* Smaller font */
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  gap: 5px;
+}
+
+#uvRiseTime, #uvFallTime {
+  font-size: 0.85rem;
+  padding: 5px;
+  white-space: nowrap;
+}
+
+.uv-box-container .uv-info {
+  text-align: center;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 0.9rem; /* Smaller font */
+}
+
+/* UV value display */
+.uv-box-container .uv-box .aqi-value {
+  font-size: min(5rem, 15vmin); /* Smaller font size */
+  margin: 0;
+  line-height: 1;
+}
+
+.uv-box-container .uv-box .aqi-category {
+  margin: 0.3rem 0 0.8rem 0;
+  padding: 0.3rem 1rem;
+  font-size: 1.2rem;
+}
+
+/* UV color classes */
+.uv-low {
+  background-color: #abd162;
+  color: #333;
+}
+
+.uv-moderate {
+  background-color: #ffdb57;
+  color: #333;
+}
+
+.uv-high {
+  background-color: #ffa94b;
+  color: #333;
+}
+
+.uv-very-high {
+  background-color: #ff6d4b;
+  color: white;
+}
+
+.uv-extreme {
+  background-color: #9b479f;
+  color: white;
+}
+
+/* Responsive adjustments for UV box */
+@media (max-width: 767px) {
+  .uv-box-container .uv-box {
+    padding: 12px;
+    max-height: 350px;
+  }
+  
+  .uv-box-container .uv-box .aqi-value {
+    font-size: min(4rem, 13vmin);
+  }
+  
+  .uv-box-container .uv-box .aqi-category {
+    font-size: 1rem;
+    padding: 0.2rem 0.8rem;
+  }
+  
+  .uv-box-container .uv-chart-container {
+    height: 150px;
+    padding: 8px;
+  }
+  
+  .uv-box-container .uv-crossing-times {
+    font-size: 0.8rem;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 4px;
+  }
+  
+  .uv-box-container .uv-info {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+}
+
+.uv-info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.uv-box h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1.8rem;
+}
+
+.uv-box #uvCurrentValue {
+  font-size: min(4.5rem, 15vmin);
+  line-height: 1;
+  margin: 0.3rem 0;
+}
+
+.uv-box #uvCurrentClass {
+  font-size: 1.2rem;
+  padding: 0.3rem 0.8rem;
+  margin: 0.2rem 0 0.8rem;
+}
+
+#uvRiseTime, #uvFallTime {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .uv-box #uvCurrentValue {
+    font-size: min(3.5rem, 13vmin);
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 1rem;
+    padding: 0.2rem 0.6rem;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
   }
 } 

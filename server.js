@@ -463,6 +463,105 @@ app.get('/api/version', (req, res) => {
   }
 });
 
+// API endpoint to fetch UV index data
+app.get('/api/uvindex', async (req, res) => {
+  try {
+    const clientIp = getClientIp(req);
+    const forceRefresh = req.query.force === '1';
+    
+    // Consolidate client request logging
+    const requestType = forceRefresh ? 'forced refresh' : 'regular';
+    console.log(`👤 [${clientIp}] Requesting UV index data (${requestType})`);
+
+    // Create a cache key for UV data
+    const cacheKey = 'uv-index-data';
+    
+    // Check if we have cached data and it's not expired (and not forced refresh)
+    if (!forceRefresh && dataCache[cacheKey] && 
+        Date.now() - dataCache[cacheKey].timestamp < (serverConfig.uvRefreshIntervalSec || 1800) * 1000) {
+      
+      if (serverConfig.logLevel === 'debug') {
+        console.log(`👤 [${clientIp}] Using cached UV data`);
+      }
+      
+      logger.info(`Sent cached UV data to client ${clientIp}`);
+      return res.json(dataCache[cacheKey].data);
+    }
+    
+    console.log(`👤 [${clientIp}] ${forceRefresh ? 'Forced refresh' : 'Cache expired'}, fetching new UV data`);
+    
+    // Check if UV API is configured
+    if (!serverConfig.uvApi || (!serverConfig.uvApi.url && !serverConfig.uvApi.cachedServerUrl)) {
+      console.warn('⚠️ UV API is not configured');
+      return res.json({ 
+        error: 'UV API not configured',
+        result: []
+      });
+    }
+
+    let apiUrl = serverConfig.uvApi.useCachedServer ? 
+                 serverConfig.uvApi.cachedServerUrl : 
+                 serverConfig.uvApi.url;
+    
+    // Default to cached server if using OpenUV but no API key
+    if (!serverConfig.uvApi.useCachedServer && !serverConfig.uvApi.apiKey) {
+      apiUrl = serverConfig.uvApi.cachedServerUrl;
+      console.log('No UV API key provided, falling back to cached server');
+    }
+    
+    if (!apiUrl) {
+      return res.json({ 
+        error: 'UV API URL not configured',
+        result: []
+      });
+    }
+    
+    // Ensure the API URL has a protocol
+    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+      if (apiUrl.includes('192.168.') || apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost')) {
+        apiUrl = 'http://' + apiUrl;
+      } else {
+        apiUrl = 'https://' + apiUrl;
+      }
+    }
+    
+    // Fetch data from UV API
+    const data = await fetchExternalData(apiUrl);
+    
+    console.log(`📤 To [${clientIp}]: Fresh UV data`);
+    logger.info(`Sent fresh UV data to client ${clientIp}`);
+    
+    // Check if the data has actually changed from what's in the cache
+    let dataChanged = true;
+    if (dataCache[cacheKey] && dataCache[cacheKey].data) {
+      // Compare the old and new data
+      dataChanged = JSON.stringify(data) !== JSON.stringify(dataCache[cacheKey].data);
+    }
+    
+    // Cache the response
+    dataCache[cacheKey] = {
+      timestamp: Date.now(),
+      data: data
+    };
+    
+    // Only notify clients if there was a real data change and 
+    // this isn't a forced refresh initiated by an SSE event
+    // This prevents the notification loop
+    if (dataChanged && !req.query._sse) {
+      console.log(`Data changed, notifying clients of UV update`);
+      notifyClients('uv-update');
+    }
+    
+    return res.json(data);
+  } catch (error) {
+    console.error('❌ Error fetching UV data:', error.message);
+    return res.json({ 
+      error: 'Failed to fetch UV data: ' + error.message,
+      result: []
+    });
+  }
+});
+
 // Serve index.html for all routes to support SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

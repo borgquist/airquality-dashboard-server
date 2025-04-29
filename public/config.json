@@ -42,7 +42,14 @@
     "showChart": true,
     "showWeather": true,
     "showTime": true,
-    "showLastUpdated": true
+    "showLastUpdated": true,
+    "showUvIndex": true,
+    "uvThreshold": 4
+  },
+  "uvChartColors": {
+    "lineColor": "rgba(255, 99, 132, 1)",
+    "fillColor": "rgba(255, 99, 132, 0.2)",
+    "thresholdColor": "rgba(255, 193, 7, 0.8)"
   },
   "location": {
     "cityName": "Abu Dhabi",

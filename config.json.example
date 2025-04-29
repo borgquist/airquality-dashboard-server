@@ -3,6 +3,12 @@
   "logLevel": "info",
   "pollingIntervalSec": 20,
   "externalApiUrl": "YOUR_API_URL_HERE",
+  "uvApi": {
+    "url": "https://api.openuv.io/api/v1/uv",
+    "apiKey": "YOUR_API_KEY_HERE",
+    "useCachedServer": false,
+    "cachedServerUrl": ""
+  },
   "location": {
     "cityName": "Abu Dhabi",
     "latitude": 24.4539,
