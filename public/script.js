@@ -646,11 +646,11 @@ function addUvSafetyTimes(data) {
   
   // Always show the safe times regardless of current time
   if (morningTimeStr && eveningTimeStr) {
-    safetyMessage = `Safe UV: before ${morningTimeStr} & after ${eveningTimeStr}`;
+    safetyMessage = `UV: safe before ${morningTimeStr} & after ${eveningTimeStr}`;
   } else if (morningTimeStr) {
-    safetyMessage = `Safe UV: before ${morningTimeStr}`;
+    safetyMessage = `UV: safe before ${morningTimeStr}`;
   } else if (eveningTimeStr) {
-    safetyMessage = `Safe UV: after ${eveningTimeStr}`;
+    safetyMessage = `UV: safe after ${eveningTimeStr}`;
   } else if (isCurrentUvSafe) {
     safetyMessage = 'UV levels currently safe';
   } else {
@@ -958,13 +958,15 @@ function createUvForecastGraph(data) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
-    // Split data into safe and unsafe series for coloring
-    if (entry.uvi <= uvSafetyThreshold) {
-      safeUviValues.push(entry.uvi);
-      unsafeUviValues.push(null);
-    } else {
-      safeUviValues.push(null);
+    // Don't split into safe/unsafe, instead put all points in both datasets
+    // but cap the safe dataset at the threshold value
+    safeUviValues.push(Math.min(entry.uvi, uvSafetyThreshold));
+    
+    // For unsafe values, only show values above the threshold
+    if (entry.uvi > uvSafetyThreshold) {
       unsafeUviValues.push(entry.uvi);
+    } else {
+      unsafeUviValues.push(null);
     }
     
     // Check if this is current time
