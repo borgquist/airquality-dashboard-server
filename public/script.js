@@ -3,13 +3,6 @@ let config;
 let eventSource;
 let lastAqiData = null; // Store the last AQI data received
 
-// Register Chart.js annotation plugin if available
-if (window.ChartAnnotation) {
-  Chart.register(window.ChartAnnotation);
-} else {
-  console.warn('Chart.js annotation plugin not found');
-}
-
 // Fetch configuration and initialize
 async function loadConfig() {
   try {
