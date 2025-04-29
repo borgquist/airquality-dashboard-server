@@ -219,6 +219,13 @@ function startExternalApiPolling() {
           
           if (hasChanged) {
             console.log('Data updated from external API');
+            // Invalidate the cache when data changes
+            const cacheKey = `airquality-data`;
+            if (dataCache[cacheKey]) {
+              console.log('Invalidating API response cache due to data change');
+              dataCache[cacheKey].data = data;
+              dataCache[cacheKey].timestamp = Date.now();
+            }
             // Notify clients on each update
             notifyClients('aqi-update');
           } else {
