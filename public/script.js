@@ -989,23 +989,17 @@ function createUvForecastGraph(data) {
       const crossingTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       
       // Insert a connecting point at exactly the threshold
-      // We add this point to both datasets at the exact same position
       const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
       times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
       
-      // This is the last point of the safe zone
+      // Add the threshold point to both datasets to ensure connection
       safeUviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // This is the first point of the unsafe zone
       unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
       
-      // Update the existing values to ensure connection
-      unsafeUviValues[i] = null;  // Make sure previous point is null in unsafe dataset
-      
-      // Add additional transition points if there's a gap
+      // Ensure the next point in safeUviValues is null
       if (i+2 < safeUviValues.length) {
-        safeUviValues[i+2] = null;  // Make sure next point is null in safe dataset
+        safeUviValues[i+2] = null;
       }
       
       // Update current time index if needed
@@ -1027,18 +1021,13 @@ function createUvForecastGraph(data) {
       times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
       
-      // This is the last point of the unsafe zone
+      // Add the threshold point to both datasets to ensure connection
       unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // This is the first point of the safe zone
       safeUviValues.splice(i+1, 0, uvSafetyThreshold);
       
-      // Update the existing values to ensure connection
-      safeUviValues[i] = null;  // Make sure previous point is null in safe dataset
-      
-      // Add additional transition points if there's a gap
+      // Ensure the next point in unsafeUviValues is null
       if (i+2 < unsafeUviValues.length) {
-        unsafeUviValues[i+2] = null;  // Make sure next point is null in unsafe dataset
+        unsafeUviValues[i+2] = null;
       }
       
       // Update current time index if needed
