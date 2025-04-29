@@ -337,59 +337,110 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
   // Create chart
   const ctx = canvas.getContext('2d');
   
-  // Create datasets for green and red segments based on UV threshold
+  // Create datasets for multiple UV level segments
   const createSegmentedDatasets = () => {
     const times = smoothData.times;
     const values = smoothData.values;
     
     if (!times.length) return [];
     
-    // Get colors from config
-    const belowThresholdColor = {
-      lineColor: 'rgba(76, 175, 80, 1)',  // Green
-      fillColor: 'rgba(76, 175, 80, 0.4)'
+    // Define colors for different UV ranges - multiple distinct colors
+    const uvColors = {
+      low: {
+        lineColor: 'rgba(76, 175, 80, 1)',        // Green
+        fillColor: 'rgba(76, 175, 80, 0.6)'
+      },
+      moderate: {
+        lineColor: 'rgba(255, 235, 59, 1)',       // Yellow
+        fillColor: 'rgba(255, 235, 59, 0.6)'
+      },
+      high: {
+        lineColor: 'rgba(255, 152, 0, 1)',        // Orange
+        fillColor: 'rgba(255, 152, 0, 0.6)'
+      },
+      veryHigh: {
+        lineColor: 'rgba(233, 30, 99, 1)',        // Pink/red
+        fillColor: 'rgba(233, 30, 99, 0.6)'
+      },
+      extreme: {
+        lineColor: 'rgba(156, 39, 176, 1)',       // Purple
+        fillColor: 'rgba(156, 39, 176, 0.6)'
+      }
     };
     
-    const aboveThresholdColor = {
-      lineColor: 'rgba(236, 64, 122, 1)',  // Pink
-      fillColor: 'rgba(236, 64, 122, 0.4)'
-    };
+    // Using a single dataset approach with color interpolation
+    // This avoids ANY gaps between segments
+    const coloredData = [];
     
-    const datasets = [];
-    
-    // Below threshold dataset (green)
-    datasets.push({
-      label: 'Below Threshold',
-      data: values.map((v, i) => v < 4 ? v : null),
-      borderColor: belowThresholdColor.lineColor,
-      backgroundColor: belowThresholdColor.fillColor,
-      borderWidth: 3,
-      pointRadius: 0,
-      tension: 0.4,
-      fill: true
+    // Process each data point and assign the appropriate color
+    values.forEach((value, index) => {
+      let color;
+      
+      if (value <= 3) {
+        color = uvColors.low.fillColor;
+      } else if (value <= 6) {
+        color = uvColors.moderate.fillColor;
+      } else if (value <= 8) {
+        color = uvColors.high.fillColor;
+      } else if (value <= 11) {
+        color = uvColors.veryHigh.fillColor;
+      } else {
+        color = uvColors.extreme.fillColor;
+      }
+      
+      coloredData.push({
+        x: times[index],
+        y: value,
+        color: color
+      });
     });
     
-    // Above threshold dataset (pink)
-    datasets.push({
-      label: 'Above Threshold',
-      data: values.map((v, i) => v >= 4 ? v : null),
-      borderColor: aboveThresholdColor.lineColor,
-      backgroundColor: aboveThresholdColor.fillColor,
-      borderWidth: 3,
-      pointRadius: 0,
-      tension: 0.4,
-      fill: true
-    });
-    
-    // Add a thin line on top to make curve continuous
-    datasets.push({
+    // Create the seamless dataset
+    const datasets = [{
       label: 'UV Index',
       data: values,
-      borderColor: 'rgba(33, 33, 33, 0.5)',
+      borderColor: values.map((v, i) => {
+        if (v <= 3) return uvColors.low.lineColor;
+        if (v <= 6) return uvColors.moderate.lineColor;
+        if (v <= 8) return uvColors.high.lineColor;
+        if (v <= 11) return uvColors.veryHigh.lineColor;
+        return uvColors.extreme.lineColor;
+      }),
+      backgroundColor: values.map((v, i) => {
+        if (v <= 3) return uvColors.low.fillColor;
+        if (v <= 6) return uvColors.moderate.fillColor;
+        if (v <= 8) return uvColors.high.fillColor;
+        if (v <= 11) return uvColors.veryHigh.fillColor;
+        return uvColors.extreme.fillColor;
+      }),
+      segment: {
+        borderColor: ctx => getSegmentColor(ctx, 'line'),
+        backgroundColor: ctx => getSegmentColor(ctx, 'fill'),
+      },
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.4,
+      fill: true
+    }];
+    
+    // Helper function to get color by segment
+    function getSegmentColor(ctx, type) {
+      const value = ctx.p0.parsed.y;
+      if (value <= 3) return type === 'line' ? uvColors.low.lineColor : uvColors.low.fillColor;
+      if (value <= 6) return type === 'line' ? uvColors.moderate.lineColor : uvColors.moderate.fillColor;
+      if (value <= 8) return type === 'line' ? uvColors.high.lineColor : uvColors.high.fillColor;
+      if (value <= 11) return type === 'line' ? uvColors.veryHigh.lineColor : uvColors.veryHigh.fillColor;
+      return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
+    }
+    
+    // Thin black outline
+    datasets.push({
+      label: 'UV Outline',
+      data: values,
+      borderColor: 'rgba(0, 0, 0, 0.3)',
       backgroundColor: 'rgba(0, 0, 0, 0)', // transparent
       borderWidth: 1,
       pointRadius: 0,
-      pointHoverRadius: 5,
       tension: 0.4,
       fill: false
     });
@@ -698,7 +749,7 @@ function getCurrentUvLevel(uvReadings, currentTime) {
 // Get UV category name
 function getUvCategoryName(uvValue) {
   if (uvValue === null) return '-';
-  if (uvValue < 4) return 'Low';
+  if (uvValue < 3) return 'Low';
   if (uvValue < 6) return 'Moderate';
   if (uvValue < 8) return 'High';
   if (uvValue < 11) return 'Very High';
