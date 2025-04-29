@@ -652,14 +652,6 @@ app.get('/api/airquality', async (req, res) => {
       data: data
     };
     
-    // If this was a forced refresh, notify other clients about the update
-    if (forceRefresh) {
-      // Update the cached data and notify all clients
-      lastFetchedData = data;
-      console.log(`Forced refresh from client ${clientIp} triggered SSE notification`);
-      notifyClients('aqi-update');
-    }
-    
     return res.json(data);
   } catch (error) {
     console.error('Error fetching air quality data:', error.message);
