@@ -958,9 +958,12 @@ function createUvForecastGraph(data) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
-    // Don't split into safe/unsafe, instead put all points in both datasets
-    // but cap the safe dataset at the threshold value
-    safeUviValues.push(Math.min(entry.uvi, uvSafetyThreshold));
+    // For the safe values, only show actual values below the threshold
+    if (entry.uvi <= uvSafetyThreshold) {
+      safeUviValues.push(entry.uvi);
+    } else {
+      safeUviValues.push(null);
+    }
     
     // For unsafe values, only show values above the threshold
     if (entry.uvi > uvSafetyThreshold) {
