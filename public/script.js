@@ -633,56 +633,28 @@ function addUvSafetyTimes(data) {
     eveningSafeTime = findNextTransitionTime(todayForecasts, uvSafetyThreshold, false);
   }
   
-  // Find tomorrow's morning unsafe time
-  let tomorrowMorningUnsafeTime = null;
-  if (tomorrowForecasts.length > 0) {
-    tomorrowMorningUnsafeTime = findNextTransitionTime(tomorrowForecasts, uvSafetyThreshold, true);
-  }
+  // Format morning and evening times
+  const morningTimeStr = morningUnsafeTime ? formatTimeForDisplay(morningUnsafeTime) : null;
+  const eveningTimeStr = eveningSafeTime ? formatTimeForDisplay(eveningSafeTime) : null;
   
-  // Get current interpolated UV value
-  const currentUvi = getCurrentInterpolatedUvi(adjustedForecast);
-  
-  // Build the safety message based on current time and UV level
+  // Create the simplified safety message
   let safetyMessage = '';
   
   // Get the current UV value from the API response
   const apiCurrentUvi = data.now?.uvi || -1;
   const isCurrentUvSafe = apiCurrentUvi <= uvSafetyThreshold;
   
-  // Format morning and evening times
-  const morningTimeStr = morningUnsafeTime ? formatTimeForDisplay(morningUnsafeTime) : null;
-  const eveningTimeStr = eveningSafeTime ? formatTimeForDisplay(eveningSafeTime) : null;
-  const tomorrowMorningTimeStr = tomorrowMorningUnsafeTime ? formatTimeForDisplay(tomorrowMorningUnsafeTime) : null;
-  
-  // Format the safety threshold with highlighting
-  const safeThresholdSpan = `<span class="safe-threshold">UV ${uvSafetyThreshold}</span>`;
-  
-  // Create simple safety message with clear time information
-  if (morningUnsafeTime && eveningSafeTime) {
-    // We have both transition times - provide the clearest message
-    safetyMessage = `Safe UV levels: Before ${morningTimeStr} and after ${eveningTimeStr}`;
-  } else if (morningUnsafeTime) {
-    // We only have morning transition time
-    if (now < morningUnsafeTime) {
-      safetyMessage = `Safe UV levels: Until ${morningTimeStr}`;
-    } else {
-      safetyMessage = `UV levels currently high (above ${uvSafetyThreshold})`;
-    }
-  } else if (eveningSafeTime) {
-    // We only have evening transition time
-    if (now < eveningSafeTime) {
-      safetyMessage = `Safe UV levels: After ${eveningTimeStr}`;
-    } else if (tomorrowMorningUnsafeTime) {
-      safetyMessage = `Safe UV levels: Until tomorrow ${tomorrowMorningTimeStr}`;
-    } else {
-      safetyMessage = `Safe UV levels: Rest of the day`;
-    }
+  // Simplified message that shows both times regardless of current time
+  if (morningTimeStr && eveningTimeStr) {
+    safetyMessage = `Safe UV: before ${morningTimeStr} & after ${eveningTimeStr}`;
+  } else if (morningTimeStr) {
+    safetyMessage = `Safe UV: before ${morningTimeStr}`;
+  } else if (eveningTimeStr) {
+    safetyMessage = `Safe UV: after ${eveningTimeStr}`;
   } else if (isCurrentUvSafe) {
-    // No transition times found but current UV is safe
-    safetyMessage = `UV is currently safe (below ${uvSafetyThreshold})`;
+    safetyMessage = 'UV levels currently safe';
   } else {
-    // No transition times found and current UV is unsafe
-    safetyMessage = `UV protection recommended (above safe level ${uvSafetyThreshold})`;
+    safetyMessage = 'UV protection recommended';
   }
   
   // Remove any existing safety info
@@ -967,6 +939,8 @@ function createUvForecastGraph(data) {
   // Create arrays for labels (times) and data
   const times = [];
   const uviValues = [];
+  const safeUviValues = [];
+  const unsafeUviValues = [];
   
   // Use the same threshold as in the safety message
   const uvSafetyThreshold = 4;
@@ -984,6 +958,15 @@ function createUvForecastGraph(data) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
+    // Split data into safe and unsafe series for coloring
+    if (entry.uvi <= uvSafetyThreshold) {
+      safeUviValues.push(entry.uvi);
+      unsafeUviValues.push(null);
+    } else {
+      safeUviValues.push(null);
+      unsafeUviValues.push(entry.uvi);
+    }
+    
     // Check if this is current time
     if (entry.isCurrent || 
         (Math.abs(entryTime.getTime() - currentTime.getTime()) < 30 * 60 * 1000)) {
@@ -998,99 +981,58 @@ function createUvForecastGraph(data) {
     uvChart.destroy();
   }
   
-  // Create a line chart
+  // Create a line chart with two separate datasets for safe and unsafe zones
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: times,
-      datasets: [{
-        label: 'UV Index',
-        data: uviValues,
-        borderColor: function(context) {
-          const index = context.dataIndex;
-          const value = uviValues[index];
-          
-          // If this is the current time point, highlight it
-          if (index === currentTimeIndex) {
-            return 'rgba(41, 128, 185, 1)'; // Blue for current time
-          }
-          
-          // Return green for safe values, red for unsafe
-          return value <= uvSafetyThreshold ? 
-                 'rgba(46, 204, 113, 1)' : // Green when safe
-                 'rgba(231, 76, 60, 1)';   // Red when unsafe
+      datasets: [
+        {
+          // Safe zone - green line
+          label: 'Safe UV',
+          data: safeUviValues,
+          borderColor: 'rgba(46, 204, 113, 1)',
+          backgroundColor: 'rgba(46, 204, 113, 0.1)',
+          pointBackgroundColor: 'rgba(46, 204, 113, 1)',
+          pointBorderColor: 'rgba(46, 204, 113, 1)',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 0, // Hide all points except current time
+          fill: 'origin',
+          spanGaps: false
         },
-        backgroundColor: function(context) {
-          const index = context.dataIndex;
-          const value = uviValues[index];
-          
-          // If this is the current time point, highlight it
-          if (index === currentTimeIndex) {
-            return 'rgba(41, 128, 185, 0.8)'; // Blue for current time
-          }
-          
-          // Return green for safe values, red for unsafe
-          return value <= uvSafetyThreshold ? 
-                 'rgba(46, 204, 113, 0.8)' : // Green when safe
-                 'rgba(231, 76, 60, 0.8)';   // Red when unsafe
+        {
+          // Unsafe zone - red line
+          label: 'Unsafe UV',
+          data: unsafeUviValues,
+          borderColor: 'rgba(231, 76, 60, 1)',
+          backgroundColor: 'rgba(231, 76, 60, 0.1)',
+          pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+          pointBorderColor: 'rgba(231, 76, 60, 1)',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 0, // Hide all points except current time
+          fill: 'origin',
+          spanGaps: false
         },
-        pointBorderColor: function(context) {
-          const index = context.dataIndex;
-          const value = uviValues[index];
-          
-          // If this is the current time point, highlight it
-          if (index === currentTimeIndex) {
-            return 'rgba(41, 128, 185, 1)'; // Blue for current time
-          }
-          
-          // Return green for safe values, red for unsafe
-          return value <= uvSafetyThreshold ? 
-                 'rgba(46, 204, 113, 1)' : // Green when safe
-                 'rgba(231, 76, 60, 1)';   // Red when unsafe
-        },
-        pointBackgroundColor: function(context) {
-          const index = context.dataIndex;
-          const value = uviValues[index];
-          
-          // If this is the current time point, highlight it
-          if (index === currentTimeIndex) {
-            return 'rgba(41, 128, 185, 1)'; // Blue for current time
-          }
-          
-          // Return green for safe values, red for unsafe
-          return value <= uvSafetyThreshold ? 
-                 'rgba(46, 204, 113, 1)' : // Green when safe
-                 'rgba(231, 76, 60, 1)';   // Red when unsafe
-        },
-        pointRadius: function(context) {
-          const index = context.dataIndex;
-          // Make current time point larger and threshold crossing points slightly larger
-          if (index === currentTimeIndex) {
-            return 6;
-          } else if (index > 0) {
-            const prevValue = uviValues[index - 1];
-            const currValue = uviValues[index];
-            // Make threshold crossing points larger
-            if ((prevValue <= uvSafetyThreshold && currValue > uvSafetyThreshold) ||
-                (prevValue > uvSafetyThreshold && currValue <= uvSafetyThreshold)) {
-              return 5;
-            }
-          }
-          return 3;
-        },
-        borderWidth: 3,
-        tension: 0.3, // Add some curve to the line for smoother appearance
-        fill: {
-          target: 'origin',
-          above: 'rgba(231, 76, 60, 0.1)',
-          below: 'rgba(46, 204, 113, 0.1)'
+        {
+          // Current time marker - only show a single point
+          label: 'Current',
+          data: uviValues.map((value, i) => i === currentTimeIndex ? value : null),
+          pointBackgroundColor: 'rgba(41, 128, 185, 1)',
+          pointBorderColor: 'rgba(41, 128, 185, 1)',
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          borderWidth: 0,
+          fill: false,
+          showLine: false
         }
-      }]
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: false, // Disable animations completely
+      animation: false, // Disable animations
       plugins: {
         legend: {
           display: false
@@ -1099,6 +1041,8 @@ function createUvForecastGraph(data) {
           callbacks: {
             label: function(context) {
               const value = context.raw;
+              if (value === null) return '';
+              
               const category = getUVCategory(value).name;
               let label = `UV Index: ${value.toFixed(1)} (${category})`;
               
@@ -1110,7 +1054,7 @@ function createUvForecastGraph(data) {
               }
               
               // Indicate current time in tooltip
-              if (context.dataIndex === currentTimeIndex) {
+              if (context.datasetIndex === 2) { // Current time dataset
                 label += ' (Current Time)';
               }
               
@@ -1149,7 +1093,7 @@ function createUvForecastGraph(data) {
     }
   });
   
-  // Manually add the threshold line after the chart is created
+  // Manually add the green area after the chart is created
   setTimeout(() => {
     // Add a visible colored section to highlight the safe zone
     const canvas = document.getElementById('uvForecastGraph');
@@ -1165,33 +1109,27 @@ function createUvForecastGraph(data) {
     
     const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
     
-    // Draw threshold line
-    ctx.save();
-    ctx.beginPath();
-    ctx.setLineDash([5, 5]);
-    ctx.strokeStyle = 'rgba(0, 150, 0, 0.7)';
-    ctx.lineWidth = 2;
-    ctx.moveTo(xAxis.left, yPixel);
-    ctx.lineTo(xAxis.right, yPixel);
-    ctx.stroke();
-    
-    // Add "Safe threshold" label
-    ctx.fillStyle = 'rgba(0, 150, 0, 0.7)';
-    ctx.fillRect(xAxis.left, yPixel - 20, 100, 20);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 12px Arial';
-    ctx.fillText('Safe threshold', xAxis.left + 5, yPixel - 5);
-    
     // Add a green semi-transparent overlay to the "safe zone"
     ctx.fillStyle = 'rgba(46, 204, 113, 0.1)';
     ctx.fillRect(xAxis.left, yPixel, xAxis.width, yAxis.bottom - yPixel);
     
     // Add "SAFE UV LEVELS" text centered in the area
+    ctx.save();
     ctx.fillStyle = 'rgba(46, 204, 113, 0.6)';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('SAFE UV LEVELS', xAxis.left + xAxis.width / 2, yAxis.bottom - 10);
+    ctx.restore();
     
+    // Add dashed line at threshold without the label box
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = 'rgba(46, 204, 113, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.moveTo(xAxis.left, yPixel);
+    ctx.lineTo(xAxis.right, yPixel);
+    ctx.stroke();
     ctx.restore();
   }, 100);
 }
