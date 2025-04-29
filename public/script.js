@@ -902,10 +902,6 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     new Date(a.time).getTime() - new Date(b.time).getTime()
   );
   
-  // Find earliest and latest times in the data
-  const earliestTime = new Date(sortedForecast[0].time);
-  const latestTime = new Date(sortedForecast[sortedForecast.length - 1].time);
-  
   // Use the original data points
   for (const point of sortedForecast) {
     result.push({
@@ -929,8 +925,7 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     if (needToAddCurrentTime) {
       result.push({
         time: new Date(currentTime),
-        uvi: lastInterpolatedUvi,
-        isCurrent: true
+        uvi: lastInterpolatedUvi
       });
     }
   }
@@ -938,10 +933,9 @@ function generateCompleteTimelineData(forecastData, currentTime) {
   // Sort all points by time
   result.sort((a, b) => a.time.getTime() - b.time.getTime());
   
-  // Ensure we have nice coverage by adding more interpolated points
+  // Add regular interpolation points for smoother curve
   const morePoints = [];
-  const uvSafetyThreshold = 4.0; // Same threshold used throughout app
-
+  
   for (let i = 0; i < result.length - 1; i++) {
     const curr = result[i];
     const next = result[i+1];
@@ -949,66 +943,18 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     // Calculate time difference in hours
     const timeDiffHours = (next.time.getTime() - curr.time.getTime()) / (1000 * 60 * 60);
     
-    // Basic interpolation for regular gaps
-    if (timeDiffHours > 0.25) { // Increased density - points every 15min
-      // Add more frequent interpolation points for smoother curves
-      const numPointsToAdd = Math.max(2, Math.ceil(timeDiffHours * 4)); // At least 2 points
+    // Add interpolation points for smoother curves if points are more than 15 min apart
+    if (timeDiffHours > 0.25) {
+      const numPointsToAdd = Math.ceil(timeDiffHours * 4); // One point every 15 minutes
       
-      for (let j = 1; j <= numPointsToAdd; j++) {
-        const ratio = j / (numPointsToAdd + 1);
+      for (let j = 1; j < numPointsToAdd; j++) {
+        const ratio = j / numPointsToAdd;
         const interpTime = new Date(curr.time.getTime() + ratio * (next.time.getTime() - curr.time.getTime()));
         const interpUvi = curr.uvi + ratio * (next.uvi - curr.uvi);
         
         morePoints.push({
           time: interpTime,
           uvi: interpUvi
-        });
-      }
-    }
-    
-    // Special handling for transitions across the threshold 
-    // Add extra points around threshold crossings
-    if ((curr.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) || 
-        (curr.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold)) {
-      
-      // Calculate where the threshold crossing occurs
-      let ratio;
-      if (curr.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
-        ratio = (uvSafetyThreshold - curr.uvi) / (next.uvi - curr.uvi);
-      } else {
-        ratio = (curr.uvi - uvSafetyThreshold) / (curr.uvi - next.uvi);
-      }
-      
-      // Add points just before and after the threshold
-      const crossingTime = new Date(curr.time.getTime() + ratio * (next.time.getTime() - curr.time.getTime()));
-      
-      // Add 2 points before
-      for (let j = 1; j <= 2; j++) {
-        const beforeRatio = ratio * (j / 3);
-        const beforeTime = new Date(curr.time.getTime() + beforeRatio * (next.time.getTime() - curr.time.getTime()));
-        const beforeUvi = curr.uvi + beforeRatio * (next.uvi - curr.uvi);
-        
-        morePoints.push({
-          time: beforeTime,
-          uvi: beforeUvi
-        });
-      }
-      
-      // Add the exact threshold point
-      morePoints.push({
-        time: crossingTime,
-        uvi: uvSafetyThreshold
-      });
-      
-      // Add 2 points after
-      for (let j = 1; j <= 2; j++) {
-        const afterRatio = ratio + ((1 - ratio) * (j / 3));
-        const afterTime = new Date(curr.time.getTime() + afterRatio * (next.time.getTime() - curr.time.getTime()));
-        const afterUvi = curr.uvi + afterRatio * (next.uvi - curr.uvi);
-        
-        morePoints.push({
-          time: afterTime,
-          uvi: afterUvi
         });
       }
     }
@@ -1041,7 +987,7 @@ function createUvForecastGraph(data) {
     return;
   }
   
-  // Check if we need to add more data points
+  // Generate smooth data timeline
   const enhancedForecast = generateCompleteTimelineData(dayTimeForecast, currentTime);
   
   // Create arrays for labels (times) and data
@@ -1058,11 +1004,7 @@ function createUvForecastGraph(data) {
   // Process each entry for the chart
   enhancedForecast.forEach((entry) => {
     const entryTime = new Date(entry.time);
-    
-    // Format the time for clarity
-    let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-    
-    times.push(timeLabel);
+    times.push(entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}));
     uviValues.push(entry.uvi);
   });
   
@@ -1109,11 +1051,10 @@ function createUvForecastGraph(data) {
       labels: times,
       datasets: [
         {
-          // Single black line for UV values
           label: 'UV Index',
           data: uviValues,
           borderColor: '#000000',
-          borderWidth: 2,
+          borderWidth: 3,
           tension: 0.1,
           pointRadius: 0,
           fill: false,
@@ -1220,16 +1161,11 @@ function createUvForecastGraph(data) {
     
     if (!yAxis || !xAxis) return;
     
-    // Get the y-pixel position for the threshold
-    const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
-    
-    // Save the current state
-    ctx.save();
-    
-    // Clear previous drawings with chart area
+    // Clear the current state and start fresh
     chart.clear();
     
-    // Fill the background areas first
+    // Get the y-pixel position for the threshold
+    const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
     
     // Add a red semi-transparent overlay to the "unsafe zone" (ABOVE threshold)
     ctx.fillStyle = 'rgba(231, 76, 60, 0.2)';
@@ -1245,14 +1181,7 @@ function createUvForecastGraph(data) {
     ctx.textAlign = 'center';
     ctx.fillText('SAFE UV LEVELS', xAxis.left + xAxis.width / 2, yAxis.bottom - 10);
     
-    // Restore the context to draw the chart
-    ctx.restore();
-    
-    // Redraw the chart over the filled areas
-    chart.draw();
-    
-    // Redraw the threshold line to make sure it's visible
-    ctx.save();
+    // Draw the threshold line
     ctx.beginPath();
     ctx.moveTo(xAxis.left, yPixel);
     ctx.lineTo(xAxis.right, yPixel);
@@ -1260,7 +1189,9 @@ function createUvForecastGraph(data) {
     ctx.lineWidth = 2;
     ctx.strokeStyle = '#000000';
     ctx.stroke();
-    ctx.restore();
+    
+    // Redraw the chart data on top
+    chart.draw();
   }, 100);
 }
 
