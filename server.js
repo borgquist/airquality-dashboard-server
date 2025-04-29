@@ -125,7 +125,10 @@ function startHeartbeat() {
   // Send a ping every 10 seconds to all connected clients
   heartbeatTimer = setInterval(() => {
     if (sseClients.size > 0) {
-      console.log(`💓 Sending heartbeat ping to ${sseClients.size} clients`);
+      // Reduce log verbosity - only log heartbeats in debug mode
+      if (serverConfig.logLevel === 'debug') {
+        console.log(`💓 Sending heartbeat ping to ${sseClients.size} clients`);
+      }
       
       // Create a ping event
       const pingEvent = {
@@ -183,19 +186,23 @@ function notifyClients(eventType) {
     timestamp: new Date().toISOString()
   };
   
-  // Log the number of connected clients
-  console.log(`📢 Notifying ${sseClients.size} clients of ${eventType} update`);
-  logger.info(`Notifying ${sseClients.size} clients of ${eventType} update`);
+  // Consolidate notification logs
+  let logMessage = `📢 Notifying ${sseClients.size} clients of ${eventType} update`;
   
-  // Log specific data being sent in notifications
+  // Add PM2.5 data if available
   if (eventType === 'aqi-update' && lastFetchedData && lastFetchedData.current && lastFetchedData.current.pm25) {
-    console.log(`📊 SSE EVENT NOTIFICATION - Current PM2.5 AQI US: ${lastFetchedData.current.pm25.aqius} (conc: ${lastFetchedData.current.pm25.conc})`);
+    logMessage += ` (PM2.5 AQI US: ${lastFetchedData.current.pm25.aqius}, conc: ${lastFetchedData.current.pm25.conc})`;
+    
+    // Keep detailed structured logging for the log file but not console
     logger.info(`SSE ${eventType} notification data`, {
       pm25_aqius: lastFetchedData.current.pm25.aqius,
       pm25_conc: lastFetchedData.current.pm25.conc,
       timestamp: new Date().toISOString()
     });
   }
+  
+  console.log(logMessage);
+  logger.info(`Notifying ${sseClients.size} clients of ${eventType} update`);
   
   // Send the event to all connected clients
   let successCount = 0;
@@ -211,8 +218,11 @@ function notifyClients(eventType) {
     }
   });
   
-  // Log the event details
-  console.log(`✅ Successfully sent ${eventType} event to ${successCount}/${sseClients.size} clients`);
+  // Only log result if there were issues or in debug mode
+  if (successCount < sseClients.size || serverConfig.logLevel === 'debug') {
+    console.log(`✅ Sent ${eventType} event to ${successCount}/${sseClients.size} clients`);
+  }
+  
   logger.info(`Sent ${eventType} event to ${sseClients.size} clients`);
 }
 
@@ -249,9 +259,14 @@ function startExternalApiPolling() {
           // Check if the data has changed
           const hasChanged = JSON.stringify(data) !== JSON.stringify(lastFetchedData);
           
-          // Log PM2.5 AQI US value if present
+          // Consolidate logging - only log detailed info when data changes
           if (data && data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
-            console.log(`PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc}) at ${new Date().toISOString()}`);
+            // Only log the value if it changed or in debug mode
+            if (hasChanged || serverConfig.logLevel === 'debug') {
+              console.log(`📊 PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc}) at ${new Date().toISOString()}`);
+            }
+            
+            // Keep structured logging for log files
             logger.info('PM2.5 AQI US value', {
               aqius: data.current.pm25.aqius,
               concentration: data.current.pm25.conc,
@@ -263,22 +278,22 @@ function startExternalApiPolling() {
           lastFetchedData = data;
           
           if (hasChanged) {
-            console.log('Data updated from external API');
+            console.log('📊 Data updated from external API');
             // Invalidate the cache when data changes
             const cacheKey = `airquality-data`;
             if (dataCache[cacheKey]) {
-              console.log('Invalidating API response cache due to data change');
               dataCache[cacheKey].data = data;
               dataCache[cacheKey].timestamp = Date.now();
             }
             // Notify clients on each update
             notifyClients('aqi-update');
-          } else {
-            console.log('Data unchanged from external API');
+          } else if (serverConfig.logLevel === 'debug') {
+            // Only log unchanged data in debug mode
+            console.log('📊 Data unchanged from external API');
           }
         })
         .catch(error => {
-          console.error('Failed to update data:', error.message);
+          console.error('❌ Failed to update data:', error.message);
         });
     }, externalApiInterval);
   } else {
@@ -318,10 +333,9 @@ async function fetchExternalData(apiUrl) {
     
     // Use the API URL directly without appending lat/lon parameters
     const url = apiUrl;
-    console.log(`Attempting to connect to: ${url} at ${new Date().toISOString()}`);
     
-    // Log DNS lookup attempt
-    console.log(`Performing DNS lookup for: ${url.replace('http://', '').replace('https://', '').split('/')[0]}`);
+    // Reduce verbosity - combine DNS lookup and connection messages
+    console.log(`🔄 Fetching data from ${url}`);
     
     // Use a simple timeout approach instead of AbortController
     const timeoutPromise = new Promise((_, reject) => {
@@ -339,10 +353,14 @@ async function fetchExternalData(apiUrl) {
     }
     
     const data = await response.json();
-    console.log(`Successfully fetched data from: ${url}`);
+    
+    // Only log detailed data in debug mode
+    if (serverConfig.logLevel === 'debug') {
+      console.log(`✅ Successfully fetched data from: ${url}`);
+    }
     return data;
   } catch (error) {
-    console.error(`Error in fetchExternalData: ${error.message}`);
+    console.error(`❌ Error in fetchExternalData: ${error.message}`);
     throw error;
   }
 }
@@ -587,10 +605,12 @@ app.get('/api/airquality', async (req, res) => {
   try {
     const clientIp = getClientIp(req);
     const forceRefresh = req.query.force === '1';
-    console.log(`[${clientIp}] Fetching air quality data${forceRefresh ? ' (forced refresh)' : ''}`);
-
+    
+    // Consolidate client request logging
+    const requestType = forceRefresh ? 'forced refresh' : 'regular';
+    
     if (!serverConfig.externalApiUrl) {
-      console.warn('External API URL is not configured');
+      console.warn('⚠️ External API URL is not configured');
       return res.json({ 
         error: 'Air quality API not configured',
         current: null
@@ -613,31 +633,38 @@ app.get('/api/airquality', async (req, res) => {
     
     // Check if we have cached data and it's not expired (and not a forced refresh)
     if (!forceRefresh && dataCache[cacheKey] && Date.now() - dataCache[cacheKey].timestamp < CACHE_TTL) {
-      console.log(`[${clientIp}] Using cached air quality data`);
       
-      // Log what we're sending to client from cache
-      if (dataCache[cacheKey].data && dataCache[cacheKey].data.current && dataCache[cacheKey].data.current.pm25) {
-        console.log(`SENDING TO CLIENT [${clientIp}] (CACHED): PM2.5 AQI US: ${dataCache[cacheKey].data.current.pm25.aqius} (conc: ${dataCache[cacheKey].data.current.pm25.conc})`);
-        logger.info(`Sent cached data to client ${clientIp}`, {
-          pm25_aqius: dataCache[cacheKey].data.current.pm25.aqius,
-          pm25_conc: dataCache[cacheKey].data.current.pm25.conc,
-          cached: true,
-          timestamp: new Date().toISOString()
-        });
+      // Only log in debug mode or if it's a forced refresh
+      if (serverConfig.logLevel === 'debug') {
+        console.log(`👤 [${clientIp}] Using cached air quality data`);
       }
+      
+      // Consolidate logging for client responses
+      if (dataCache[cacheKey].data && dataCache[cacheKey].data.current && dataCache[cacheKey].data.current.pm25 && serverConfig.logLevel === 'debug') {
+        console.log(`📤 To [${clientIp}]: Cached PM2.5 AQI US: ${dataCache[cacheKey].data.current.pm25.aqius} (conc: ${dataCache[cacheKey].data.current.pm25.conc})`);
+      }
+      
+      // Keep detailed structured logging for log files
+      logger.info(`Sent cached data to client ${clientIp}`, {
+        pm25_aqius: dataCache[cacheKey].data.current?.pm25?.aqius,
+        pm25_conc: dataCache[cacheKey].data.current?.pm25?.conc,
+        cached: true,
+        timestamp: new Date().toISOString()
+      });
       
       return res.json(dataCache[cacheKey].data);
     }
     
-    console.log(`[${clientIp}] ${forceRefresh ? 'Forced refresh' : 'First time fetch or cache expired'}, fetching new air quality data`);
+    console.log(`👤 [${clientIp}] ${forceRefresh ? 'Forced refresh' : 'Cache expired'}, fetching new air quality data`);
     
     // Fetch data directly from the API without appending lat/lon
     const data = await fetchExternalData(apiUrl);
     
-    // Log PM2.5 AQI US value when responding to API request
+    // Consolidate client response logging
     if (data && data.current && data.current.pm25 && data.current.pm25.aqius !== undefined) {
-      console.log(`[${clientIp}] PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc})`);
-      console.log(`SENDING TO CLIENT [${clientIp}] (FRESH): PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc})`);
+      console.log(`📤 To [${clientIp}]: Fresh PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc})`);
+      
+      // Keep detailed structured logging for log files
       logger.info(`Sent fresh data to client ${clientIp}`, {
         pm25_aqius: data.current.pm25.aqius,
         pm25_conc: data.current.pm25.conc,
@@ -654,7 +681,7 @@ app.get('/api/airquality', async (req, res) => {
     
     return res.json(data);
   } catch (error) {
-    console.error('Error fetching air quality data:', error.message);
+    console.error('❌ Error fetching air quality data:', error.message);
     return res.json({ 
       error: 'Failed to fetch air quality data: ' + error.message,
       current: null 
