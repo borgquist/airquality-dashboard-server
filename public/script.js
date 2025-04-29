@@ -958,121 +958,101 @@ function createUvForecastGraph(data) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
+    // For safe values and unsafe values
+    if (entry.uvi <= uvSafetyThreshold) {
+      // For safe values, show the actual values
+      safeUviValues.push(entry.uvi);
+      unsafeUviValues.push(null);
+    } else {
+      // For unsafe values, show the actual values
+      unsafeUviValues.push(entry.uvi);
+      safeUviValues.push(null);
+    }
+    
     // Check if this is current time
     if (entry.isCurrent || 
         (Math.abs(entryTime.getTime() - currentTime.getTime()) < 30 * 60 * 1000)) {
       currentTimeIndex = index;
     }
   });
-
-  // Create safe and unsafe series with exact transition points
-  safeUviValues = [];
-  unsafeUviValues = [];
-
-  // Find transition points (where UV crosses threshold)
-  const transitions = [];
+  
+  // Now add exact transition points at the threshold to connect the lines
+  // We need to find where the UV crosses the threshold and insert points
+  const transitionPoints = [];
+  
   for (let i = 0; i < enhancedForecast.length - 1; i++) {
     const current = enhancedForecast[i];
     const next = enhancedForecast[i+1];
+    const currentTime = new Date(current.time);
+    const nextTime = new Date(next.time);
     
-    // If crossing from safe to unsafe
+    // If crossing the threshold from safe to unsafe
     if (current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
-      const transitionIndex = i;
-      transitions.push({ index: transitionIndex, type: 'safe-to-unsafe' });
+      // Calculate exact crossing time
+      const ratio = (uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi);
+      const crossingTime = new Date(
+        currentTime.getTime() + 
+        ratio * (nextTime.getTime() - currentTime.getTime())
+      );
+      
+      // Format crossing time
+      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit'});
+      
+      // Insert a point at exactly the threshold
+      transitionPoints.push({
+        index: i + 0.5,
+        time: timeLabel,
+        safeValue: uvSafetyThreshold,
+        unsafeValue: uvSafetyThreshold
+      });
     }
-    
-    // If crossing from unsafe to safe
-    if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
-      const transitionIndex = i;
-      transitions.push({ index: transitionIndex, type: 'unsafe-to-safe' });
-    }
-  }
-
-  // Create the data series with proper transitions
-  for (let i = 0; i < enhancedForecast.length; i++) {
-    const entry = enhancedForecast[i];
-    
-    if (entry.uvi <= uvSafetyThreshold) {
-      // This is a safe point
-      let isBoundaryPoint = false;
-      let boundaryDirection = '';
+    // If crossing the threshold from unsafe to safe
+    else if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
+      // Calculate exact crossing time
+      const ratio = (current.uvi - uvSafetyThreshold) / (current.uvi - next.uvi);
+      const crossingTime = new Date(
+        currentTime.getTime() + 
+        ratio * (nextTime.getTime() - currentTime.getTime())
+      );
       
-      // Check if this is right before a transition to unsafe
-      for (const t of transitions) {
-        if (t.index === i && t.type === 'safe-to-unsafe') {
-          isBoundaryPoint = true;
-          boundaryDirection = 'to-unsafe';
-          break;
-        }
-      }
+      // Format crossing time
+      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit'});
       
-      if (isBoundaryPoint && boundaryDirection === 'to-unsafe') {
-        // This is the last safe point before unsafe - set exactly to threshold
-        safeUviValues.push(uvSafetyThreshold);
-      } else {
-        // Normal safe point
-        safeUviValues.push(entry.uvi);
-      }
-      
-      // Always null for unsafe
-      unsafeUviValues.push(null);
-    } else {
-      // This is an unsafe point
-      let isBoundaryPoint = false;
-      let boundaryDirection = '';
-      
-      // Check if this is right after a transition from safe
-      for (const t of transitions) {
-        if (t.index === i-1 && t.type === 'safe-to-unsafe') {
-          isBoundaryPoint = true;
-          boundaryDirection = 'from-safe';
-          break;
-        }
-      }
-      
-      // Check if this is right before a transition to safe
-      for (const t of transitions) {
-        if (t.index === i && t.type === 'unsafe-to-safe') {
-          isBoundaryPoint = true;
-          boundaryDirection = 'to-safe';
-          break;
-        }
-      }
-      
-      if (isBoundaryPoint) {
-        if (boundaryDirection === 'from-safe') {
-          // First unsafe point after safe - start exactly at threshold
-          unsafeUviValues.push(uvSafetyThreshold);
-        } else if (boundaryDirection === 'to-safe') {
-          // Last unsafe point before safe - end exactly at threshold
-          unsafeUviValues.push(uvSafetyThreshold);
-        } else {
-          unsafeUviValues.push(entry.uvi);
-        }
-      } else {
-        // Normal unsafe point
-        unsafeUviValues.push(entry.uvi);
-      }
-      
-      // Always null for safe
-      safeUviValues.push(null);
+      // Insert a point at exactly the threshold
+      transitionPoints.push({
+        index: i + 0.5,
+        time: timeLabel,
+        safeValue: uvSafetyThreshold,
+        unsafeValue: uvSafetyThreshold
+      });
     }
   }
-
-  // Now analyze the result to fix any issues at transitions
-  for (const t of transitions) {
-    const index = t.index;
+  
+  // Insert the transition points
+  transitionPoints.sort((a, b) => a.index - b.index);
+  for (const point of transitionPoints) {
+    // Find the actual index where to insert
+    let insertIndex = Math.floor(point.index);
+    for (let i = 0; i <= insertIndex; i++) {
+      if (times[i] === point.time) {
+        // If a point at this time already exists, use that
+        insertIndex = i;
+        break;
+      }
+    }
     
-    if (t.type === 'safe-to-unsafe') {
-      // Make sure safe ends at threshold and unsafe starts at threshold
-      safeUviValues[index] = uvSafetyThreshold;
-      unsafeUviValues[index + 1] = uvSafetyThreshold;
-    } else if (t.type === 'unsafe-to-safe') {
-      // Make sure unsafe ends at threshold and safe starts at threshold
-      unsafeUviValues[index] = uvSafetyThreshold;
-      safeUviValues[index + 1] = uvSafetyThreshold;
+    // Insert the transition point
+    times.splice(insertIndex + 1, 0, point.time);
+    uviValues.splice(insertIndex + 1, 0, uvSafetyThreshold);
+    safeUviValues.splice(insertIndex + 1, 0, point.safeValue);
+    unsafeUviValues.splice(insertIndex + 1, 0, point.unsafeValue);
+    
+    // Adjust current time index if needed
+    if (currentTimeIndex > insertIndex) {
+      currentTimeIndex++;
     }
   }
+  // At this point we should have exact transition points inserted that make the lines meet perfectly
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
@@ -1096,7 +1076,7 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(46, 204, 113, 1)',
           pointBorderColor: 'rgba(46, 204, 113, 1)',
           borderWidth: 3,
-          tension: 0.1, // Reduce curve tension for more accurate transitions
+          tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
           spanGaps: false  // Change to false to prevent connecting across null values
@@ -1110,7 +1090,7 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(231, 76, 60, 1)',
           pointBorderColor: 'rgba(231, 76, 60, 1)',
           borderWidth: 3,
-          tension: 0.1, // Reduce curve tension for more accurate transitions
+          tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
           spanGaps: true  // Keep true for red line to span any small gaps
