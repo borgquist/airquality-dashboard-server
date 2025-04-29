@@ -313,68 +313,53 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
     }
   };
   
+  // Add vertical line for current time
+  const currentTime = new Date();
+  const currentTimeStr = currentTime.toLocaleTimeString('en-GB', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'Asia/Dubai'
+  });
+  
+  annotations.currentTime = {
+    type: 'line',
+    xMin: currentTimeStr,
+    xMax: currentTimeStr,
+    borderColor: '#000000',
+    borderWidth: 3,
+    drawTime: 'afterDatasetsDraw'
+  };
+  
   // Create chart
   const ctx = canvas.getContext('2d');
   
-  // Define colors for different UV ranges - multiple distinct colors with less transparency
+  // Define colors for different UV ranges
   const uvColors = {
     low: {
       lineColor: 'rgba(76, 175, 80, 1)',        // Green
-      fillColor: 'rgba(76, 175, 80, 0.8)',      // Less transparent
-      textColor: '#000000'                       // Black text for lighter backgrounds
+      fillColor: 'rgba(76, 175, 80, 0.8)'      
     },
     moderate: {
       lineColor: 'rgba(255, 235, 59, 1)',       // Yellow
-      fillColor: 'rgba(255, 235, 59, 0.8)',     // Less transparent
-      textColor: '#000000'                       // Black text
+      fillColor: 'rgba(255, 235, 59, 0.8)'     
     },
     high: {
       lineColor: 'rgba(255, 152, 0, 1)',        // Orange
-      fillColor: 'rgba(255, 152, 0, 0.8)',      // Less transparent
-      textColor: '#000000'                       // Black text
+      fillColor: 'rgba(255, 152, 0, 0.8)'     
     },
     veryHigh: {
       lineColor: 'rgba(233, 30, 99, 1)',        // Pink/red
-      fillColor: 'rgba(233, 30, 99, 0.8)',      // Less transparent
-      textColor: '#FFFFFF'                       // White text for darker backgrounds
+      fillColor: 'rgba(233, 30, 99, 0.8)'      
     },
     extreme: {
       lineColor: 'rgba(156, 39, 176, 1)',       // Purple
-      fillColor: 'rgba(156, 39, 176, 0.8)',     // Less transparent
-      textColor: '#FFFFFF'                       // White text
+      fillColor: 'rgba(156, 39, 176, 0.8)'     
     }
   };
   
-  // Using a single dataset approach with color interpolation
-  // This avoids ANY gaps between segments
-  const coloredData = [];
-  
-  // Process each data point and assign the appropriate color
-  smoothData.values.forEach((value, index) => {
-    let color;
-    
-    if (value <= 3) {
-      color = uvColors.low.fillColor;
-    } else if (value <= 6) {
-      color = uvColors.moderate.fillColor;
-    } else if (value <= 8) {
-      color = uvColors.high.fillColor;
-    } else if (value <= 11) {
-      color = uvColors.veryHigh.fillColor;
-    } else {
-      color = uvColors.extreme.fillColor;
-    }
-    
-    coloredData.push({
-      x: smoothData.times[index],
-      y: value,
-      color: color
-    });
-  });
-  
-  // Create the seamless dataset
+  // Create the datasets
   const datasets = [{
-    label: 'UV Index',
+    label: '',  // Empty label to hide in legend
     data: smoothData.values,
     borderColor: smoothData.values.map((v, i) => {
       if (v <= 3) return uvColors.low.lineColor;
@@ -410,18 +395,7 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
     return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
   }
   
-  // Thin black outline
-  datasets.push({
-    label: 'UV Outline',
-    data: smoothData.values,
-    borderColor: 'rgba(0, 0, 0, 0.3)',
-    backgroundColor: 'rgba(0, 0, 0, 0)', // transparent
-    borderWidth: 1,
-    pointRadius: 0,
-    tension: 0.4,
-    fill: false
-  });
-  
+  // Create the chart
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
