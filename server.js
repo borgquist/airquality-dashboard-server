@@ -96,19 +96,12 @@ function getClientIp(req) {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Data cache and control variables
+// Remove UV API variables
 let lastFetchedData = null;
 let lastFetchTime = 0;
 let fetchPromise = null;
 let externalApiTimer = null;
 const externalApiInterval = (serverConfig.pollingIntervalSec || 20) * 1000;
-
-// UV API variables
-let lastUvData = null;
-let lastUvFetchTime = 0;
-let uvFetchPromise = null;
-let uvApiTimer = null;
-const uvApiInterval = (serverConfig.uvRefreshIntervalSec || 1800) * 1000;
 
 // Keep track of connected SSE clients
 const sseClients = new Set();
@@ -365,237 +358,6 @@ async function fetchExternalData(apiUrl) {
   }
 }
 
-// Start timed polling of UV API
-function startUvApiPolling() {
-  // Clear any existing timer
-  if (uvApiTimer) {
-    clearInterval(uvApiTimer);
-  }
-  
-  // Initial fetch
-  fetchUvData();
-  
-  // Set up recurring timer
-  uvApiTimer = setInterval(fetchUvData, uvApiInterval);
-  
-  logger.info(`Started UV API polling every ${uvApiInterval/1000} seconds`);
-}
-
-// Fetch data from UV API
-async function fetchUvData() {
-  // If a fetch is already in progress, don't start another one
-  if (uvFetchPromise) {
-    logger.debug('Skipping scheduled UV API poll - previous fetch still in progress');
-    return;
-  }
-  
-  // Check if UV configuration is available
-  if (!serverConfig.uvApi) {
-    logger.error('UV API configuration not available in config.json');
-    return;
-  }
-
-  // Check if using cached server or direct OpenUV API
-  if (serverConfig.uvApi.useCachedServer) {
-    // Use the cached server URL
-    if (!serverConfig.uvApi.cachedServerUrl) {
-      logger.error('Cached server URL not configured but useCachedServer is true');
-      return;
-    }
-    
-    let apiUrl = serverConfig.uvApi.cachedServerUrl;
-    
-    // Ensure URL has protocol
-    if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-      // For local network addresses, default to http
-      if (apiUrl.includes('192.168.') || apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost')) {
-        apiUrl = 'http://' + apiUrl;
-      } else {
-        apiUrl = 'https://' + apiUrl;
-      }
-    }
-    
-    logger.info(`Polling cached UV API server: ${apiUrl}`);
-    requestStats.trackApiCall();
-    
-    try {
-      uvFetchPromise = fetch(apiUrl);
-      
-      const response = await uvFetchPromise;
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Check if we got valid data
-      if (!data || !data.result || !Array.isArray(data.result)) {
-        throw new Error('Invalid data format from cached UV API server');
-      }
-      
-      // Transform the data to match our expected format
-      const transformedData = transformOpenUvData(data);
-      
-      // Check if the data has changed
-      const hasChanged = JSON.stringify(transformedData) !== JSON.stringify(lastUvData);
-      
-      // Update cache
-      lastUvData = transformedData;
-      lastUvFetchTime = Date.now();
-      
-      if (hasChanged) {
-        logger.info('UV API data refreshed successfully', {
-          timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now && transformedData.now.uvi,
-          source: 'cached server'
-        });
-        
-        // Notify clients of new UV data
-        notifyClients('uv-update');
-      } else {
-        logger.info('UV API data unchanged', {
-          timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now && transformedData.now.uvi,
-          source: 'cached server'
-        });
-      }
-      
-    } catch (error) {
-      logger.error('Error fetching from cached UV API server', { 
-        error: error.message,
-        url: apiUrl
-      });
-    } finally {
-      // Always clear the promise
-      uvFetchPromise = null;
-    }
-  } else {
-    // Use direct OpenUV API
-    if (!serverConfig.uvApi.apiKey) {
-      logger.error('OpenUV API key not configured in config.json');
-      return;
-    }
-    
-    const lat = serverConfig.location.latitude;
-    const lon = serverConfig.location.longitude;
-    let apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
-    
-    // Ensure URL has protocol
-    if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-      apiUrl = 'https://' + apiUrl;
-    }
-    
-    const url = `${apiUrl}?lat=${lat}&lng=${lon}`;
-    
-    logger.info(`Polling OpenUV API: ${url}`);
-    requestStats.trackApiCall();
-    
-    try {
-      uvFetchPromise = fetch(url, {
-        headers: {
-          'x-access-token': serverConfig.uvApi.apiKey
-        }
-      });
-      
-      const response = await uvFetchPromise;
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Transform the OpenUV API data format to match our expected format
-      const transformedData = transformOpenUvData(data);
-      
-      // Check if the data has changed
-      const hasChanged = JSON.stringify(transformedData) !== JSON.stringify(lastUvData);
-      
-      // Update cache
-      lastUvData = transformedData;
-      lastUvFetchTime = Date.now();
-      
-      if (hasChanged) {
-        logger.info('UV API data refreshed successfully', {
-          timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now && transformedData.now.uvi,
-          source: 'OpenUV API'
-        });
-        
-        // Notify clients of new UV data
-        notifyClients('uv-update');
-      } else {
-        logger.info('UV API data unchanged', {
-          timestamp: new Date().toISOString(),
-          current_uvi: transformedData.now && transformedData.now.uvi,
-          source: 'OpenUV API'
-        });
-      }
-      
-    } catch (error) {
-      logger.error('Error fetching from UV API', { 
-        error: error.message,
-        url: url
-      });
-    } finally {
-      // Always clear the promise
-      uvFetchPromise = null;
-    }
-  }
-}
-
-// Transform OpenUV API data to our expected format
-function transformOpenUvData(openUvData) {
-  if (!openUvData || !openUvData.result || !Array.isArray(openUvData.result) || openUvData.result.length === 0) {
-    logger.error('Invalid or empty data from OpenUV API');
-    return null;
-  }
-  
-  try {
-    // Sort the forecast data by time
-    const sortedForecast = [...openUvData.result].sort((a, b) => {
-      return new Date(a.uv_time) - new Date(b.uv_time);
-    });
-    
-    // Find the current UV index (closest to current time)
-    const now = new Date();
-    let closestIndex = 0;
-    let minTimeDiff = Infinity;
-    
-    for (let i = 0; i < sortedForecast.length; i++) {
-      const forecastTime = new Date(sortedForecast[i].uv_time);
-      const timeDiff = Math.abs(forecastTime - now);
-      
-      if (timeDiff < minTimeDiff) {
-        minTimeDiff = timeDiff;
-        closestIndex = i;
-      }
-    }
-    
-    const currentUvi = sortedForecast[closestIndex].uv;
-    
-    // Create a forecast array in the format our frontend expects
-    const forecast = sortedForecast.map(item => {
-      return {
-        uvi: item.uv,
-        time: item.uv_time
-      };
-    });
-    
-    // Return in the format expected by our frontend
-    return {
-      now: {
-        uvi: currentUvi
-      },
-      forecast: forecast
-    };
-  } catch (error) {
-    logger.error('Error transforming OpenUV data', { error: error.message });
-    return null;
-  }
-}
-
 // Cache for API requests
 const dataCache = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes default TTL
@@ -689,116 +451,6 @@ app.get('/api/airquality', async (req, res) => {
   }
 });
 
-// API endpoint to fetch UV index data
-app.get('/api/uvindex', async (req, res) => {
-  const clientIP = getClientIp(req);
-  requestStats.trackRequest(clientIP);
-  
-  // Check if UV API is configured
-  if (!serverConfig.uvApi) {
-    logger.warn('UV API not configured in config.json');
-    return res.json({
-      error: 'UV API not configured',
-      now: { uvi: null },
-      forecast: []
-    });
-  }
-  
-  // If we have cached data, return it immediately
-  if (lastUvData) {
-    return res.json(lastUvData);
-  }
-  
-  // If we don't have data yet, fetch it now
-  try {
-    if (!uvFetchPromise) {
-      // Check if using cached server or direct OpenUV API
-      if (serverConfig.uvApi.useCachedServer) {
-        // Using cached server
-        if (!serverConfig.uvApi.cachedServerUrl) {
-          throw new Error('Cached server URL not configured but useCachedServer is true');
-        }
-        
-        let apiUrl = serverConfig.uvApi.cachedServerUrl;
-        
-        // Ensure URL has protocol
-        if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-          // For local network addresses, default to http
-          if (apiUrl.includes('192.168.') || apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost')) {
-            apiUrl = 'http://' + apiUrl;
-          } else {
-            apiUrl = 'https://' + apiUrl;
-          }
-        }
-        
-        logger.info(`First-time cached UV API fetch triggered by client ${clientIP}`);
-        uvFetchPromise = fetch(apiUrl);
-        requestStats.trackApiCall();
-      } else {
-        // Using direct OpenUV API
-        if (!serverConfig.uvApi.apiKey) {
-          throw new Error('OpenUV API key not configured');
-        }
-        
-        const lat = serverConfig.location.latitude;
-        const lon = serverConfig.location.longitude;
-        let apiUrl = serverConfig.uvApi.url || 'https://api.openuv.io/api/v1/forecast';
-        
-        // Ensure URL has protocol
-        if (apiUrl && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-          apiUrl = 'https://' + apiUrl;
-        }
-        
-        const url = `${apiUrl}?lat=${lat}&lng=${lon}`;
-        
-        logger.info(`First-time UV data fetch triggered by client ${clientIP}`);
-        
-        uvFetchPromise = fetch(url, {
-          headers: {
-            'x-access-token': serverConfig.uvApi.apiKey
-          }
-        });
-        
-        requestStats.trackApiCall();
-      }
-    } else {
-      logger.debug(`Client ${clientIP} waiting for in-progress UV fetch`);
-    }
-    
-    const response = await uvFetchPromise;
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    // Transform the OpenUV API data format to match our expected format
-    const transformedData = transformOpenUvData(data);
-    
-    if (!transformedData) {
-      throw new Error('Failed to transform UV data');
-    }
-    
-    // Update cache
-    lastUvData = transformedData;
-    lastUvFetchTime = Date.now();
-    uvFetchPromise = null;
-    
-    return res.json(transformedData);
-  } catch (error) {
-    logger.error('Error fetching UV index data', { error: error.message });
-    uvFetchPromise = null;
-    
-    // Return a valid but empty response structure instead of an error
-    return res.json({
-      error: error.message,
-      now: { uvi: null },
-      forecast: []
-    });
-  }
-});
-
 // API endpoint to fetch version information
 app.get('/api/version', (req, res) => {
   try {
@@ -821,24 +473,13 @@ app.listen(PORT, () => {
   logger.info(`Server started on port ${PORT}`);
   
   // Log configuration
-  const uvApiConfig = serverConfig.uvApi 
-    ? serverConfig.uvApi.useCachedServer 
-      ? `Using cached UV server at ${serverConfig.uvApi.cachedServerUrl}`
-      : serverConfig.uvApi.apiKey 
-        ? 'Configured with direct OpenUV API' 
-        : 'Missing OpenUV API key'
-    : 'Not configured';
-
   logger.info('Server configuration:', {
     apiUrl: serverConfig.externalApiUrl,
-    pollingInterval: `${serverConfig.pollingIntervalSec || 20}s`,
-    uvPollingInterval: `${serverConfig.uvRefreshIntervalSec || 1800}s`,
-    uvApi: uvApiConfig
+    pollingInterval: `${serverConfig.pollingIntervalSec || 20}s`
   });
   
   // Start the polling timers
   startExternalApiPolling();
-  startUvApiPolling();
   
   // Start the heartbeat
   startHeartbeat();
