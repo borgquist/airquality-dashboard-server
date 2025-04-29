@@ -430,35 +430,57 @@ function updateAirQualityDisplay(data) {
     // Get the main AQI card
     const mainAqiElement = document.querySelector('.main-aqi');
     
+    debugPrint(`Changing AQI category to: ${aqiCategory.name} (class: ${aqiCategory.className})`);
+    
     // Remove all category classes from both elements
     const categoryClasses = ['good', 'moderate', 'unhealthy-sensitive', 'unhealthy', 'very-unhealthy', 'hazardous'];
     
     categoryElement.classList.remove(...categoryClasses);
     mainAqiElement.classList.remove(...categoryClasses);
     
+    // IMPORTANT: Clear any inline styles that might be overriding the CSS classes
+    // This is critical to ensure color changes apply immediately without requiring a refresh
+    mainAqiElement.style.removeProperty('background-color');
+    mainAqiElement.style.removeProperty('color');
+    mainAqiElement.style.removeProperty('--measurement-text-color');
+    
+    debugPrint('Removed inline styles to ensure CSS classes take effect');
+    
     // Add the current category class to both elements
     categoryElement.classList.add(aqiCategory.className);
     mainAqiElement.classList.add(aqiCategory.className);
     
-    // Apply custom color settings from config if available
-    const configKey = aqiCategory.className.replace('-', '').replace('-', '');
-    if (config.aqiColors && config.aqiColors[configKey]) {
-      const colorConfig = config.aqiColors[configKey];
-      mainAqiElement.style.backgroundColor = colorConfig.backgroundColor;
-      mainAqiElement.style.color = colorConfig.textColor;
-      
-      // Set the CSS variable for measurement text color based on textColor
-      const textColor = colorConfig.textColor.toLowerCase();
-      // If the main text color is white or light, use white for measurements, otherwise black
-      if (textColor === '#fff' || textColor === '#ffffff' || textColor === 'white') {
-        mainAqiElement.style.setProperty('--measurement-text-color', '#fff');
-      } else {
-        mainAqiElement.style.setProperty('--measurement-text-color', '#000');
-      }
-    }
+    debugPrint(`Added class '${aqiCategory.className}' to elements`);
     
-    // Update page background based on AQI
-    updatePageBackground(aqiValue);
+    // Wait a tiny bit for the class styles to apply before potentially overriding with custom colors
+    // This ensures that if custom colors fail, the class-based colors will still be visible
+    setTimeout(() => {
+      // Apply custom color settings from config if available
+      const configKey = aqiCategory.className.replace('-', '').replace('-', '');
+      if (config.aqiColors && config.aqiColors[configKey]) {
+        const colorConfig = config.aqiColors[configKey];
+        debugPrint(`Applying custom colors from config: bg=${colorConfig.backgroundColor}, text=${colorConfig.textColor}`);
+        
+        mainAqiElement.style.backgroundColor = colorConfig.backgroundColor;
+        mainAqiElement.style.color = colorConfig.textColor;
+        
+        // Set the CSS variable for measurement text color based on textColor
+        const textColor = colorConfig.textColor.toLowerCase();
+        // If the main text color is white or light, use white for measurements, otherwise black
+        if (textColor === '#fff' || textColor === '#ffffff' || textColor === 'white') {
+          mainAqiElement.style.setProperty('--measurement-text-color', '#fff');
+          debugPrint('Set measurement text color to white');
+        } else {
+          mainAqiElement.style.setProperty('--measurement-text-color', '#000');
+          debugPrint('Set measurement text color to black');
+        }
+      } else {
+        debugPrint('No custom colors in config, using CSS class-based colors');
+      }
+      
+      // Update page background based on AQI
+      updatePageBackground(aqiValue);
+    }, 10);
   } else {
     document.getElementById('aqiCategory').textContent = '-';
   }

@@ -374,33 +374,6 @@ footer {
   color: white;
 }
 
-/* AQI category colors for card backgrounds */
-.main-aqi.good {
-  background-color: green;
-}
-
-.main-aqi.moderate {
-  background-color: #8cd211;
-}
-
-.main-aqi.unhealthy-sensitive {
-  background-color: yellow;
-  color: black;
-}
-
-.main-aqi.unhealthy {
-  background-color: orange;
-  color: black;
-}
-
-.main-aqi.very-unhealthy {
-  background-color: red;
-}
-
-.main-aqi.hazardous {
-  background-color: darkred;
-}
-
 /* Background colors for body */
 body.bg-good {
   background-color: rgba(0, 128, 0, 0.15);
@@ -860,7 +833,7 @@ body.bg-hazardous {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: white;
+  color: var(--measurement-text-color, #fff);
   padding: 5px;
   background-color: rgba(255, 255, 255, 0.15);
   border-radius: 8px;
@@ -876,13 +849,13 @@ body.bg-hazardous {
 .weather-data-small .label {
   font-size: 0.9rem;
   font-weight: normal;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--measurement-text-color, rgba(255, 255, 255, 0.9));
 }
 
 .weather-data-small .value {
   font-size: 1.1rem;
   font-weight: bold;
-  color: white;
+  color: var(--measurement-text-color, #fff);
 }
 
 .weather-data-small .label::before {
