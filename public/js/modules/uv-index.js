@@ -216,10 +216,31 @@ function updateUvIndexDisplay(data) {
   
   // Update the below 4 info
   const uvBelowInfo = document.getElementById('uvBelowInfo');
-  if (uvBelowInfo && uvFallTime) {
-    uvBelowInfo.textContent = `below 4 after ${uvFallTime}`;
-  } else if (uvBelowInfo) {
-    uvBelowInfo.textContent = '';
+  if (uvBelowInfo) {
+    // Get current time in minutes for comparison
+    const currentHour = currentTime.getHours();
+    const currentMinute = currentTime.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    
+    // Only show the notification if:
+    // 1. We have a valid fall time
+    // 2. The current time is before the fall time
+    // 3. The current UV level is at or above the threshold
+    if (uvFallTime && currentUv >= 4) {
+      const [fallHour, fallMinute] = uvFallTime.split(':').map(Number);
+      const fallTimeMinutes = fallHour * 60 + fallMinute;
+      
+      if (currentTimeMinutes < fallTimeMinutes) {
+        uvBelowInfo.textContent = `below 4 after ${uvFallTime}`;
+        uvBelowInfo.style.display = 'inline-block';
+      } else {
+        // Current time is already past the fall time, hide notification
+        uvBelowInfo.style.display = 'none';
+      }
+    } else {
+      // No fall time or UV already below threshold, hide notification
+      uvBelowInfo.style.display = 'none';
+    }
   }
   
   // Clear UV info text - we don't want any recommendations displayed
@@ -316,118 +337,57 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
   // Create chart
   const ctx = canvas.getContext('2d');
   
-  // Create datasets for green and red segments based on threshold times
+  // Create datasets for green and red segments based on UV threshold
   const createSegmentedDatasets = () => {
     const times = smoothData.times;
     const values = smoothData.values;
     
     if (!times.length) return [];
     
-    // Helper function to find index of closest time
-    const findTimeIndex = (timeStr) => {
-      if (!timeStr) return -1;
-      return times.findIndex(t => t === timeStr) !== -1 ? 
-        times.findIndex(t => t === timeStr) : 
-        times.findIndex(t => t > timeStr);
+    // Get colors from config
+    const belowThresholdColor = {
+      lineColor: 'rgba(76, 175, 80, 1)',  // Green
+      fillColor: 'rgba(76, 175, 80, 0.4)'
     };
     
-    // Indexes for rise and fall times
-    const riseIndex = findTimeIndex(uvRiseTime);
-    const fallIndex = findTimeIndex(uvFallTime);
+    const aboveThresholdColor = {
+      lineColor: 'rgba(236, 64, 122, 1)',  // Pink
+      fillColor: 'rgba(236, 64, 122, 0.4)'
+    };
     
-    // If we don't have clear time transitions, use a simple color scheme
-    if (riseIndex === -1 && fallIndex === -1) {
-      // Just use one segment with the main UV line
-      return [{
-        label: 'UV Index',
-        data: values,
-        borderColor: 'rgba(33, 150, 243, 0.8)',
-        backgroundColor: 'rgba(33, 150, 243, 0.2)',
-        borderWidth: 3,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        tension: 0.4,
-        fill: true
-      }];
-    }
-    
-    // Create datasets
     const datasets = [];
     
-    // Green Zone (safe): before riseIndex or after fallIndex
-    if (riseIndex !== -1) {
-      // Before rise time (morning)
-      datasets.push({
-        label: 'Safe Zone (Morning)',
-        data: values.map((v, i) => i <= riseIndex ? v : null),
-        borderColor: 'rgba(76, 175, 80, 0.8)',
-        backgroundColor: 'rgba(76, 175, 80, 0.3)',
-        borderWidth: 3,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true
-      });
-    }
+    // Below threshold dataset (green)
+    datasets.push({
+      label: 'Below Threshold',
+      data: values.map((v, i) => v < 4 ? v : null),
+      borderColor: belowThresholdColor.lineColor,
+      backgroundColor: belowThresholdColor.fillColor,
+      borderWidth: 3,
+      pointRadius: 0,
+      tension: 0.4,
+      fill: true
+    });
     
-    if (fallIndex !== -1) {
-      // After fall time (evening)
-      datasets.push({
-        label: 'Safe Zone (Evening)',
-        data: values.map((v, i) => i >= fallIndex ? v : null),
-        borderColor: 'rgba(76, 175, 80, 0.8)',
-        backgroundColor: 'rgba(76, 175, 80, 0.3)',
-        borderWidth: 3,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true
-      });
-    }
+    // Above threshold dataset (pink)
+    datasets.push({
+      label: 'Above Threshold',
+      data: values.map((v, i) => v >= 4 ? v : null),
+      borderColor: aboveThresholdColor.lineColor,
+      backgroundColor: aboveThresholdColor.fillColor,
+      borderWidth: 3,
+      pointRadius: 0,
+      tension: 0.4,
+      fill: true
+    });
     
-    // Red Zone (risk): between riseIndex and fallIndex
-    if (riseIndex !== -1 && fallIndex !== -1) {
-      datasets.push({
-        label: 'Risk Zone',
-        data: values.map((v, i) => i > riseIndex && i < fallIndex ? v : null),
-        borderColor: 'rgba(233, 30, 99, 0.8)',
-        backgroundColor: 'rgba(233, 30, 99, 0.3)',
-        borderWidth: 3,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true
-      });
-    } else if (riseIndex !== -1) {
-      // No fall time but we have rise time - risk zone after rise
-      datasets.push({
-        label: 'Risk Zone',
-        data: values.map((v, i) => i > riseIndex ? v : null),
-        borderColor: 'rgba(233, 30, 99, 0.8)',
-        backgroundColor: 'rgba(233, 30, 99, 0.3)',
-        borderWidth: 3,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true
-      });
-    } else if (fallIndex !== -1) {
-      // No rise time but we have fall time - risk zone before fall
-      datasets.push({
-        label: 'Risk Zone',
-        data: values.map((v, i) => i < fallIndex ? v : null),
-        borderColor: 'rgba(233, 30, 99, 0.8)',
-        backgroundColor: 'rgba(233, 30, 99, 0.3)',
-        borderWidth: 3,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true
-      });
-    }
-    
-    // Main line on top of all zones (makes the line continuous)
+    // Add a thin line on top to make curve continuous
     datasets.push({
       label: 'UV Index',
       data: values,
-      borderColor: 'rgba(33, 150, 243, 0.8)',
-      backgroundColor: 'rgba(33, 150, 243, 0)',
-      borderWidth: 3,
+      borderColor: 'rgba(33, 33, 33, 0.5)',
+      backgroundColor: 'rgba(0, 0, 0, 0)', // transparent
+      borderWidth: 1,
       pointRadius: 0,
       pointHoverRadius: 5,
       tension: 0.4,
@@ -738,7 +698,7 @@ function getCurrentUvLevel(uvReadings, currentTime) {
 // Get UV category name
 function getUvCategoryName(uvValue) {
   if (uvValue === null) return '-';
-  if (uvValue < 3) return 'Low';
+  if (uvValue < 4) return 'Low';
   if (uvValue < 6) return 'Moderate';
   if (uvValue < 8) return 'High';
   if (uvValue < 11) return 'Very High';

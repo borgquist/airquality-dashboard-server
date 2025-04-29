@@ -46,9 +46,34 @@
     "showUvIndex": true,
     "uvThreshold": 4
   },
+  "uvThresholds": {
+    "low": 2,
+    "moderate": 5,
+    "high": 7,
+    "veryHigh": 10,
+    "extreme": 11
+  },
   "uvChartColors": {
-    "lineColor": "rgba(255, 99, 132, 1)",
-    "fillColor": "rgba(255, 99, 132, 0.2)",
+    "low": {
+      "lineColor": "rgba(76, 175, 80, 1)",
+      "fillColor": "rgba(76, 175, 80, 0.4)"
+    },
+    "high": {
+      "lineColor": "rgba(236, 64, 122, 1)",
+      "fillColor": "rgba(236, 64, 122, 0.4)"
+    },
+    "moderate": {
+      "lineColor": "rgba(255, 193, 7, 1)",
+      "fillColor": "rgba(255, 193, 7, 0.2)"
+    },
+    "veryHigh": {
+      "lineColor": "rgba(244, 67, 54, 1)",
+      "fillColor": "rgba(244, 67, 54, 0.2)"
+    },
+    "extreme": {
+      "lineColor": "rgba(156, 39, 176, 1)",
+      "fillColor": "rgba(156, 39, 176, 0.2)"
+    },
     "thresholdColor": "rgba(255, 193, 7, 0.8)"
   },
   "location": {
