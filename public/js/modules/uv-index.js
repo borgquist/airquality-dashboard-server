@@ -147,6 +147,12 @@ function updateUvIndexDisplay(data) {
       uvInfo.innerHTML = '';
     }
     
+    // Clear below 4 info
+    const uvBelowInfo = document.getElementById('uvBelowInfo');
+    if (uvBelowInfo) {
+      uvBelowInfo.textContent = '';
+    }
+    
     return;
   }
   
@@ -206,6 +212,14 @@ function updateUvIndexDisplay(data) {
   
   if (uvFallElement) {
     uvFallElement.textContent = uvFallTime ? `Ok after: ${uvFallTime}` : 'Ok after: --:--';
+  }
+  
+  // Update the below 4 info
+  const uvBelowInfo = document.getElementById('uvBelowInfo');
+  if (uvBelowInfo && uvFallTime) {
+    uvBelowInfo.textContent = `below 4 after ${uvFallTime}`;
+  } else if (uvBelowInfo) {
+    uvBelowInfo.textContent = '';
   }
   
   // Clear UV info text - we don't want any recommendations displayed
