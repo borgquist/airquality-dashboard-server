@@ -7,9 +7,10 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "cubic-spline": "^3.0.3",
     "express": "^4.18.2",
     "node-fetch": "^2.6.12",
-    "winston": "^3.11.0",
-    "cors": "^2.8.5"
+    "winston": "^3.11.0"
   }
-} 
+}

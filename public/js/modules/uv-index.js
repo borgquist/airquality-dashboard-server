@@ -1,5 +1,100 @@
 // UV Index module for handling UV data and charts
 
+// Add cubic spline implementation
+class CubicSpline {
+  constructor(xs, ys) {
+    if (xs.length !== ys.length || xs.length < 2) {
+      throw new Error("Cubic spline needs at least 2 points and equal-length arrays");
+    }
+    
+    // Sort points by x if needed
+    const points = xs.map((x, i) => ({ x, y: ys[i] })).sort((a, b) => a.x - b.x);
+    this.xs = points.map(p => p.x);
+    this.ys = points.map(p => p.y);
+    
+    const n = this.xs.length;
+    
+    // Build the tridiagonal system
+    // h[i] = x[i+1] - x[i]
+    const h = new Array(n - 1);
+    for (let i = 0; i < n - 1; i++) {
+      h[i] = this.xs[i + 1] - this.xs[i];
+      if (h[i] <= 0) {
+        throw new Error("Cubic spline needs strictly increasing x values");
+      }
+    }
+    
+    // alpha[i] = 3/h[i] * (y[i+1] - y[i]) - 3/h[i-1] * (y[i] - y[i-1])
+    const alpha = new Array(n - 1).fill(0);
+    for (let i = 1; i < n - 1; i++) {
+      alpha[i] = 3 / h[i] * (this.ys[i + 1] - this.ys[i]) - 
+                 3 / h[i - 1] * (this.ys[i] - this.ys[i - 1]);
+    }
+    
+    // Solve the tridiagonal system
+    // Initialize arrays
+    this.c = new Array(n).fill(0);  // Natural boundary conditions: c[0] = c[n-1] = 0
+    const l = new Array(n).fill(0);
+    const mu = new Array(n).fill(0);
+    const z = new Array(n).fill(0);
+    
+    // Forward sweep
+    l[0] = 1;
+    for (let i = 1; i < n - 1; i++) {
+      l[i] = 2 * (this.xs[i + 1] - this.xs[i - 1]) - h[i - 1] * mu[i - 1];
+      mu[i] = h[i] / l[i];
+      z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
+    }
+    l[n - 1] = 1;
+    
+    // Back substitution
+    for (let j = n - 2; j >= 0; j--) {
+      this.c[j] = z[j] - mu[j] * this.c[j + 1];
+    }
+    
+    // Calculate the remaining coefficients
+    this.b = new Array(n - 1);
+    this.d = new Array(n - 1);
+    
+    for (let i = 0; i < n - 1; i++) {
+      this.b[i] = (this.ys[i + 1] - this.ys[i]) / h[i] - 
+                 h[i] * (this.c[i + 1] + 2 * this.c[i]) / 3;
+      this.d[i] = (this.c[i + 1] - this.c[i]) / (3 * h[i]);
+    }
+    
+    console.log("Cubic spline coefficients calculated");
+  }
+  
+  // Evaluate spline at point x
+  at(x) {
+    // Handle out-of-range x values
+    if (x <= this.xs[0]) return this.ys[0];
+    if (x >= this.xs[this.xs.length - 1]) return this.ys[this.ys.length - 1];
+    
+    // Binary search to find the correct interval
+    let i = 0;
+    let j = this.xs.length - 1;
+    
+    while (j - i > 1) {
+      const m = Math.floor((i + j) / 2);
+      if (this.xs[m] > x) {
+        j = m;
+      } else {
+        i = m;
+      }
+    }
+    
+    // Now xs[i] <= x < xs[i+1]
+    const dx = x - this.xs[i];
+    
+    // Evaluate cubic polynomial
+    return this.ys[i] + 
+           this.b[i] * dx + 
+           this.c[i] * dx * dx + 
+           this.d[i] * dx * dx * dx;
+  }
+}
+
 // Fetch the UV index data from the server
 async function fetchUvIndexData(forceRefresh = false, isSseEvent = false) {
   try {
@@ -43,20 +138,22 @@ function updateUvIndexDisplay(data) {
     // Still update the display with empty values
     document.getElementById('uvCurrentValue').textContent = '-';
     document.getElementById('uvCurrentClass').textContent = '-';
-    document.getElementById('uvRiseTime').textContent = 'Rise above 3: --:--';
-    document.getElementById('uvFallTime').textContent = 'Fall below 3: --:--';
+    document.getElementById('uvRiseTime').textContent = 'Rise above 4: --:--';
+    document.getElementById('uvFallTime').textContent = 'Fall below 4: --:--';
     return;
   }
   
-  // Process UV data
+  console.log("Processing UV data with", data.result.length, "readings");
+  
+  // Process UV data - prepare it for cubic spline by using epoch time
   const uvReadings = data.result.map(item => ({
-    utc: new Date(item.uv_time).toISOString().substring(11, 16), // Extract HH:MM
+    utc: item.uv_time,  // Keep full ISO string for accurate time processing
     uv: item.uv
   }));
   
-  // Find crossings for UV index of 3 (moderate threshold)
-  const uvRiseTime = findCrossing(uvReadings, 3, "rising");
-  const uvFallTime = findCrossing(uvReadings, 3, "falling");
+  // Find crossings for UV index of 4 (moderate threshold)
+  const uvRiseTime = findUvCrossing(uvReadings, 4, "rising");
+  const uvFallTime = findUvCrossing(uvReadings, 4, "falling");
   
   // Get current UV level
   const currentTime = new Date();
@@ -97,11 +194,11 @@ function updateUvIndexDisplay(data) {
   const uvFallElement = document.getElementById('uvFallTime');
   
   if (uvRiseElement) {
-    uvRiseElement.textContent = uvRiseTime ? `Rise above 3: ${uvRiseTime}` : 'Rise above 3: --:--';
+    uvRiseElement.textContent = uvRiseTime ? `Rise above 4: ${uvRiseTime}` : 'Rise above 4: --:--';
   }
   
   if (uvFallElement) {
-    uvFallElement.textContent = uvFallTime ? `Fall below 3: ${uvFallTime}` : 'Fall below 3: --:--';
+    uvFallElement.textContent = uvFallTime ? `Fall below 4: ${uvFallTime}` : 'Fall below 4: --:--';
   }
   
   // Update UV info with recommendations
@@ -124,12 +221,8 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
     uvChart.destroy();
   }
   
-  // Prepare data for chart
-  const times = uvReadings.map(reading => reading.utc);
-  const values = uvReadings.map(reading => reading.uv);
-  
-  // Generate additional points for a smoother curve
-  const smoothData = generateSmoothCurve(times, values);
+  // Generate smooth curve using cubic spline interpolation
+  const smoothData = generateSmoothCurveWithSpline(uvReadings);
   
   // Create annotations for rise and fall times
   const annotations = {};
@@ -227,7 +320,7 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
         },
         y: {
           beginAtZero: true,
-          suggestedMax: Math.max(...values) * 1.1,
+          suggestedMax: Math.max(...smoothData.values) * 1.1,
           ticks: {
             stepSize: 2,
             color: '#333'
@@ -266,6 +359,217 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
   });
 }
 
+// Function to generate a smooth curve using cubic spline
+function generateSmoothCurveWithSpline(uvReadings) {
+  if (!uvReadings || uvReadings.length < 2) {
+    console.error('Cannot generate smooth curve: insufficient data');
+    
+    // Fall back to original data as points
+    return {
+      times: uvReadings.map(reading => {
+        const date = new Date(reading.utc);
+        return date.toLocaleTimeString('en-GB', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Dubai' // Display in local time
+        });
+      }),
+      values: uvReadings.map(reading => reading.uv)
+    };
+  }
+  
+  try {
+    // Prepare data for interpolation
+    const x = uvReadings.map(r => new Date(r.utc).getTime()); // ms since epoch
+    const y = uvReadings.map(r => r.uv);
+    
+    console.log('Prepared data for spline:', {
+      timeRange: [new Date(x[0]).toISOString(), new Date(x[x.length-1]).toISOString()],
+      uvRange: [Math.min(...y), Math.max(...y)],
+      points: x.length
+    });
+    
+    // Create spline using our direct implementation
+    console.log('Creating CubicSpline instance');
+    const spline = new CubicSpline(x, y);
+    console.log('CubicSpline instance created successfully');
+    
+    // Generate smoothed points (every 10 minutes)
+    const start = x[0];
+    const end = x[x.length - 1];
+    const step = 10 * 60 * 1000; // 10 minutes in ms
+    
+    const smoothTimes = [];
+    const smoothValues = [];
+    
+    for (let t = start; t <= end; t += step) {
+      // Interpolate UV value at this time
+      const uv = spline.at(t);
+      
+      // Format time for display
+      const timeStr = new Date(t).toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Asia/Dubai' // Display in local time
+      });
+      
+      smoothTimes.push(timeStr);
+      smoothValues.push(uv);
+    }
+    
+    console.log(`Generated ${smoothTimes.length} smooth points using cubic spline`);
+    console.log('Sample points:', smoothValues.slice(0, 3), '...', smoothValues.slice(-3));
+    return { times: smoothTimes, values: smoothValues };
+  } catch (error) {
+    console.error('Error generating smooth curve with spline:', error);
+    console.log('Falling back to linear interpolation after error');
+    
+    // Fall back to linear interpolation if spline fails
+    return generateSmoothCurve(uvReadings.map(reading => {
+      const date = new Date(reading.utc);
+      return {
+        utc: date.toLocaleTimeString('en-GB', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Dubai'
+        }),
+        uv: reading.uv
+      };
+    }));
+  }
+}
+
+// Find the UV crossing time using cubic spline interpolation
+function findUvCrossing(uvReadings, targetUV, direction = "rising") {
+  if (!uvReadings || uvReadings.length < 2) {
+    return null;
+  }
+  
+  try {
+    // Prepare data for interpolation
+    const x = uvReadings.map(r => new Date(r.utc).getTime()); // ms since epoch
+    const y = uvReadings.map(r => r.uv);
+    
+    // Create spline
+    const spline = new CubicSpline(x, y);
+    
+    // Using cubic spline to find the crossing
+    for (let i = 0; i < uvReadings.length - 1; i++) {
+      const t1 = new Date(uvReadings[i].utc).getTime();
+      const t2 = new Date(uvReadings[i+1].utc).getTime();
+      const uv1 = uvReadings[i].uv;
+      const uv2 = uvReadings[i+1].uv;
+      
+      // Check if there's a potential crossing
+      const isCrossingRange = (direction === "rising" && uv1 < targetUV && uv2 > targetUV) ||
+                             (direction === "falling" && uv1 > targetUV && uv2 < targetUV);
+      
+      if (isCrossingRange) {
+        // Search for precise crossing using binary search within this interval
+        let tLow = t1;
+        let tHigh = t2;
+        let tMid, uvMid;
+        
+        // Binary search for crossing within 1-minute precision
+        while (tHigh - tLow > 60000) { // 1 minute = 60000 ms
+          tMid = Math.floor((tLow + tHigh) / 2);
+          uvMid = spline.at(tMid);
+          
+          if ((direction === "rising" && uvMid < targetUV) ||
+              (direction === "falling" && uvMid > targetUV)) {
+            tLow = tMid;
+          } else {
+            tHigh = tMid;
+          }
+        }
+        
+        // Convert to formatted time
+        const crossingTime = new Date((tLow + tHigh) / 2);
+        const timeStr = crossingTime.toLocaleTimeString('en-GB', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Asia/Dubai'
+        });
+        
+        return timeStr;
+      }
+    }
+    
+    return null; // No crossing found
+  } catch (error) {
+    console.error('Error in findUvCrossing:', error);
+    
+    // Fall back to the original linear method
+    return findCrossing(uvReadings.map(reading => {
+      const date = new Date(reading.utc);
+      return {
+        utc: date.toLocaleTimeString('en-GB', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Dubai'
+        }),
+        uv: reading.uv
+      };
+    }), targetUV, direction);
+  }
+}
+
+// Get current UV level based on cubic spline interpolation
+function getCurrentUvLevel(uvReadings, currentTime) {
+  if (!uvReadings || uvReadings.length === 0) return null;
+  
+  try {
+    // Prepare data for interpolation
+    const x = uvReadings.map(r => new Date(r.utc).getTime()); // ms since epoch
+    const y = uvReadings.map(r => r.uv);
+    
+    // Current time in ms
+    const now = currentTime.getTime();
+    
+    // Check if current time is within our data range
+    if (now < x[0] || now > x[x.length - 1]) {
+      // Outside range - get closest value
+      return now < x[0] ? y[0] : y[y.length - 1];
+    }
+    
+    // Create spline and get interpolated value
+    const spline = new CubicSpline(x, y);
+    return spline.at(now);
+  } catch (error) {
+    console.error('Error in getCurrentUvLevel:', error);
+    
+    // Fall back to original method
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    
+    // Find surrounding data points
+    for (let i = 0; i < uvReadings.length - 1; i++) {
+      const t1 = new Date(uvReadings[i].utc);
+      const t2 = new Date(uvReadings[i+1].utc);
+      
+      const t1Minutes = t1.getHours() * 60 + t1.getMinutes();
+      const t2Minutes = t2.getHours() * 60 + t2.getMinutes();
+      
+      if (currentMinutes >= t1Minutes && currentMinutes <= t2Minutes) {
+        // Linear interpolation
+        const fraction = (currentMinutes - t1Minutes) / (t2Minutes - t1Minutes);
+        return uvReadings[i].uv + fraction * (uvReadings[i+1].uv - uvReadings[i].uv);
+      }
+    }
+    
+    // Outside the range, get closest value
+    const firstTime = new Date(uvReadings[0].utc);
+    const lastTime = new Date(uvReadings[uvReadings.length - 1].utc);
+    
+    const firstMinutes = firstTime.getHours() * 60 + firstTime.getMinutes();
+    const lastMinutes = lastTime.getHours() * 60 + lastTime.getMinutes();
+    
+    if (currentMinutes < firstMinutes) return uvReadings[0].uv;
+    if (currentMinutes > lastMinutes) return uvReadings[uvReadings.length - 1].uv;
+  }
+  
+  return null;
+}
+
 // Get UV category name
 function getUvCategoryName(uvValue) {
   if (uvValue === null) return '-';
@@ -297,7 +601,7 @@ function getUvInfoAndRecommendations(uvValue) {
   return `<p>${recommendations}</p>`;
 }
 
-// Generate additional points for a smoother curve
+// Generate additional points for a smoother curve (fallback for linear interpolation)
 function generateSmoothCurve(times, values) {
   if (times.length !== values.length || times.length < 2) {
     return { times, values };
@@ -338,7 +642,7 @@ function generateSmoothCurve(times, values) {
   return { times: smoothTimes, values: smoothValues };
 }
 
-// Find the interpolated crossing time
+// Find the interpolated crossing time (fallback method)
 function findCrossing(uvReadings, targetUV, direction = "rising") {
   for (let i = 0; i < uvReadings.length - 1; i++) {
     const current = uvReadings[i];
@@ -358,47 +662,6 @@ function findCrossing(uvReadings, targetUV, direction = "rising") {
   return null; // No crossing found
 }
 
-// Get current UV level based on time interpolation
-function getCurrentUvLevel(uvReadings, currentTime) {
-  if (!uvReadings || uvReadings.length === 0) return null;
-  
-  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  
-  // Find surrounding data points
-  for (let i = 0; i < uvReadings.length - 1; i++) {
-    const current = uvReadings[i];
-    const next = uvReadings[i + 1];
-    
-    const currentMinutesUtc = timeToMinutes(current.utc);
-    const nextMinutesUtc = timeToMinutes(next.utc);
-    
-    if (currentMinutes >= currentMinutesUtc && currentMinutes <= nextMinutesUtc) {
-      // Interpolate
-      const fraction = (currentMinutes - currentMinutesUtc) / (nextMinutesUtc - currentMinutesUtc);
-      return current.uv + fraction * (next.uv - current.uv);
-    }
-  }
-  
-  // Outside the range, get closest value
-  const firstTime = timeToMinutes(uvReadings[0].utc);
-  const lastTime = timeToMinutes(uvReadings[uvReadings.length - 1].utc);
-  
-  if (currentMinutes < firstTime) return uvReadings[0].uv;
-  if (currentMinutes > lastTime) return uvReadings[uvReadings.length - 1].uv;
-  
-  return null;
-}
-
-// Get UV index class for styling
-function getUvClass(uvValue) {
-  if (uvValue === null) return '';
-  if (uvValue < 3) return 'uv-low';
-  if (uvValue < 6) return 'uv-moderate';
-  if (uvValue < 8) return 'uv-high';
-  if (uvValue < 11) return 'uv-very-high';
-  return 'uv-extreme';
-}
-
 // Convert "HH:MM" string to minutes since midnight
 function timeToMinutes(timeStr) {
   const [hours, minutes] = timeStr.split(":").map(Number);
@@ -410,4 +673,14 @@ function minutesToTime(minutes) {
   const h = Math.floor(minutes / 60) % 24;
   const m = Math.round(minutes % 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Get UV index class for styling
+function getUvClass(uvValue) {
+  if (uvValue === null) return '';
+  if (uvValue < 3) return 'uv-low';
+  if (uvValue < 6) return 'uv-moderate';
+  if (uvValue < 8) return 'uv-high';
+  if (uvValue < 11) return 'uv-very-high';
+  return 'uv-extreme';
 } 
