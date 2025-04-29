@@ -889,9 +889,10 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     // Calculate time difference in hours
     const timeDiffHours = (next.time.getTime() - curr.time.getTime()) / (1000 * 60 * 60);
     
-    // If points are more than 1 hour apart, add interpolated points
-    if (timeDiffHours > 1) {
-      const numPointsToAdd = Math.floor(timeDiffHours);
+    // If points are more than 30 minutes apart, add interpolated points
+    if (timeDiffHours > 0.5) {
+      // Add more frequent interpolation points for smoother curves
+      const numPointsToAdd = Math.max(1, Math.floor(timeDiffHours * 2));
       
       for (let j = 1; j <= numPointsToAdd; j++) {
         const ratio = j / (numPointsToAdd + 1);
@@ -952,7 +953,7 @@ function createUvForecastGraph(data) {
   enhancedForecast.forEach((entry, index) => {
     const entryTime = new Date(entry.time);
     
-    // Format the time to show the hour only - with minutes to prevent label collisions
+    // Format the time for clarity and more precise display
     let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     
     times.push(timeLabel);
@@ -1080,7 +1081,7 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(46, 204, 113, 1)',
           pointBorderColor: 'rgba(46, 204, 113, 1)',
           borderWidth: 3,
-          tension: 0.3,
+          tension: 0.2, // Reduced tension for more accurate line
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
           spanGaps: false,  // Don't connect across gaps
@@ -1097,10 +1098,10 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(231, 76, 60, 1)',
           pointBorderColor: 'rgba(231, 76, 60, 1)',
           borderWidth: 3,
-          tension: 0.3,
+          tension: 0.2, // Reduced tension for more accurate line
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false,  // Don't connect across gaps (changed from true)
+          spanGaps: false,  // Don't connect across gaps
           segment: {
             borderColor: ctx => 'rgba(231, 76, 60, 1)'
           }
@@ -1111,8 +1112,8 @@ function createUvForecastGraph(data) {
           data: transitionPoints,
           pointBackgroundColor: 'rgba(0, 0, 0, 0.5)',
           pointBorderColor: 'rgba(0, 0, 0, 0.5)',
-          pointRadius: 3,
-          pointHoverRadius: 5,
+          pointRadius: 4,
+          pointHoverRadius: 6,
           borderWidth: 0,
           fill: false,
           showLine: false
@@ -1178,7 +1179,7 @@ function createUvForecastGraph(data) {
               label: {
                 enabled: true,
                 content: 'Safe Threshold',
-                position: 'start',
+                position: 'end',
                 backgroundColor: 'rgba(46, 204, 113, 0.7)',
                 color: '#fff',
                 font: {
@@ -1219,7 +1220,8 @@ function createUvForecastGraph(data) {
     }
   });
   
-  // Manually add the green area after the chart is created
+  // After creating the chart, add one more function to clarify the threshold values
+  // Add a visible colored section to highlight the safe zone
   setTimeout(() => {
     // Add a visible colored section to highlight the safe zone
     const canvas = document.getElementById('uvForecastGraph');
@@ -1247,16 +1249,23 @@ function createUvForecastGraph(data) {
     ctx.fillText('SAFE UV LEVELS', xAxis.left + xAxis.width / 2, yAxis.bottom - 10);
     ctx.restore();
     
-    // Add dashed line at threshold without the label box
-    ctx.save();
-    ctx.beginPath();
-    ctx.setLineDash([5, 5]);
-    ctx.strokeStyle = 'rgba(46, 204, 113, 0.7)';
-    ctx.lineWidth = 2;
-    ctx.moveTo(xAxis.left, yPixel);
-    ctx.lineTo(xAxis.right, yPixel);
-    ctx.stroke();
-    ctx.restore();
+    // Ensure threshold points are clearly visible by adding dots at transition points
+    if (transitionPoints) {
+      transitionPoints.forEach((value, index) => {
+        if (value === uvSafetyThreshold) {
+          const xPixel = xAxis.getPixelForValue(index);
+          
+          // Draw a more visible point at each transition
+          ctx.beginPath();
+          ctx.arc(xPixel, yPixel, 5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      });
+    }
   }, 100);
 }
 
