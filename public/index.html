@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Quality Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=1004">
+  <link rel="stylesheet" href="style.css?v=1005">
 </head>
 <body>
   <div class="container">
@@ -72,25 +72,25 @@
             </div>
           </div>
         </div>
+      </div>
+      
+      <!-- UV Index Display - now outside left-column for side-by-side layout -->
+      <div class="card uv-box">
+        <h2>UV Index</h2>
+        <div id="uvCurrentValue" class="aqi-value">-</div>
+        <div id="uvCurrentClass" class="aqi-category">-</div>
         
-        <!-- UV Index Display -->
-        <div class="card uv-box">
-          <h2>UV Index</h2>
-          <div id="uvCurrentValue" class="aqi-value">-</div>
-          <div id="uvCurrentClass" class="aqi-category">-</div>
-          
-          <div class="uv-chart-container">
-            <canvas id="uvChart" width="100%" height="150"></canvas>
-          </div>
-          
-          <div class="uv-crossing-times">
-            <div id="uvRiseTime">Rise above 3: --:--</div>
-            <div id="uvFallTime">Fall below 3: --:--</div>
-          </div>
-          
-          <div id="uvInfo" class="uv-info">
-            <!-- UV info and recommendations will be shown here -->
-          </div>
+        <div class="uv-chart-container">
+          <canvas id="uvChart" width="100%" height="150"></canvas>
+        </div>
+        
+        <div class="uv-crossing-times">
+          <div id="uvRiseTime">Rise above 3: --:--</div>
+          <div id="uvFallTime">Fall below 3: --:--</div>
+        </div>
+        
+        <div id="uvInfo" class="uv-info">
+          <!-- UV info and recommendations will be shown here -->
         </div>
       </div>
     </div>
