@@ -1120,38 +1120,7 @@ function createUvForecastGraph(data) {
           }
         }
       }
-    },
-    plugins: [{
-      id: 'connectThresholdPoints',
-      afterDraw: function(chart) {
-        const ctx = chart.ctx;
-        const xAxis = chart.scales.x;
-        const yAxis = chart.scales.y;
-        const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
-        
-        // Draw connection dots at each transition point
-        for (let i = 0; i < chart.data.datasets[0].data.length - 1; i++) {
-          const xPixel1 = chart.getDatasetMeta(0).data[i].x;
-          const xPixel2 = chart.getDatasetMeta(0).data[i+1].x;
-          const midX = (xPixel1 + xPixel2) / 2;
-          
-          // Draw green dot at the meeting point
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(midX, yPixel, 6, 0, 2 * Math.PI);
-          ctx.fillStyle = 'rgba(46, 204, 113, 1)';
-          ctx.fill();
-          
-          // Draw red dot over it, but with a hole in the middle
-          ctx.beginPath();
-          ctx.arc(midX, yPixel, 6, 0, 2 * Math.PI);
-          ctx.strokeStyle = 'rgba(231, 76, 60, 1)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-    }]
+    }
   });
   
   // Manually add the green area after the chart is created
