@@ -1043,50 +1043,38 @@ function createUvForecastGraph(data) {
     }
   });
   
-  // Find all transitions and insert precise transition points
-  let i = 0;
-  while (i < times.length - 1) {
-    const currValue = uviValues[i];
-    const nextValue = uviValues[i+1];
+  // Find transition points and create connecting points to ensure lines connect properly
+  for (let i = 0; i < enhancedForecast.length - 1; i++) {
+    const current = enhancedForecast[i];
+    const next = enhancedForecast[i+1];
     
-    // Check if we're crossing the threshold
-    if ((currValue < uvSafetyThreshold && nextValue > uvSafetyThreshold) ||
-        (currValue > uvSafetyThreshold && nextValue < uvSafetyThreshold)) {
+    // Only check for crossing threshold (simpler condition)
+    if ((current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) || 
+        (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold)) {
       
-      // Create exact interpolated transition point
-      const currSafe = currValue <= uvSafetyThreshold;
-      const currTime = new Date(enhancedForecast[i].time);
-      const nextTime = new Date(enhancedForecast[i+1].time);
+      // Create transition point with careful ratio calculation
+      const ratio = Math.abs((uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi));
+      const transitionTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
+      const timeLabel = transitionTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
       
-      // Calculate the exact transition time
-      const timeDiff = nextTime.getTime() - currTime.getTime();
-      const valueDiff = nextValue - currValue;
-      const ratio = (uvSafetyThreshold - currValue) / valueDiff;
-      const transitionTime = new Date(currTime.getTime() + (ratio * timeDiff));
-      
-      // Format the transition time
-      const transTimeLabel = transitionTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-      
-      // Insert the transition point - critical to use the same exact value for both datasets
-      times.splice(i+1, 0, transTimeLabel);
-      uviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // Explicitly set both datasets to have the threshold value at this point for perfect alignment
-      const transitionValue = uvSafetyThreshold;
-      safeUviValues.splice(i+1, 0, transitionValue);
-      unsafeUviValues.splice(i+1, 0, transitionValue);
-      
-      // Ensure following points have the correct nulls - this prevents the horizontal shift
-      if (currSafe) {
-        // After transition from safe to unsafe, safe values should be null
-        if (i+2 < safeUviValues.length) {
-          safeUviValues[i+2] = null;
-        }
-      } else {
-        // After transition from unsafe to safe, unsafe values should be null
-        if (i+2 < unsafeUviValues.length) {
-          unsafeUviValues[i+2] = null;
-        }
+      // Most important: create another point that's EXACTLY at the threshold time
+      // but slightly offset in value for each dataset
+      if (current.uvi <= uvSafetyThreshold) { // Transitioning from safe to unsafe
+        // Insert the exact threshold point
+        times.splice(i+1, 0, timeLabel);
+        uviValues.splice(i+1, 0, uvSafetyThreshold);
+        
+        // Create a slight offset value for each dataset
+        safeUviValues.splice(i+1, 0, uvSafetyThreshold);
+        unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
+      } else { // Transitioning from unsafe to safe
+        // Insert the exact threshold point
+        times.splice(i+1, 0, timeLabel);
+        uviValues.splice(i+1, 0, uvSafetyThreshold);
+        
+        // Create a slight offset value for each dataset
+        unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
+        safeUviValues.splice(i+1, 0, uvSafetyThreshold);
       }
       
       // Update current time index if needed
@@ -1094,10 +1082,7 @@ function createUvForecastGraph(data) {
         currentTimeIndex++;
       }
       
-      // Skip the newly inserted point
-      i += 2;
-    } else {
-      i++;
+      i++; // Skip the inserted point
     }
   }
   
@@ -1132,15 +1117,10 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(46, 204, 113, 1)',
           pointBorderColor: 'rgba(46, 204, 113, 1)',
           borderWidth: 3,
-          tension: 0, // No tension for precise connections at threshold
-          pointRadius: 0, // Hide all points except special ones
+          tension: 0.1, // Slight tension
+          pointRadius: 0, 
           fill: 'origin',
-          spanGaps: false,  // Don't connect across gaps
-          pointHoverRadius: 4,
-          stepped: false, // Ensure no steps in the line
-          segment: {
-            borderColor: ctx => 'rgba(46, 204, 113, 1)'
-          }
+          spanGaps: false
         },
         {
           // Unsafe zone - red line
@@ -1151,29 +1131,23 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(231, 76, 60, 1)',
           pointBorderColor: 'rgba(231, 76, 60, 1)',
           borderWidth: 3,
-          tension: 0, // No tension for precise connections at threshold
-          pointRadius: 0, // Hide all points except special ones
+          tension: 0.1, // Slight tension
+          pointRadius: 0,
           fill: 'origin',
-          spanGaps: false,  // Don't connect across gaps
-          pointHoverRadius: 4,
-          stepped: false, // Ensure no steps in the line
-          segment: {
-            borderColor: ctx => 'rgba(231, 76, 60, 1)'
-          }
+          spanGaps: false
         },
         {
-          // Transition points at threshold value - make connections visible
+          // Transition points at threshold value
           label: 'Transition',
           data: transitionPoints,
-          pointBackgroundColor: 'rgba(0, 0, 0, 0.7)',
-          pointBorderColor: 'rgba(255, 255, 255, 0.8)',
+          pointBackgroundColor: 'rgba(0, 0, 0, 0.6)',
+          pointBorderColor: '#fff',
           pointBorderWidth: 1,
           pointRadius: 5,
           pointHoverRadius: 7,
           borderWidth: 0,
           fill: false,
-          showLine: false,
-          order: 1 // Lower order means it's drawn on top
+          showLine: false
         },
         {
           // Current time marker - only show a single point
