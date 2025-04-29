@@ -267,16 +267,18 @@
       <!-- UV Index Display - now outside left-column for side-by-side layout -->
       <div class="card uv-box uv-card">
         <h2>UV Index</h2>
-        <div id="uvCurrentValue" class="aqi-value">-</div>
-        <div id="uvCurrentClass" class="aqi-category">-</div>
+        <div class="aqi-value-container">
+          <div id="uvCurrentValue" class="aqi-value">-</div>
+          <div id="uvCurrentClass" class="aqi-category">-</div>
+        </div>
         
         <div class="uv-chart-container">
-          <canvas id="uvChart" width="100%" height="90"></canvas>
+          <canvas id="uvChart" width="100%" height="100%"></canvas>
         </div>
         
         <div class="uv-crossing-times">
-          <div id="uvRiseTime">Rise above 3: --:--</div>
-          <div id="uvFallTime">Fall below 3: --:--</div>
+          <div id="uvRiseTime">Rise above 4: --:--</div>
+          <div id="uvFallTime">Fall below 4: --:--</div>
         </div>
         
         <div id="uvInfo" class="uv-info">

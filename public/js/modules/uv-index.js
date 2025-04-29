@@ -138,8 +138,15 @@ function updateUvIndexDisplay(data) {
     // Still update the display with empty values
     document.getElementById('uvCurrentValue').textContent = '-';
     document.getElementById('uvCurrentClass').textContent = '-';
-    document.getElementById('uvRiseTime').textContent = 'Rise above 4: --:--';
-    document.getElementById('uvFallTime').textContent = 'Fall below 4: --:--';
+    document.getElementById('uvRiseTime').textContent = 'Ok before: --:--';
+    document.getElementById('uvFallTime').textContent = 'Ok after: --:--';
+    
+    // Clear UV info text
+    const uvInfo = document.getElementById('uvInfo');
+    if (uvInfo) {
+      uvInfo.innerHTML = '';
+    }
+    
     return;
   }
   
@@ -189,22 +196,22 @@ function updateUvIndexDisplay(data) {
     }
   }
   
-  // Update crossing times
+  // Update crossing times with new labels
   const uvRiseElement = document.getElementById('uvRiseTime');
   const uvFallElement = document.getElementById('uvFallTime');
   
   if (uvRiseElement) {
-    uvRiseElement.textContent = uvRiseTime ? `Rise above 4: ${uvRiseTime}` : 'Rise above 4: --:--';
+    uvRiseElement.textContent = uvRiseTime ? `Ok before: ${uvRiseTime}` : 'Ok before: --:--';
   }
   
   if (uvFallElement) {
-    uvFallElement.textContent = uvFallTime ? `Fall below 4: ${uvFallTime}` : 'Fall below 4: --:--';
+    uvFallElement.textContent = uvFallTime ? `Ok after: ${uvFallTime}` : 'Ok after: --:--';
   }
   
-  // Update UV info with recommendations
+  // Clear UV info text - we don't want any recommendations displayed
   const uvInfo = document.getElementById('uvInfo');
   if (uvInfo) {
-    uvInfo.innerHTML = getUvInfoAndRecommendations(currentUv);
+    uvInfo.innerHTML = '';
   }
   
   // Update chart
@@ -241,7 +248,10 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
         position: 'top',
         backgroundColor: 'rgba(255, 152, 0, 0.8)',
         color: 'white',
-        padding: 4
+        padding: 4,
+        font: {
+          size: 12
+        }
       }
     };
   }
@@ -260,7 +270,10 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
         position: 'top',
         backgroundColor: 'rgba(76, 175, 80, 0.8)',
         color: 'white',
-        padding: 4
+        padding: 4,
+        font: {
+          size: 12
+        }
       }
     };
   }
@@ -279,33 +292,154 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
       position: 'end',
       backgroundColor: 'rgba(255, 152, 0, 0.8)',
       color: 'white',
-      padding: 4
+      padding: 4,
+      font: {
+        size: 12
+      }
     }
   };
   
   // Create chart
   const ctx = canvas.getContext('2d');
+  
+  // Create datasets for green and red segments based on threshold times
+  const createSegmentedDatasets = () => {
+    const times = smoothData.times;
+    const values = smoothData.values;
+    
+    if (!times.length) return [];
+    
+    // Helper function to find index of closest time
+    const findTimeIndex = (timeStr) => {
+      if (!timeStr) return -1;
+      return times.findIndex(t => t === timeStr) !== -1 ? 
+        times.findIndex(t => t === timeStr) : 
+        times.findIndex(t => t > timeStr);
+    };
+    
+    // Indexes for rise and fall times
+    const riseIndex = findTimeIndex(uvRiseTime);
+    const fallIndex = findTimeIndex(uvFallTime);
+    
+    // If we don't have clear time transitions, use a simple color scheme
+    if (riseIndex === -1 && fallIndex === -1) {
+      // Just use one segment with the main UV line
+      return [{
+        label: 'UV Index',
+        data: values,
+        borderColor: 'rgba(33, 150, 243, 0.8)',
+        backgroundColor: 'rgba(33, 150, 243, 0.2)',
+        borderWidth: 3,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.4,
+        fill: true
+      }];
+    }
+    
+    // Create datasets
+    const datasets = [];
+    
+    // Green Zone (safe): before riseIndex or after fallIndex
+    if (riseIndex !== -1) {
+      // Before rise time (morning)
+      datasets.push({
+        label: 'Safe Zone (Morning)',
+        data: values.map((v, i) => i <= riseIndex ? v : null),
+        borderColor: 'rgba(76, 175, 80, 0.8)',
+        backgroundColor: 'rgba(76, 175, 80, 0.3)',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: true
+      });
+    }
+    
+    if (fallIndex !== -1) {
+      // After fall time (evening)
+      datasets.push({
+        label: 'Safe Zone (Evening)',
+        data: values.map((v, i) => i >= fallIndex ? v : null),
+        borderColor: 'rgba(76, 175, 80, 0.8)',
+        backgroundColor: 'rgba(76, 175, 80, 0.3)',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: true
+      });
+    }
+    
+    // Red Zone (risk): between riseIndex and fallIndex
+    if (riseIndex !== -1 && fallIndex !== -1) {
+      datasets.push({
+        label: 'Risk Zone',
+        data: values.map((v, i) => i > riseIndex && i < fallIndex ? v : null),
+        borderColor: 'rgba(233, 30, 99, 0.8)',
+        backgroundColor: 'rgba(233, 30, 99, 0.3)',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: true
+      });
+    } else if (riseIndex !== -1) {
+      // No fall time but we have rise time - risk zone after rise
+      datasets.push({
+        label: 'Risk Zone',
+        data: values.map((v, i) => i > riseIndex ? v : null),
+        borderColor: 'rgba(233, 30, 99, 0.8)',
+        backgroundColor: 'rgba(233, 30, 99, 0.3)',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: true
+      });
+    } else if (fallIndex !== -1) {
+      // No rise time but we have fall time - risk zone before fall
+      datasets.push({
+        label: 'Risk Zone',
+        data: values.map((v, i) => i < fallIndex ? v : null),
+        borderColor: 'rgba(233, 30, 99, 0.8)',
+        backgroundColor: 'rgba(233, 30, 99, 0.3)',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: true
+      });
+    }
+    
+    // Main line on top of all zones (makes the line continuous)
+    datasets.push({
+      label: 'UV Index',
+      data: values,
+      borderColor: 'rgba(33, 150, 243, 0.8)',
+      backgroundColor: 'rgba(33, 150, 243, 0)',
+      borderWidth: 3,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      tension: 0.4,
+      fill: false
+    });
+    
+    return datasets;
+  };
+  
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: smoothData.times,
-      datasets: [
-        {
-          label: 'UV Index',
-          data: smoothData.values,
-          borderColor: 'rgba(233, 30, 99, 0.8)',
-          backgroundColor: 'rgba(233, 30, 99, 0.2)',
-          borderWidth: 3,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          tension: 0.4,
-          fill: true
-        }
-      ]
+      datasets: createSegmentedDatasets()
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 10,
+          right: 10,
+          bottom: 5,
+          left: 5
+        }
+      },
       scales: {
         x: {
           grid: {
@@ -314,8 +448,11 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
           ticks: {
             maxRotation: 0,
             autoSkip: true,
-            maxTicksLimit: 8,
-            color: '#333'
+            maxTicksLimit: 12,
+            color: '#333',
+            font: {
+              size: 10
+            }
           }
         },
         y: {
@@ -323,7 +460,13 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
           suggestedMax: Math.max(...smoothData.values) * 1.1,
           ticks: {
             stepSize: 2,
-            color: '#333'
+            color: '#333',
+            font: {
+              size: 10
+            },
+            callback: function(value) {
+              return value === 0 ? '' : value;
+            }
           },
           grid: {
             color: 'rgba(200, 200, 200, 0.3)'
@@ -338,6 +481,14 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
           titleColor: 'white',
           bodyColor: 'white',
+          titleFont: {
+            size: 12
+          },
+          bodyFont: {
+            size: 12
+          },
+          padding: 8,
+          displayColors: false,
           callbacks: {
             title: function(tooltipItems) {
               return tooltipItems[0].label;
@@ -589,7 +740,7 @@ function getUvInfoAndRecommendations(uvValue) {
   if (uvValue < 3) {
     recommendations = 'Low risk. No protection needed for most people.';
   } else if (uvValue < 6) {
-    recommendations = 'Moderate risk. Wear sunscreen SPF 30+, hat, and sunglasses.';
+    recommendations = 'Wear sunscreen SPF 30+, hat, and sunglasses.';
   } else if (uvValue < 8) {
     recommendations = 'High risk. Stay in shade during midday hours. Use SPF 30+ sunscreen, hat, and sunglasses.';
   } else if (uvValue < 11) {

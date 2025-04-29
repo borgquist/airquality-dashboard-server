@@ -1226,6 +1226,36 @@ body.bg-hazardous {
   color: white;
 }
 
+/* UV box color styling for better visual hierarchy */
+.uv-box.uv-low h2,
+.uv-box.uv-moderate h2,
+.uv-box.uv-high h2,
+.uv-box.uv-very-high h2,
+.uv-box.uv-extreme h2 {
+  color: inherit;
+}
+
+.uv-box.uv-low .uv-chart-container,
+.uv-box.uv-moderate .uv-chart-container,
+.uv-box.uv-high .uv-chart-container,
+.uv-box.uv-very-high .uv-chart-container,
+.uv-box.uv-extreme .uv-chart-container {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.uv-box.uv-low #uvRiseTime,
+.uv-box.uv-low #uvFallTime,
+.uv-box.uv-moderate #uvRiseTime,
+.uv-box.uv-moderate #uvFallTime,
+.uv-box.uv-high #uvRiseTime,
+.uv-box.uv-high #uvFallTime,
+.uv-box.uv-very-high #uvRiseTime,
+.uv-box.uv-very-high #uvFallTime,
+.uv-box.uv-extreme #uvRiseTime,
+.uv-box.uv-extreme #uvFallTime {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
 /* Responsive adjustments for UV box */
 @media (max-width: 767px) {
   .uv-box-container .uv-box {
@@ -1398,17 +1428,251 @@ body.bg-hazardous {
 .uv-box {
   height: 380px;
   background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
 }
 
-/* Adjust chart container */
+.uv-box h2 {
+  margin: 0 0 5px 0;
+  font-size: 1.5rem;
+  border-bottom: none;
+  flex-shrink: 0;
+}
+
+/* Compact value and category to use less vertical space */
+.uv-box .aqi-value-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+/* Styling based on UV level */
+.uv-low .aqi-value-container {
+  background-color: rgba(171, 209, 98, 0.2);
+  border-left: 4px solid #abd162;
+}
+
+.uv-moderate .aqi-value-container {
+  background-color: rgba(255, 219, 87, 0.2);
+  border-left: 4px solid #ffdb57;
+}
+
+.uv-high .aqi-value-container {
+  background-color: rgba(255, 169, 75, 0.2);
+  border-left: 4px solid #ffa94b;
+}
+
+.uv-very-high .aqi-value-container {
+  background-color: rgba(255, 109, 75, 0.2);
+  border-left: 4px solid #ff6d4b;
+}
+
+.uv-extreme .aqi-value-container {
+  background-color: rgba(155, 71, 159, 0.2);
+  border-left: 4px solid #9b479f;
+}
+
+.uv-box #uvCurrentValue {
+  font-size: min(3.2rem, 10vmin);
+  line-height: 1;
+  margin: 0;
+}
+
+.uv-box #uvCurrentClass {
+  font-size: 1.2rem;
+  padding: 0.3rem 0.8rem;
+  margin: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Enlarged chart container */
 .uv-chart-container {
-  height: 120px;
-  margin: 5px 0;
+  width: 100%;
+  background-color: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 0 0 10px 0;
+  height: 200px; /* Increased height further */
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-grow: 1; /* Allow to take available space */
 }
 
-/* Fine tune element spacing */
+/* Make crossing times smaller and horizontal with improved styling */
+.uv-crossing-times {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 0.9rem;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+#uvRiseTime, #uvFallTime {
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+  margin: 0 3px;
+  font-weight: 600;
+}
+
+/* Color-coded time indicators */
+#uvRiseTime {
+  background-color: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #2e7d32;
+}
+
+#uvFallTime {
+  background-color: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #2e7d32;
+}
+
+/* Override for colored boxes */
+.uv-box.uv-low #uvRiseTime,
+.uv-box.uv-low #uvFallTime,
+.uv-box.uv-moderate #uvRiseTime,
+.uv-box.uv-moderate #uvFallTime,
+.uv-box.uv-high #uvRiseTime,
+.uv-box.uv-high #uvFallTime,
+.uv-box.uv-very-high #uvRiseTime,
+.uv-box.uv-very-high #uvFallTime,
+.uv-box.uv-extreme #uvRiseTime,
+.uv-box.uv-extreme #uvFallTime {
+  background-color: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Style the "Ok" indicators based on current UV level */
+.uv-low #uvRiseTime, 
+.uv-low #uvFallTime, 
+.uv-moderate #uvRiseTime, 
+.uv-moderate #uvFallTime {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.uv-high #uvRiseTime, 
+.uv-high #uvFallTime, 
+.uv-very-high #uvRiseTime, 
+.uv-very-high #uvFallTime, 
+.uv-extreme #uvRiseTime, 
+.uv-extreme #uvFallTime {
+  color: white;
+}
+
+/* Compact info section - now empty but keeping minimal height for spacing */
 #uvInfo {
-  margin-top: 5px;
+  min-height: 5px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 767px) {
+  .uv-box {
+    padding: 12px;
+  }
+  
+  .uv-chart-container {
+    height: 190px;
+  }
+  
+  .uv-box .aqi-value-container {
+    gap: 10px;
+    padding: 4px 8px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(3rem, 10vmin);
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.5rem;
+    letter-spacing: 0.3px;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.4rem;
+  }
+}
+
+/* Landscape orientation - prioritize the chart */
+@media (orientation: landscape) {
+  .uv-chart-container {
+    height: 200px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(2.8rem, 8vmin);
+  }
+  
+  .uv-box .aqi-value-container {
+    margin-bottom: 5px;
+  }
+  
+  .uv-crossing-times {
+    margin: 5px 0;
+  }
+}
+
+/* Very small screens - make everything more compact */
+@media (max-width: 400px) {
+  .uv-box {
+    padding: 10px;
+  }
+  
+  .uv-box h2 {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+  
+  .uv-box .aqi-value-container {
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(2.8rem, 9vmin);
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .uv-chart-container {
+    height: 160px;
+  }
+  
+  .uv-crossing-times {
+    margin: 4px 0;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.3rem;
+  }
+  
+  #uvInfo {
+    font-size: 0.8rem;
+  }
 }
 
 /* UV color classes */
