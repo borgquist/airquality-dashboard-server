@@ -711,49 +711,38 @@ body.bg-hazardous {
   }
 }
 
+/* Update UV safety info styles */
 .uv-safety-info {
-  padding: 12px;
-  margin: 12px 0;
+  background-color: rgba(46, 204, 113, 0.2);
+  padding: 0.8rem 1.2rem;
   border-radius: 8px;
-  font-size: 1.2rem;
-  font-weight: bold;
+  margin: 0.5rem 0 1rem 0;
   text-align: center;
-  background-color: rgba(46, 204, 113, 0.15);
-  color: #27ae60;
-  border: 2px solid #27ae60;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  position: relative;
+  font-weight: bold;
+  border-left: 4px solid rgba(46, 204, 113, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: #000; /* Default to black text */
 }
 
 .uv-safety-info::before {
-  content: '☀️ ';
+  content: '☀️';
+  margin-right: 0.5rem;
 }
 
 .uv-safety-info.unsafe {
-  background-color: rgba(231, 76, 60, 0.15);
-  color: #e74c3c;
-  border: 2px solid #e74c3c;
+  background-color: rgba(231, 76, 60, 0.2);
+  border-left: 4px solid rgba(231, 76, 60, 0.8);
+  color: #000; /* Keep text black for visibility */
 }
 
 .uv-safety-info.unsafe::before {
-  content: '⚠️ ';
+  content: '⚠️';
 }
 
-.uv-safety-info .safe-threshold {
-  font-weight: bold;
-  background-color: rgba(46, 204, 113, 0.2);
-  padding: 2px 5px;
-  border-radius: 4px;
-}
-
-/* Style for UV error message */
 .uv-error {
   background-color: rgba(231, 76, 60, 0.1);
-  color: #c0392b;
-  font-weight: 600;
-  padding: 0.8rem;
-  text-align: center;
-  border-left: 3px solid #e74c3c;
+  color: #000;
+  border-left: 4px solid rgba(231, 76, 60, 0.8);
 }
 
 /* Optimization for small screens like Raspberry Pi displays */
@@ -968,4 +957,102 @@ body.bg-hazardous {
   justify-content: center;
   width: 100%;
   margin-bottom: 0.5rem;
+}
+
+/* Add adaptive text color styles for measurement values */
+.aqi-measurement {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 0.4rem;
+  margin-bottom: 0.2rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* Variable for adaptive text color */
+  color: var(--measurement-text-color, #fff);
+}
+
+.measurement-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+  /* Variable for adaptive text color */
+  color: var(--measurement-text-color, #fff);
+}
+
+/* Set text color variables based on AQI category */
+.main-aqi.good {
+  background-color: #4CAF50;
+  --measurement-text-color: #000;
+}
+
+.main-aqi.moderate {
+  background-color: #FFEB3B;
+  --measurement-text-color: #000;
+}
+
+.main-aqi.unhealthy-sensitive {
+  background-color: #FF9800;
+  --measurement-text-color: #000;
+}
+
+.main-aqi.unhealthy {
+  background-color: #F44336;
+  --measurement-text-color: #fff;
+}
+
+.main-aqi.very-unhealthy {
+  background-color: #9C27B0;
+  --measurement-text-color: #fff;
+}
+
+.main-aqi.hazardous {
+  background-color: #7D0023;
+  --measurement-text-color: #fff;
+}
+
+/* Ensure weather data text is also properly visible */
+.weather-data-small .label,
+.weather-data-small .value {
+  color: var(--measurement-text-color, #fff);
+}
+
+/* Adjust the layout for measurements now that they're below */
+.aqi-measurements-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Make room for 3-4 digit AQI values */
+.aqi-value {
+  font-size: 12rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+  line-height: 0.9;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .aqi-value {
+    font-size: 9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .aqi-value {
+    font-size: 7rem;
+  }
+}
+
+/* Move AQI category closer to value */
+.aqi-category {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
 } 

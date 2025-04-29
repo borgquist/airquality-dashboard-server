@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Quality Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=1001">
+  <link rel="stylesheet" href="style.css?v=1002">
 </head>
 <body>
   <div class="container">
@@ -22,6 +22,12 @@
       <div class="left-column">
         <div class="card main-aqi">
           <h2>Current AQI</h2>
+          
+          <!-- Main AQI display with more room for 3-4 digits -->
+          <div id="aqiDisplay" class="aqi-value">-</div>
+          <div id="aqiCategory" class="aqi-category">-</div>
+          
+          <!-- Moved measurements below the main AQI display -->
           <div class="aqi-measurements-row">
             <div class="aqi-side-values">
               <div class="aqi-measurement-container">
@@ -37,7 +43,7 @@
                 <div class="measurement-label">PM1</div>
               </div>
             </div>
-            <div id="aqiDisplay" class="aqi-value">-</div>
+            
             <div class="aqi-side-values">
               <div class="aqi-measurement-container">
                 <div class="aqi-measurement" id="pm25Value">-</div>
@@ -49,8 +55,6 @@
               </div>
             </div>
           </div>
-          
-          <div id="aqiCategory" class="aqi-category">-</div>
           
           <div class="weather-data-small">
             <div class="weather-item temperature">

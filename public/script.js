@@ -446,6 +446,15 @@ function updateAirQualityDisplay(data) {
       const colorConfig = config.aqiColors[configKey];
       mainAqiElement.style.backgroundColor = colorConfig.backgroundColor;
       mainAqiElement.style.color = colorConfig.textColor;
+      
+      // Set the CSS variable for measurement text color based on textColor
+      const textColor = colorConfig.textColor.toLowerCase();
+      // If the main text color is white or light, use white for measurements, otherwise black
+      if (textColor === '#fff' || textColor === '#ffffff' || textColor === 'white') {
+        mainAqiElement.style.setProperty('--measurement-text-color', '#fff');
+      } else {
+        mainAqiElement.style.setProperty('--measurement-text-color', '#000');
+      }
     }
     
     // Update page background based on AQI
@@ -676,8 +685,18 @@ function addUvSafetyTimes(data) {
   
   safetyElement.innerHTML = safetyMessage;
   
-  const forecastContainer = document.querySelector('.uv-forecast-container');
-  forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
+  // Check if #uvSafetyInfo exists, use it if it does, otherwise use the forecast container
+  const safetyInfoElement = document.getElementById('uvSafetyInfo');
+  if (safetyInfoElement) {
+    // Clear existing content
+    safetyInfoElement.innerHTML = '';
+    // Append to the dedicated container
+    safetyInfoElement.appendChild(safetyElement);
+  } else {
+    // Fall back to the original method
+    const forecastContainer = document.querySelector('.uv-forecast-container');
+    forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
+  }
 }
 
 // Helper function to get the current interpolated UV index
