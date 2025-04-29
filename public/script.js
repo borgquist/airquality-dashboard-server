@@ -1220,28 +1220,46 @@ function createUvForecastGraph(data) {
     
     if (!yAxis || !xAxis) return;
     
+    // Get the y-pixel position for the threshold
     const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
     
-    // Clear any previous overlays by drawing a transparent rectangle
-    ctx.clearRect(xAxis.left, yAxis.top, xAxis.width, yAxis.height);
+    // Save the current state
+    ctx.save();
     
-    // Redraw the chart
-    chart.draw();
+    // Clear previous drawings with chart area
+    chart.clear();
     
-    // Add a green semi-transparent overlay to the "safe zone"
-    ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
-    ctx.fillRect(xAxis.left, yPixel, xAxis.width, yAxis.bottom - yPixel);
+    // Fill the background areas first
     
-    // Add a red semi-transparent overlay to the "unsafe zone"
+    // Add a red semi-transparent overlay to the "unsafe zone" (ABOVE threshold)
     ctx.fillStyle = 'rgba(231, 76, 60, 0.2)';
     ctx.fillRect(xAxis.left, yAxis.top, xAxis.width, yPixel - yAxis.top);
     
+    // Add a green semi-transparent overlay to the "safe zone" (BELOW threshold)
+    ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
+    ctx.fillRect(xAxis.left, yPixel, xAxis.width, yAxis.bottom - yPixel);
+    
     // Add "SAFE UV LEVELS" text centered in the safe area
-    ctx.save();
     ctx.fillStyle = 'rgba(46, 204, 113, 0.8)';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('SAFE UV LEVELS', xAxis.left + xAxis.width / 2, yAxis.bottom - 10);
+    
+    // Restore the context to draw the chart
+    ctx.restore();
+    
+    // Redraw the chart over the filled areas
+    chart.draw();
+    
+    // Redraw the threshold line to make sure it's visible
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(xAxis.left, yPixel);
+    ctx.lineTo(xAxis.right, yPixel);
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
     ctx.restore();
   }, 100);
 }
