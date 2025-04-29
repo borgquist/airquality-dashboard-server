@@ -1249,23 +1249,7 @@ function createUvForecastGraph(data) {
     ctx.fillText('SAFE UV LEVELS', xAxis.left + xAxis.width / 2, yAxis.bottom - 10);
     ctx.restore();
     
-    // Ensure threshold points are clearly visible by adding dots at transition points
-    if (transitionPoints) {
-      transitionPoints.forEach((value, index) => {
-        if (value === uvSafetyThreshold) {
-          const xPixel = xAxis.getPixelForValue(index);
-          
-          // Draw a more visible point at each transition
-          ctx.beginPath();
-          ctx.arc(xPixel, yPixel, 5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fill();
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-      });
-    }
+    // No transition points/dots - removed as requested
   }, 100);
 }
 
