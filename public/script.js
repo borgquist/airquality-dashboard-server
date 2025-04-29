@@ -990,17 +990,12 @@ function createUvForecastGraph(data) {
       
       // Insert a connecting point at exactly the threshold
       const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      
+      // Add the threshold point at the exact crossover
       times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // Add the threshold point to both datasets to ensure connection
       safeUviValues.splice(i+1, 0, uvSafetyThreshold);
       unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // Ensure the next point in safeUviValues is null
-      if (i+2 < safeUviValues.length) {
-        safeUviValues[i+2] = null;
-      }
       
       // Update current time index if needed
       if (currentTimeIndex > i) {
@@ -1018,17 +1013,12 @@ function createUvForecastGraph(data) {
       
       // Insert a connecting point at exactly the threshold
       const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      
+      // Add the threshold point at the exact crossover
       times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // Add the threshold point to both datasets to ensure connection
       unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
       safeUviValues.splice(i+1, 0, uvSafetyThreshold);
-      
-      // Ensure the next point in unsafeUviValues is null
-      if (i+2 < unsafeUviValues.length) {
-        unsafeUviValues[i+2] = null;
-      }
       
       // Update current time index if needed
       if (currentTimeIndex > i) {
@@ -1036,6 +1026,16 @@ function createUvForecastGraph(data) {
       }
       
       i++; // Skip the newly inserted point in the next iteration
+    }
+  }
+  
+  // Now create proper null values to ensure gap filling works correctly
+  for (let i = 0; i < times.length; i++) {
+    if (safeUviValues[i] !== null && safeUviValues[i] > uvSafetyThreshold) {
+      safeUviValues[i] = null;
+    }
+    if (unsafeUviValues[i] !== null && unsafeUviValues[i] <= uvSafetyThreshold) {
+      unsafeUviValues[i] = null;
     }
   }
   
