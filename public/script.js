@@ -945,7 +945,7 @@ function generateCompleteTimelineData(forecastData, currentTime) {
     
     // Add interpolation points for smoother curves if points are more than 15 min apart
     if (timeDiffHours > 0.25) {
-      const numPointsToAdd = Math.ceil(timeDiffHours * 4); // One point every 15 minutes
+      const numPointsToAdd = Math.ceil(timeDiffHours * 8); // More points for smoother curve
       
       for (let j = 1; j < numPointsToAdd; j++) {
         const ratio = j / numPointsToAdd;
@@ -1055,7 +1055,7 @@ function createUvForecastGraph(data) {
           data: uviValues,
           borderColor: '#000000',
           borderWidth: 3,
-          tension: 0.1,
+          tension: 0.4,
           pointRadius: 0,
           fill: false,
           spanGaps: false
@@ -1168,11 +1168,11 @@ function createUvForecastGraph(data) {
     const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
     
     // Add a red semi-transparent overlay to the "unsafe zone" (ABOVE threshold)
-    ctx.fillStyle = 'rgba(231, 76, 60, 0.2)';
+    ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
     ctx.fillRect(xAxis.left, yAxis.top, xAxis.width, yPixel - yAxis.top);
     
     // Add a green semi-transparent overlay to the "safe zone" (BELOW threshold)
-    ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
+    ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
     ctx.fillRect(xAxis.left, yPixel, xAxis.width, yAxis.bottom - yPixel);
     
     // Add "SAFE UV LEVELS" text centered in the safe area
