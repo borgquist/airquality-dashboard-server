@@ -2,14 +2,7 @@
   "port": 3000,
   "logLevel": "info",
   "pollingIntervalSec": 20,
-  "uvRefreshIntervalSec": 1800,
   "externalApiUrl": "YOUR_API_URL_HERE",
-  "uvApi": {
-    "url": "https://api.openuv.io/api/v1/forecast",
-    "apiKey": "YOUR_OPENUV_API_KEY_HERE",
-    "useCachedServer": false,
-    "cachedServerUrl": "http://hostname:8001/data"
-  },
   "location": {
     "cityName": "Abu Dhabi",
     "latitude": 24.4539,

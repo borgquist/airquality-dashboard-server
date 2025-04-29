@@ -325,8 +325,8 @@ body.bg-hazardous {
 @media (min-width: 768px) {
   .dashboard {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
     min-height: 400px;
     max-height: 80vh;
     overflow: visible;
@@ -342,44 +342,6 @@ body.bg-hazardous {
     justify-content: center;
     padding: 1.5rem;
   }
-  
-  .main-aqi h2 {
-    margin-bottom: 0;
-  }
-  
-  .aqi-value {
-    font-size: 15rem;
-    line-height: 0.85;
-  }
-  
-  .info-box {
-    grid-column: 2 / 3;
-    grid-row: 1 / 2;
-    align-self: start;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 1.5rem 2rem;
-  }
-  
-  .info-data {
-    margin-top: 1rem;
-  }
-  
-  .uv-index {
-    grid-column: 1 / -1;
-    grid-row: 2 / 3;
-    height: 100%;
-  }
-  
-  .uv-value {
-    font-size: 7rem;
-  }
-  
-  .uv-category {
-    font-size: 1.5rem;
-  }
 }
 
 /* Landscape mode specific styling */
@@ -388,7 +350,7 @@ body.bg-hazardous {
   
   .dashboard {
     display: grid;
-    grid-template-columns: 60% 40%; /* AQI takes 60%, UV takes 40% */
+    grid-template-columns: 100%; /* AQI takes full width */
     gap: 6px;
     margin-top: -5px;
     margin-bottom: 10px;
@@ -397,10 +359,6 @@ body.bg-hazardous {
   .aqi-value {
     font-size: 12rem; /* Extra large AQI value */
     line-height: 0.9;
-  }
-  
-  .uv-value {
-    font-size: 4rem; /* Smaller UV value */
   }
   
   .card {
@@ -412,8 +370,8 @@ body.bg-hazardous {
 @media (max-width: 767px) and (min-width: 480px) {
   .dashboard {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
     gap: 1rem;
     height: auto;
   }
@@ -433,16 +391,6 @@ body.bg-hazardous {
   .aqi-value {
     font-size: 6rem;
     line-height: 1;
-  }
-  
-  .info-box {
-    grid-column: 2 / 3;
-    grid-row: 1 / 2;
-  }
-  
-  .uv-index {
-    grid-column: 1 / -1;
-    grid-row: 2 / 3;
   }
   
   .card {
@@ -472,15 +420,6 @@ body.bg-hazardous {
   
   .label, .value {
     font-size: 1rem;
-  }
-  
-  .uv-value {
-    font-size: 5rem;
-  }
-  
-  .uv-category {
-    font-size: 1.1rem;
-    padding: 0.4rem 0.8rem;
   }
   
   h1 {
@@ -515,7 +454,7 @@ body.bg-hazardous {
   .dashboard {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto;
     gap: 0.8rem;
     width: 100%;
     overflow: hidden;
@@ -530,12 +469,6 @@ body.bg-hazardous {
   .info-box {
     grid-column: 1 / 2;
     grid-row: 2 / 3;
-    width: 100%;
-  }
-  
-  .uv-index {
-    grid-column: 1 / 2;
-    grid-row: 3 / 4;
     width: 100%;
   }
   
@@ -564,19 +497,6 @@ body.bg-hazardous {
     font-size: 5rem;
   }
   
-  .uv-value-container {
-    gap: 0.5rem;
-  }
-  
-  .uv-value {
-    font-size: 4rem;
-  }
-  
-  .uv-category {
-    font-size: 1.1rem;
-    padding: 0.4rem 0.8rem;
-  }
-  
   .card h2 {
     font-size: 1.2rem;
     margin-bottom: 0.5rem;
@@ -603,75 +523,6 @@ body.bg-hazardous {
   
   .value {
     font-size: 1.1rem;
-  }
-}
-
-/* Update UV safety info styles */
-.uv-safety-info {
-  background-color: rgba(46, 204, 113, 0.2);
-  padding: 0.8rem 1.2rem;
-  border-radius: 8px;
-  margin: 0.5rem 0 1rem 0;
-  text-align: center;
-  font-weight: bold;
-  border-left: 4px solid rgba(46, 204, 113, 0.8);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  color: #000; /* Default to black text */
-}
-
-.uv-safety-info::before {
-  content: '☀️';
-  margin-right: 0.5rem;
-}
-
-.uv-safety-info.unsafe {
-  background-color: rgba(231, 76, 60, 0.2);
-  border-left: 4px solid rgba(231, 76, 60, 0.8);
-  color: #000; /* Keep text black for visibility */
-}
-
-.uv-safety-info.unsafe::before {
-  content: '⚠️';
-}
-
-.uv-error {
-  background-color: rgba(231, 76, 60, 0.1);
-  color: #000;
-  border-left: 4px solid rgba(231, 76, 60, 0.8);
-}
-
-/* Optimization for small screens like Raspberry Pi displays */
-@media (max-height: 800px) {
-  body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-  }
-  
-  .container {
-    padding: 0.5rem 1rem 0 1rem;
-  }
-  
-  .dashboard {
-    gap: 0.8rem;
-  }
-  
-  .uv-forecast-container {
-    margin-top: 0.5rem;
-  }
-  
-  footer {
-    margin-top: 0.2rem;
-    border-top: none;
-  }
-  
-  .info-data {
-    gap: 0.5rem;
-  }
-  
-  .weather-item {
-    margin-bottom: 0.2rem;
-    padding: 0.3rem 0.2rem;
   }
 }
 
@@ -1108,4 +959,34 @@ body.bg-hazardous {
 #co2Container:has(.measurement-value:empty),
 #co2Container:has(.measurement-value[innerText="-"]) {
   display: none;
+}
+
+@media (max-height: 800px) {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .container {
+    padding: 0.5rem 1rem 0 1rem;
+  }
+  
+  .dashboard {
+    gap: 0.8rem;
+  }
+  
+  footer {
+    margin-top: 0.2rem;
+    border-top: none;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    margin-bottom: 0.2rem;
+    padding: 0.3rem 0.2rem;
+  }
 } 

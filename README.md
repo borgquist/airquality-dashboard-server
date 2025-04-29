@@ -9,8 +9,6 @@ A simple web server that displays real-time air quality data from an external AP
 - AQI categorization with color coding
 - Detailed pollutant information (PM1, PM2.5, PM10)
 - Weather data display (temperature, humidity, pressure)
-- UV Index forecasting with safety guidelines
-- Support for both direct OpenUV API and cached UV API server
 - Logging to file for monitoring and debugging
 
 ## Requirements
@@ -33,43 +31,12 @@ The configuration includes:
 - `port`: The port number the server runs on (default: 3000)
 - `logLevel`: Logging level (info, debug, error, etc.)
 - `pollingIntervalSec`: How often to fetch data from external API (in seconds)
-- `uvRefreshIntervalSec`: How often to fetch UV index data (in seconds)
 - `externalApiUrl`: The URL to fetch air quality data from **(REQUIRED - you must set this)**
-- `uvApi`: Configuration for the UV index data source
-  - `url`: The OpenUV API URL (default: https://api.openuv.io/api/v1/forecast)
-  - `apiKey`: Your OpenUV API key (required if using direct OpenUV API)
-  - `useCachedServer`: Set to `true` to use a cached UV API server instead of direct OpenUV API (default: false)
-  - `cachedServerUrl`: URL of the cached UV API server (required if `useCachedServer` is true)
-- `location`: Geographic coordinates for your location **(REQUIRED for UV index)**
+- `location`: Geographic coordinates for your location
   - `latitude`: Your location's latitude
   - `longitude`: Your location's longitude
   - `cityName`: Your city name (for display purposes)
   - `timeZone`: Time zone information
-
-### UV API Configuration Options
-
-You can configure the UV data source in two ways:
-
-1. **Direct OpenUV API**: Uses the OpenUV.io API directly with your API key
-   ```json
-   "uvApi": {
-     "url": "https://api.openuv.io/api/v1/forecast",
-     "apiKey": "YOUR_OPENUV_API_KEY_HERE",
-     "useCachedServer": false
-   }
-   ```
-   Note: You must provide a valid OpenUV API key for this option to work.
-
-2. **Cached UV API Server**: Uses a JSON caching server to avoid API rate limits
-   ```json
-   "uvApi": {
-     "url": "",
-     "apiKey": "",
-     "useCachedServer": true,
-     "cachedServerUrl": "http://hostname:8001/data"
-   }
-   ```
-   This option is recommended if you have multiple clients accessing the OpenUV API to avoid hitting rate limits. See [json-cacher](https://github.com/borgquist/json-cacher) for a simple implementation of a caching server.
 
 ### Important Note About Configuration
 

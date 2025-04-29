@@ -1,20 +1,27 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Air Quality Dashboard",
-  "description": "Dashboard for displaying air quality and UV index data",
-  "lastUpdated": "2023-04-27",
+  "description": "Dashboard for displaying air quality data",
+  "lastUpdated": "2023-04-28",
   "features": [
     "Air Quality Index display with background color indication",
     "Weather information display",
-    "UV index current value and forecast graph",
     "Responsive design for mobile and desktop"
   ],
   "changelog": [
     {
+      "version": "1.2.0",
+      "date": "2023-04-28",
+      "changes": [
+        "Removed UV index functionality",
+        "Simplified UI to focus purely on air quality",
+        "Improved performance and reliability"
+      ]
+    },
+    {
       "version": "1.1.0",
       "date": "2023-04-27",
       "changes": [
-        "Added UV index display and forecast",
         "Changed background color based on AQI level",
         "Simplified UI to focus on AQI",
         "Improved configuration structure"

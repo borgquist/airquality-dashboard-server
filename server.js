@@ -96,7 +96,7 @@ function getClientIp(req) {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Remove UV API variables
+// Data cache and control variables
 let lastFetchedData = null;
 let lastFetchTime = 0;
 let fetchPromise = null;
