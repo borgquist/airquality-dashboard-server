@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Quality Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=1002">
+  <link rel="stylesheet" href="style.css?v=1003">
 </head>
 <body>
   <div class="container">
@@ -27,43 +27,48 @@
           <div id="aqiDisplay" class="aqi-value">-</div>
           <div id="aqiCategory" class="aqi-category">-</div>
           
-          <!-- Moved measurements below the main AQI display -->
-          <div class="aqi-measurements-row">
-            <div class="aqi-side-values">
-              <div class="aqi-measurement-container">
-                <div class="aqi-measurement" id="particleCountValue">-</div>
-                <div class="measurement-label">Particles/L</div>
-              </div>
-              <div class="aqi-measurement-container">
-                <div class="aqi-measurement" id="pm10Value">-</div>
-                <div class="measurement-label">PM10</div>
-              </div>
-              <div class="aqi-measurement-container">
-                <div class="aqi-measurement" id="pm1Value">-</div>
-                <div class="measurement-label">PM1</div>
-              </div>
+          <!-- Measurements in a cleaner grid layout -->
+          <div class="measurements-grid">
+            <div class="measurement-item">
+              <div class="measurement-value" id="pm25Value">-</div>
+              <div class="measurement-label">PM2.5</div>
             </div>
             
-            <div class="aqi-side-values">
-              <div class="aqi-measurement-container">
-                <div class="aqi-measurement" id="pm25Value">-</div>
-                <div class="measurement-label">PM2.5</div>
-              </div>
-              <div class="aqi-measurement-container">
-                <div class="aqi-measurement" id="co2Value">-</div>
-                <div class="measurement-label">CO₂</div>
-              </div>
+            <div class="measurement-item">
+              <div class="measurement-value" id="pm10Value">-</div>
+              <div class="measurement-label">PM10</div>
+            </div>
+            
+            <div class="measurement-item">
+              <div class="measurement-value" id="pm1Value">-</div>
+              <div class="measurement-label">PM1</div>
             </div>
           </div>
           
-          <div class="weather-data-small">
+          <!-- Additional measurements in a second row if needed -->
+          <div class="measurements-grid secondary-measurements">
+            <div class="measurement-item" id="particlesContainer">
+              <div class="measurement-value" id="particleCountValue">-</div>
+              <div class="measurement-label">Particles/L</div>
+            </div>
+            
+            <div class="measurement-item" id="co2Container">
+              <div class="measurement-value" id="co2Value">-</div>
+              <div class="measurement-label">CO₂</div>
+            </div>
+          </div>
+          
+          <!-- Weather data in a consistent format -->
+          <div class="weather-data-grid">
             <div class="weather-item temperature">
-              <span class="label">Temperature:</span>
-              <span id="temperature" class="value">-</span>
+              <div class="weather-icon">🌡️</div>
+              <div class="weather-label">Temperature:</div>
+              <div id="temperature" class="weather-value">-</div>
             </div>
             <div class="weather-item humidity">
-              <span class="label">Humidity:</span>
-              <span id="humidity" class="value">-</span>
+              <div class="weather-icon">💧</div>
+              <div class="weather-label">Humidity:</div>
+              <div id="humidity" class="weather-value">-</div>
             </div>
           </div>
         </div>

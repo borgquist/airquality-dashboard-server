@@ -398,7 +398,7 @@ function updateAirQualityDisplay(data) {
   }
   
   // Hide or show particles display
-  const particlesContainer = document.querySelector('.aqi-measurement-container:has(#particleCountValue)');
+  const particlesContainer = document.getElementById('particlesContainer');
   if (particlesContainer && (data.current?.particles === undefined || data.current?.particles === null)) {
     particlesContainer.style.display = 'none';
   } else if (particlesContainer) {
@@ -407,7 +407,7 @@ function updateAirQualityDisplay(data) {
   }
   
   // Hide or show CO2 display
-  const co2Container = document.querySelector('.aqi-measurement-container:has(#co2Value)');
+  const co2Container = document.getElementById('co2Container');
   if (co2Container && (data.current?.co2 === undefined || data.current?.co2 === null)) {
     co2Container.style.display = 'none';
   } else if (co2Container) {

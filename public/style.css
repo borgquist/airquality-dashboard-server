@@ -1028,4 +1028,162 @@ body.bg-hazardous {
 .aqi-category {
   margin-top: 0;
   margin-bottom: 1.5rem;
+}
+
+/* Measurements grid layout */
+.measurements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 0 0.5rem;
+  width: 100%;
+}
+
+.secondary-measurements {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 0;
+  justify-content: center;
+}
+
+.secondary-measurements .measurement-item {
+  margin: 0 auto;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+/* When only one measurement is visible, center it */
+.secondary-measurements:has(.measurement-item[style*="display: none"]) .measurement-item {
+  grid-column: 1 / -1;
+}
+
+.measurement-item {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 0.6rem 0.3rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.measurement-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.measurement-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+  color: var(--measurement-text-color, #fff);
+}
+
+.measurement-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--measurement-text-color, #fff);
+  opacity: 0.9;
+}
+
+/* Weather data grid */
+.weather-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0.8rem 0.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.weather-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  border-bottom: none;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.weather-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.weather-label {
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--measurement-text-color, rgba(255, 255, 255, 0.9));
+  white-space: nowrap;
+}
+
+.weather-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--measurement-text-color, #fff);
+  text-align: right;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .measurements-grid {
+    gap: 0.6rem;
+    padding: 0;
+  }
+  
+  .measurement-value {
+    font-size: 1.3rem;
+  }
+  
+  .weather-data-grid {
+    margin-top: 1.2rem;
+    gap: 0.6rem;
+  }
+  
+  .weather-label {
+    font-size: 0.8rem;
+  }
+  
+  .weather-value {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .measurements-grid {
+    gap: 0.4rem;
+  }
+  
+  .measurement-value {
+    font-size: 1.1rem;
+  }
+  
+  .measurement-label {
+    font-size: 0.7rem;
+  }
+  
+  .weather-data-grid {
+    gap: 0.4rem;
+  }
+  
+  .weather-item {
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .weather-icon {
+    font-size: 1rem;
+  }
+}
+
+/* Hide containers when no data is available */
+#particlesContainer:has(.measurement-value:empty),
+#particlesContainer:has(.measurement-value[innerText="-"]),
+#co2Container:has(.measurement-value:empty),
+#co2Container:has(.measurement-value[innerText="-"]) {
+  display: none;
 } 
