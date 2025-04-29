@@ -963,28 +963,10 @@ function createUvForecastGraph(data) {
       // For safe values, show the actual values
       safeUviValues.push(entry.uvi);
       unsafeUviValues.push(null);
-      
-      // If this is the last safe point before an unsafe region, add an extra point at the threshold
-      if (index < enhancedForecast.length - 1) {
-        const nextEntry = enhancedForecast[index + 1];
-        if (nextEntry.uvi > uvSafetyThreshold) {
-          // Force this point to reach up to the threshold exactly
-          safeUviValues[safeUviValues.length - 1] = uvSafetyThreshold;
-        }
-      }
     } else {
       // For unsafe values, show the actual values
       unsafeUviValues.push(entry.uvi);
       safeUviValues.push(null);
-      
-      // If this is the first unsafe point after a safe region, add an extra point at the threshold
-      if (index > 0) {
-        const prevEntry = enhancedForecast[index - 1];
-        if (prevEntry.uvi <= uvSafetyThreshold) {
-          // Force this point to start from the threshold exactly
-          unsafeUviValues[unsafeUviValues.length - 1] = uvSafetyThreshold;
-        }
-      }
     }
     
     // Check if this is current time
@@ -993,6 +975,84 @@ function createUvForecastGraph(data) {
       currentTimeIndex = index;
     }
   });
+  
+  // Now add exact transition points at the threshold to connect the lines
+  // We need to find where the UV crosses the threshold and insert points
+  const transitionPoints = [];
+  
+  for (let i = 0; i < enhancedForecast.length - 1; i++) {
+    const current = enhancedForecast[i];
+    const next = enhancedForecast[i+1];
+    const currentTime = new Date(current.time);
+    const nextTime = new Date(next.time);
+    
+    // If crossing the threshold from safe to unsafe
+    if (current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
+      // Calculate exact crossing time
+      const ratio = (uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi);
+      const crossingTime = new Date(
+        currentTime.getTime() + 
+        ratio * (nextTime.getTime() - currentTime.getTime())
+      );
+      
+      // Format crossing time
+      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit'});
+      
+      // Insert a point at exactly the threshold
+      transitionPoints.push({
+        index: i + 0.5,
+        time: timeLabel,
+        safeValue: uvSafetyThreshold,
+        unsafeValue: uvSafetyThreshold
+      });
+    }
+    // If crossing the threshold from unsafe to safe
+    else if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
+      // Calculate exact crossing time
+      const ratio = (current.uvi - uvSafetyThreshold) / (current.uvi - next.uvi);
+      const crossingTime = new Date(
+        currentTime.getTime() + 
+        ratio * (nextTime.getTime() - currentTime.getTime())
+      );
+      
+      // Format crossing time
+      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit'});
+      
+      // Insert a point at exactly the threshold
+      transitionPoints.push({
+        index: i + 0.5,
+        time: timeLabel,
+        safeValue: uvSafetyThreshold,
+        unsafeValue: uvSafetyThreshold
+      });
+    }
+  }
+  
+  // Insert the transition points
+  transitionPoints.sort((a, b) => a.index - b.index);
+  for (const point of transitionPoints) {
+    // Find the actual index where to insert
+    let insertIndex = Math.floor(point.index);
+    for (let i = 0; i <= insertIndex; i++) {
+      if (times[i] === point.time) {
+        // If a point at this time already exists, use that
+        insertIndex = i;
+        break;
+      }
+    }
+    
+    // Insert the transition point
+    times.splice(insertIndex + 1, 0, point.time);
+    uviValues.splice(insertIndex + 1, 0, uvSafetyThreshold);
+    safeUviValues.splice(insertIndex + 1, 0, point.safeValue);
+    unsafeUviValues.splice(insertIndex + 1, 0, point.unsafeValue);
+    
+    // Adjust current time index if needed
+    if (currentTimeIndex > insertIndex) {
+      currentTimeIndex++;
+    }
+  }
+  // At this point we should have exact transition points inserted that make the lines meet perfectly
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
