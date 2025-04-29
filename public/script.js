@@ -637,14 +637,14 @@ function addUvSafetyTimes(data) {
   const morningTimeStr = morningUnsafeTime ? formatTimeForDisplay(morningUnsafeTime) : null;
   const eveningTimeStr = eveningSafeTime ? formatTimeForDisplay(eveningSafeTime) : null;
   
-  // Create the simplified safety message
+  // Create the safety message - always show times regardless of current time
   let safetyMessage = '';
   
   // Get the current UV value from the API response
   const apiCurrentUvi = data.now?.uvi || -1;
   const isCurrentUvSafe = apiCurrentUvi <= uvSafetyThreshold;
   
-  // Simplified message that shows both times regardless of current time
+  // Always show the safe times regardless of current time
   if (morningTimeStr && eveningTimeStr) {
     safetyMessage = `Safe UV: before ${morningTimeStr} & after ${eveningTimeStr}`;
   } else if (morningTimeStr) {
@@ -999,7 +999,7 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false
+          spanGaps: true  // Change this to true to connect across null values
         },
         {
           // Unsafe zone - red line
@@ -1013,7 +1013,7 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false
+          spanGaps: true  // Change this to true to connect across null values
         },
         {
           // Current time marker - only show a single point
