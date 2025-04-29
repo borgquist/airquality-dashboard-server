@@ -44,7 +44,7 @@
     /* AQI card with fixed height */
     .aqi-card {
       height: 450px;
-      overflow: auto;
+      overflow: visible;
       margin: 0 0 10px 0;
       padding: 15px;
       border-radius: 12px;
@@ -53,13 +53,75 @@
     
     /* UV card with fixed height */
     .uv-card {
-      height: 380px;
-      overflow: auto;
+      height: 340px;
+      overflow: visible;
       margin: 0;
-      padding: 15px;
+      padding: 10px;
       border-radius: 12px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       background-color: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* UV chart container - set exact height */
+    .uv-chart-container {
+      height: 100px;
+      margin: 3px 0;
+      flex-shrink: 0;
+    }
+    
+    /* UV Index value */
+    .uv-box .aqi-value {
+      font-size: min(3rem, 10vmin);
+      margin: 0;
+      line-height: 0.9;
+    }
+    
+    /* Crossing times */
+    .uv-crossing-times {
+      margin: 3px 0;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-around;
+    }
+    
+    /* UV info */
+    #uvInfo {
+      margin-top: 3px;
+      font-size: 0.85rem;
+      padding: 0;
+    }
+    
+    /* UV category */
+    .uv-box .aqi-category {
+      margin: 0 0 3px 0;
+      padding: 3px 8px;
+      font-size: 1rem;
+    }
+    
+    /* Compact content styling */
+    .aqi-value {
+      font-size: min(6.5rem, 16vmin);
+      line-height: 1;
+      margin: 0.1rem 0;
+    }
+    
+    .measurements-grid {
+      gap: 5px;
+      margin: 5px 0;
+    }
+    
+    .weather-data-grid {
+      margin-top: 5px;
+      padding-top: 5px;
+    }
+    
+    /* Card headings */
+    .card h2 {
+      margin: 0 0 5px 0;
+      padding-bottom: 5px;
+      font-size: 1.5rem;
     }
     
     /* Landscape orientation - side by side */
@@ -67,12 +129,70 @@
       .flex-dashboard {
         flex-direction: row;
         height: calc(100vh - 90px);
+        overflow: hidden;
       }
       
       .left-col, .uv-card {
         width: 50%;
         min-width: 300px;
+        overflow: visible;
       }
+      
+      /* Adjust heights for landscape mode */
+      .aqi-card {
+        height: auto; /* Let height adjust to content */
+        max-height: calc(100vh - 90px);
+      }
+      
+      .uv-card {
+        height: auto;
+        max-height: calc(100vh - 90px);
+      }
+      
+      /* Even more compact for landscape */
+      .uv-chart-container {
+        height: 90px;
+      }
+      
+      /* Reduced sizes for landscape */
+      .aqi-value {
+        font-size: min(5.5rem, 15vmin);
+      }
+      
+      .uv-box .aqi-value {
+        font-size: min(3rem, 10vmin);
+      }
+    }
+    
+    /* Card height optimizations */
+    .aqi-card {
+      height: 450px;
+      overflow: visible;
+    }
+    
+    .uv-card {
+      height: 340px;
+      overflow: visible;
+      padding: 10px;
+    }
+    
+    /* Optimize UV card content layout */
+    .uv-card h2 {
+      font-size: 1.3rem;
+      margin: 0 0 3px 0;
+      padding-bottom: 3px;
+    }
+    
+    .uv-crossing-times div {
+      font-size: 0.8rem;
+      padding: 2px 4px;
+    }
+    
+    /* Target low risk text */
+    .uv-info p {
+      margin: 3px 0;
+      font-size: 0.8rem;
+      line-height: 1.2;
     }
   </style>
 </head>
@@ -151,7 +271,7 @@
         <div id="uvCurrentClass" class="aqi-category">-</div>
         
         <div class="uv-chart-container">
-          <canvas id="uvChart" width="100%" height="150"></canvas>
+          <canvas id="uvChart" width="100%" height="90"></canvas>
         </div>
         
         <div class="uv-crossing-times">
