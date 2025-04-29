@@ -19,7 +19,7 @@
     },
     "moderate": {
       "backgroundColor": "#8cd211",
-      "textColor": "white"
+      "textColor": "black"
     },
     "unhealthySensitive": {
       "backgroundColor": "yellow",
