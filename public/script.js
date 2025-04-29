@@ -976,83 +976,26 @@ function createUvForecastGraph(data) {
     }
   });
   
-  // Now add exact transition points at the threshold to connect the lines
-  // We need to find where the UV crosses the threshold and insert points
+  // Find transition points for a separate connection dataset
   const transitionPoints = [];
-  
   for (let i = 0; i < enhancedForecast.length - 1; i++) {
     const current = enhancedForecast[i];
     const next = enhancedForecast[i+1];
-    const currentTime = new Date(current.time);
-    const nextTime = new Date(next.time);
     
-    // If crossing the threshold from safe to unsafe
-    if (current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
-      // Calculate exact crossing time
+    // If we cross the threshold (in either direction), add a transition point
+    const currentBelow = current.uvi <= uvSafetyThreshold;
+    const nextBelow = next.uvi <= uvSafetyThreshold;
+    
+    if (currentBelow !== nextBelow) {
+      // We have a threshold crossing
       const ratio = (uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi);
-      const crossingTime = new Date(
-        currentTime.getTime() + 
-        ratio * (nextTime.getTime() - currentTime.getTime())
-      );
-      
-      // Format crossing time
-      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit'});
-      
-      // Insert a point at exactly the threshold
+      const crossingIndex = i + ratio;
       transitionPoints.push({
-        index: i + 0.5,
-        time: timeLabel,
-        safeValue: uvSafetyThreshold,
-        unsafeValue: uvSafetyThreshold
-      });
-    }
-    // If crossing the threshold from unsafe to safe
-    else if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
-      // Calculate exact crossing time
-      const ratio = (current.uvi - uvSafetyThreshold) / (current.uvi - next.uvi);
-      const crossingTime = new Date(
-        currentTime.getTime() + 
-        ratio * (nextTime.getTime() - currentTime.getTime())
-      );
-      
-      // Format crossing time
-      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit'});
-      
-      // Insert a point at exactly the threshold
-      transitionPoints.push({
-        index: i + 0.5,
-        time: timeLabel,
-        safeValue: uvSafetyThreshold,
-        unsafeValue: uvSafetyThreshold
+        index: i,
+        nextIndex: i + 1
       });
     }
   }
-  
-  // Insert the transition points
-  transitionPoints.sort((a, b) => a.index - b.index);
-  for (const point of transitionPoints) {
-    // Find the actual index where to insert
-    let insertIndex = Math.floor(point.index);
-    for (let i = 0; i <= insertIndex; i++) {
-      if (times[i] === point.time) {
-        // If a point at this time already exists, use that
-        insertIndex = i;
-        break;
-      }
-    }
-    
-    // Insert the transition point
-    times.splice(insertIndex + 1, 0, point.time);
-    uviValues.splice(insertIndex + 1, 0, uvSafetyThreshold);
-    safeUviValues.splice(insertIndex + 1, 0, point.safeValue);
-    unsafeUviValues.splice(insertIndex + 1, 0, point.unsafeValue);
-    
-    // Adjust current time index if needed
-    if (currentTimeIndex > insertIndex) {
-      currentTimeIndex++;
-    }
-  }
-  // At this point we should have exact transition points inserted that make the lines meet perfectly
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
@@ -1061,7 +1004,7 @@ function createUvForecastGraph(data) {
     uvChart.destroy();
   }
   
-  // Create a line chart with two separate datasets for safe and unsafe zones
+  // Create a line chart with separate datasets
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -1076,10 +1019,16 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(46, 204, 113, 1)',
           pointBorderColor: 'rgba(46, 204, 113, 1)',
           borderWidth: 3,
-          tension: 0.3,
+          tension: 0, // Use 0 tension for straight lines between points
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false  // Change to false to prevent connecting across null values
+          spanGaps: false,  // Don't connect across gaps
+          segment: {
+            borderColor: ctx => {
+              // Don't change color of segments
+              return 'rgba(46, 204, 113, 1)';
+            }
+          }
         },
         {
           // Unsafe zone - red line
@@ -1090,10 +1039,31 @@ function createUvForecastGraph(data) {
           pointBackgroundColor: 'rgba(231, 76, 60, 1)',
           pointBorderColor: 'rgba(231, 76, 60, 1)',
           borderWidth: 3,
-          tension: 0.3,
+          tension: 0, // Use 0 tension for straight lines between points
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: true  // Keep true for red line to span any small gaps
+          spanGaps: true,  // Connect across any gaps
+          segment: {
+            borderColor: ctx => {
+              // Don't change color of segments
+              return 'rgba(231, 76, 60, 1)';
+            }
+          }
+        },
+        {
+          // Transition points - dots at the threshold
+          label: 'Threshold Points',
+          data: uviValues.map((val, i) => {
+            // For transition points, we'll draw connection dots in the afterDraw method
+            return null;
+          }),
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          tension: 0,
+          pointRadius: 0,
+          fill: false,
+          spanGaps: false
         },
         {
           // Current time marker - only show a single point
@@ -1134,7 +1104,7 @@ function createUvForecastGraph(data) {
               }
               
               // Indicate current time in tooltip
-              if (context.datasetIndex === 2) { // Current time dataset
+              if (context.datasetIndex === 3) { // Current time dataset
                 label += ' (Current Time)';
               }
               
@@ -1170,7 +1140,38 @@ function createUvForecastGraph(data) {
           }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'connectThresholdPoints',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx;
+        const xAxis = chart.scales.x;
+        const yAxis = chart.scales.y;
+        const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
+        
+        // Draw connection dots at each transition point
+        for (const point of transitionPoints) {
+          const xPixel1 = chart.getDatasetMeta(0).data[point.index].x;
+          const xPixel2 = chart.getDatasetMeta(0).data[point.nextIndex].x;
+          const midX = (xPixel1 + xPixel2) / 2;
+          
+          // Draw green dot at the meeting point
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(midX, yPixel, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = 'rgba(46, 204, 113, 1)';
+          ctx.fill();
+          
+          // Draw red dot over it, but with a hole in the middle
+          ctx.beginPath();
+          ctx.arc(midX, yPixel, 6, 0, 2 * Math.PI);
+          ctx.strokeStyle = 'rgba(231, 76, 60, 1)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }]
   });
   
   // Manually add the green area after the chart is created
