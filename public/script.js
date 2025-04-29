@@ -952,8 +952,8 @@ function createUvForecastGraph(data) {
   enhancedForecast.forEach((entry, index) => {
     const entryTime = new Date(entry.time);
     
-    // Format the time to show the hour only
-    let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit'});
+    // Format the time to show the hour only - with minutes to prevent label collisions
+    let timeLabel = entryTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     
     times.push(timeLabel);
     uviValues.push(entry.uvi);
@@ -989,7 +989,8 @@ function createUvForecastGraph(data) {
       
       // Insert a connecting point at exactly the threshold
       // We add this point to both datasets at the exact same position
-      times.splice(i+1, 0, crossingTime.toLocaleTimeString([], {hour: '2-digit'}));
+      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
       
       // This is the last point of the safe zone
@@ -998,9 +999,13 @@ function createUvForecastGraph(data) {
       // This is the first point of the unsafe zone
       unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
       
-      // Update the existing values
-      safeUviValues[i+2] = null;  // Make sure next point is null in safe dataset
+      // Update the existing values to ensure connection
       unsafeUviValues[i] = null;  // Make sure previous point is null in unsafe dataset
+      
+      // Add additional transition points if there's a gap
+      if (i+2 < safeUviValues.length) {
+        safeUviValues[i+2] = null;  // Make sure next point is null in safe dataset
+      }
       
       // Update current time index if needed
       if (currentTimeIndex > i) {
@@ -1017,7 +1022,8 @@ function createUvForecastGraph(data) {
       const crossingTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       
       // Insert a connecting point at exactly the threshold
-      times.splice(i+1, 0, crossingTime.toLocaleTimeString([], {hour: '2-digit'}));
+      const timeLabel = crossingTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      times.splice(i+1, 0, timeLabel);
       uviValues.splice(i+1, 0, uvSafetyThreshold);
       
       // This is the last point of the unsafe zone
@@ -1026,9 +1032,13 @@ function createUvForecastGraph(data) {
       // This is the first point of the safe zone
       safeUviValues.splice(i+1, 0, uvSafetyThreshold);
       
-      // Update the existing values
-      unsafeUviValues[i+2] = null;  // Make sure next point is null in unsafe dataset
-      safeUviValues[i] = null;      // Make sure previous point is null in safe dataset
+      // Update the existing values to ensure connection
+      safeUviValues[i] = null;  // Make sure previous point is null in safe dataset
+      
+      // Add additional transition points if there's a gap
+      if (i+2 < unsafeUviValues.length) {
+        unsafeUviValues[i+2] = null;  // Make sure next point is null in unsafe dataset
+      }
       
       // Update current time index if needed
       if (currentTimeIndex > i) {
