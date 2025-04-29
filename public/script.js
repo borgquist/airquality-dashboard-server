@@ -976,33 +976,77 @@ function createUvForecastGraph(data) {
     }
   });
   
-  // Find exact transition points and modify the data to ensure lines connect
+  // Find transition points and create connecting points to ensure lines connect properly
   for (let i = 0; i < enhancedForecast.length - 1; i++) {
     const current = enhancedForecast[i];
     const next = enhancedForecast[i+1];
     
     // If crossing from safe to unsafe (UV increasing)
     if (current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
-      // Make the green line go up to meet the threshold
-      safeUviValues[i] = uvSafetyThreshold;
+      // Calculate exact crossing point
+      const ratio = (uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi);
+      const crossingTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       
-      // Make the red line start exactly at the threshold
-      if (unsafeUviValues[i+1] !== null) {
-        unsafeUviValues[i+1] = Math.max(next.uvi, uvSafetyThreshold);
+      // Insert a connecting point at exactly the threshold
+      // We add this point to both datasets at the exact same position
+      times.splice(i+1, 0, crossingTime.toLocaleTimeString([], {hour: '2-digit'}));
+      uviValues.splice(i+1, 0, uvSafetyThreshold);
+      
+      // This is the last point of the safe zone
+      safeUviValues.splice(i+1, 0, uvSafetyThreshold);
+      
+      // This is the first point of the unsafe zone
+      unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
+      
+      // Update the existing values
+      safeUviValues[i+2] = null;  // Make sure next point is null in safe dataset
+      unsafeUviValues[i] = null;  // Make sure previous point is null in unsafe dataset
+      
+      // Update current time index if needed
+      if (currentTimeIndex > i) {
+        currentTimeIndex++;
       }
+      
+      i++; // Skip the newly inserted point in the next iteration
     }
     
     // If crossing from unsafe to safe (UV decreasing)
-    if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
-      // Make the red line go down to meet the threshold
-      unsafeUviValues[i] = uvSafetyThreshold;
+    else if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
+      // Calculate exact crossing point
+      const ratio = (current.uvi - uvSafetyThreshold) / (current.uvi - next.uvi);
+      const crossingTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       
-      // Make the green line start exactly at the threshold
-      if (safeUviValues[i+1] !== null) {
-        safeUviValues[i+1] = Math.min(next.uvi, uvSafetyThreshold);
+      // Insert a connecting point at exactly the threshold
+      times.splice(i+1, 0, crossingTime.toLocaleTimeString([], {hour: '2-digit'}));
+      uviValues.splice(i+1, 0, uvSafetyThreshold);
+      
+      // This is the last point of the unsafe zone
+      unsafeUviValues.splice(i+1, 0, uvSafetyThreshold);
+      
+      // This is the first point of the safe zone
+      safeUviValues.splice(i+1, 0, uvSafetyThreshold);
+      
+      // Update the existing values
+      unsafeUviValues[i+2] = null;  // Make sure next point is null in unsafe dataset
+      safeUviValues[i] = null;      // Make sure previous point is null in safe dataset
+      
+      // Update current time index if needed
+      if (currentTimeIndex > i) {
+        currentTimeIndex++;
       }
+      
+      i++; // Skip the newly inserted point in the next iteration
     }
   }
+  
+  // Create data for transition points (threshold points)
+  const transitionPoints = times.map((time, index) => {
+    if ((safeUviValues[index] === uvSafetyThreshold && (index === 0 || safeUviValues[index-1] === null || index === safeUviValues.length-1 || safeUviValues[index+1] === null)) ||
+        (unsafeUviValues[index] === uvSafetyThreshold && (index === 0 || unsafeUviValues[index-1] === null || index === unsafeUviValues.length-1 || unsafeUviValues[index+1] === null))) {
+      return uvSafetyThreshold;
+    }
+    return null;
+  });
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
@@ -1029,7 +1073,10 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false  // Don't connect across gaps
+          spanGaps: false,  // Don't connect across gaps
+          segment: {
+            borderColor: ctx => 'rgba(46, 204, 113, 1)'
+          }
         },
         {
           // Unsafe zone - red line
@@ -1043,7 +1090,22 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: true  // Connect across any gaps
+          spanGaps: false,  // Don't connect across gaps (changed from true)
+          segment: {
+            borderColor: ctx => 'rgba(231, 76, 60, 1)'
+          }
+        },
+        {
+          // Transition points at threshold value - make sure connections are visible
+          label: 'Transition',
+          data: transitionPoints,
+          pointBackgroundColor: 'rgba(0, 0, 0, 0.5)',
+          pointBorderColor: 'rgba(0, 0, 0, 0.5)',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 0,
+          fill: false,
+          showLine: false
         },
         {
           // Current time marker - only show a single point
@@ -1084,11 +1146,35 @@ function createUvForecastGraph(data) {
               }
               
               // Indicate current time in tooltip
-              if (context.datasetIndex === 2) { // Current time dataset
+              if (context.datasetIndex === 3) { // Current time dataset (now index 3)
                 label += ' (Current Time)';
+              } else if (context.datasetIndex === 2 && value === uvSafetyThreshold) { // Transition point
+                label = `UV Index: ${value.toFixed(1)} - Threshold value`;
               }
               
               return label;
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            thresholdLine: {
+              type: 'line',
+              yMin: uvSafetyThreshold,
+              yMax: uvSafetyThreshold,
+              borderColor: 'rgba(46, 204, 113, 0.7)',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              label: {
+                enabled: true,
+                content: 'Safe Threshold',
+                position: 'start',
+                backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                color: '#fff',
+                font: {
+                  size: 12
+                }
+              }
             }
           }
         }
