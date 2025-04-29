@@ -958,18 +958,33 @@ function createUvForecastGraph(data) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
-    // For the safe values, only show actual values below the threshold
+    // For safe values and unsafe values
     if (entry.uvi <= uvSafetyThreshold) {
+      // For safe values, show the actual values
       safeUviValues.push(entry.uvi);
-    } else {
-      safeUviValues.push(null);
-    }
-    
-    // For unsafe values, only show values above the threshold
-    if (entry.uvi > uvSafetyThreshold) {
-      unsafeUviValues.push(entry.uvi);
-    } else {
       unsafeUviValues.push(null);
+      
+      // If this is the last safe point before an unsafe region, add an extra point at the threshold
+      if (index < enhancedForecast.length - 1) {
+        const nextEntry = enhancedForecast[index + 1];
+        if (nextEntry.uvi > uvSafetyThreshold) {
+          // Force this point to reach up to the threshold exactly
+          safeUviValues[safeUviValues.length - 1] = uvSafetyThreshold;
+        }
+      }
+    } else {
+      // For unsafe values, show the actual values
+      unsafeUviValues.push(entry.uvi);
+      safeUviValues.push(null);
+      
+      // If this is the first unsafe point after a safe region, add an extra point at the threshold
+      if (index > 0) {
+        const prevEntry = enhancedForecast[index - 1];
+        if (prevEntry.uvi <= uvSafetyThreshold) {
+          // Force this point to start from the threshold exactly
+          unsafeUviValues[unsafeUviValues.length - 1] = uvSafetyThreshold;
+        }
+      }
     }
     
     // Check if this is current time
@@ -1004,7 +1019,7 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: true  // Change this to true to connect across null values
+          spanGaps: false  // Change to false to prevent connecting across null values
         },
         {
           // Unsafe zone - red line
@@ -1018,7 +1033,7 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: true  // Change this to true to connect across null values
+          spanGaps: true  // Keep true for red line to span any small gaps
         },
         {
           // Current time marker - only show a single point
