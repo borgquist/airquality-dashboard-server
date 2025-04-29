@@ -178,29 +178,8 @@ function updateUvIndexDisplay(data) {
     uvCurrentValue.textContent = currentUv !== null ? currentUv.toFixed(1) : '-';
   }
   
-  // Update UV class display
-  const uvCurrentClass = document.getElementById('uvCurrentClass');
-  if (uvCurrentClass) {
-    uvCurrentClass.textContent = getUvCategoryName(currentUv);
-    
-    // Remove all category classes
-    uvCurrentClass.classList.remove('uv-low', 'uv-moderate', 'uv-high', 'uv-very-high', 'uv-extreme');
-    
-    // Add appropriate class
-    const uvClass = getUvClass(currentUv);
-    if (uvClass) {
-      uvCurrentClass.classList.add(uvClass);
-    }
-    
-    // Also add class to parent .uv-box
-    const uvBox = document.querySelector('.uv-box');
-    if (uvBox) {
-      uvBox.classList.remove('uv-low', 'uv-moderate', 'uv-high', 'uv-very-high', 'uv-extreme');
-      if (uvClass) {
-        uvBox.classList.add(uvClass);
-      }
-    }
-  }
+  // Update the UV category display box with enhanced styling
+  updateUvCategoryDisplay(currentUv);
   
   // Update crossing times with new labels
   const uvRiseElement = document.getElementById('uvRiseTime');
@@ -337,122 +316,117 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
   // Create chart
   const ctx = canvas.getContext('2d');
   
-  // Create datasets for multiple UV level segments
-  const createSegmentedDatasets = () => {
-    const times = smoothData.times;
-    const values = smoothData.values;
+  // Define colors for different UV ranges - multiple distinct colors with less transparency
+  const uvColors = {
+    low: {
+      lineColor: 'rgba(76, 175, 80, 1)',        // Green
+      fillColor: 'rgba(76, 175, 80, 0.8)',      // Less transparent
+      textColor: '#000000'                       // Black text for lighter backgrounds
+    },
+    moderate: {
+      lineColor: 'rgba(255, 235, 59, 1)',       // Yellow
+      fillColor: 'rgba(255, 235, 59, 0.8)',     // Less transparent
+      textColor: '#000000'                       // Black text
+    },
+    high: {
+      lineColor: 'rgba(255, 152, 0, 1)',        // Orange
+      fillColor: 'rgba(255, 152, 0, 0.8)',      // Less transparent
+      textColor: '#000000'                       // Black text
+    },
+    veryHigh: {
+      lineColor: 'rgba(233, 30, 99, 1)',        // Pink/red
+      fillColor: 'rgba(233, 30, 99, 0.8)',      // Less transparent
+      textColor: '#FFFFFF'                       // White text for darker backgrounds
+    },
+    extreme: {
+      lineColor: 'rgba(156, 39, 176, 1)',       // Purple
+      fillColor: 'rgba(156, 39, 176, 0.8)',     // Less transparent
+      textColor: '#FFFFFF'                       // White text
+    }
+  };
+  
+  // Using a single dataset approach with color interpolation
+  // This avoids ANY gaps between segments
+  const coloredData = [];
+  
+  // Process each data point and assign the appropriate color
+  smoothData.values.forEach((value, index) => {
+    let color;
     
-    if (!times.length) return [];
-    
-    // Define colors for different UV ranges - multiple distinct colors
-    const uvColors = {
-      low: {
-        lineColor: 'rgba(76, 175, 80, 1)',        // Green
-        fillColor: 'rgba(76, 175, 80, 0.6)'
-      },
-      moderate: {
-        lineColor: 'rgba(255, 235, 59, 1)',       // Yellow
-        fillColor: 'rgba(255, 235, 59, 0.6)'
-      },
-      high: {
-        lineColor: 'rgba(255, 152, 0, 1)',        // Orange
-        fillColor: 'rgba(255, 152, 0, 0.6)'
-      },
-      veryHigh: {
-        lineColor: 'rgba(233, 30, 99, 1)',        // Pink/red
-        fillColor: 'rgba(233, 30, 99, 0.6)'
-      },
-      extreme: {
-        lineColor: 'rgba(156, 39, 176, 1)',       // Purple
-        fillColor: 'rgba(156, 39, 176, 0.6)'
-      }
-    };
-    
-    // Using a single dataset approach with color interpolation
-    // This avoids ANY gaps between segments
-    const coloredData = [];
-    
-    // Process each data point and assign the appropriate color
-    values.forEach((value, index) => {
-      let color;
-      
-      if (value <= 3) {
-        color = uvColors.low.fillColor;
-      } else if (value <= 6) {
-        color = uvColors.moderate.fillColor;
-      } else if (value <= 8) {
-        color = uvColors.high.fillColor;
-      } else if (value <= 11) {
-        color = uvColors.veryHigh.fillColor;
-      } else {
-        color = uvColors.extreme.fillColor;
-      }
-      
-      coloredData.push({
-        x: times[index],
-        y: value,
-        color: color
-      });
-    });
-    
-    // Create the seamless dataset
-    const datasets = [{
-      label: 'UV Index',
-      data: values,
-      borderColor: values.map((v, i) => {
-        if (v <= 3) return uvColors.low.lineColor;
-        if (v <= 6) return uvColors.moderate.lineColor;
-        if (v <= 8) return uvColors.high.lineColor;
-        if (v <= 11) return uvColors.veryHigh.lineColor;
-        return uvColors.extreme.lineColor;
-      }),
-      backgroundColor: values.map((v, i) => {
-        if (v <= 3) return uvColors.low.fillColor;
-        if (v <= 6) return uvColors.moderate.fillColor;
-        if (v <= 8) return uvColors.high.fillColor;
-        if (v <= 11) return uvColors.veryHigh.fillColor;
-        return uvColors.extreme.fillColor;
-      }),
-      segment: {
-        borderColor: ctx => getSegmentColor(ctx, 'line'),
-        backgroundColor: ctx => getSegmentColor(ctx, 'fill'),
-      },
-      borderWidth: 2,
-      pointRadius: 0,
-      tension: 0.4,
-      fill: true
-    }];
-    
-    // Helper function to get color by segment
-    function getSegmentColor(ctx, type) {
-      const value = ctx.p0.parsed.y;
-      if (value <= 3) return type === 'line' ? uvColors.low.lineColor : uvColors.low.fillColor;
-      if (value <= 6) return type === 'line' ? uvColors.moderate.lineColor : uvColors.moderate.fillColor;
-      if (value <= 8) return type === 'line' ? uvColors.high.lineColor : uvColors.high.fillColor;
-      if (value <= 11) return type === 'line' ? uvColors.veryHigh.lineColor : uvColors.veryHigh.fillColor;
-      return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
+    if (value <= 3) {
+      color = uvColors.low.fillColor;
+    } else if (value <= 6) {
+      color = uvColors.moderate.fillColor;
+    } else if (value <= 8) {
+      color = uvColors.high.fillColor;
+    } else if (value <= 11) {
+      color = uvColors.veryHigh.fillColor;
+    } else {
+      color = uvColors.extreme.fillColor;
     }
     
-    // Thin black outline
-    datasets.push({
-      label: 'UV Outline',
-      data: values,
-      borderColor: 'rgba(0, 0, 0, 0.3)',
-      backgroundColor: 'rgba(0, 0, 0, 0)', // transparent
-      borderWidth: 1,
-      pointRadius: 0,
-      tension: 0.4,
-      fill: false
+    coloredData.push({
+      x: smoothData.times[index],
+      y: value,
+      color: color
     });
-    
-    return datasets;
-  };
+  });
+  
+  // Create the seamless dataset
+  const datasets = [{
+    label: 'UV Index',
+    data: smoothData.values,
+    borderColor: smoothData.values.map((v, i) => {
+      if (v <= 3) return uvColors.low.lineColor;
+      if (v <= 6) return uvColors.moderate.lineColor;
+      if (v <= 8) return uvColors.high.lineColor;
+      if (v <= 11) return uvColors.veryHigh.lineColor;
+      return uvColors.extreme.lineColor;
+    }),
+    backgroundColor: smoothData.values.map((v, i) => {
+      if (v <= 3) return uvColors.low.fillColor;
+      if (v <= 6) return uvColors.moderate.fillColor;
+      if (v <= 8) return uvColors.high.fillColor;
+      if (v <= 11) return uvColors.veryHigh.fillColor;
+      return uvColors.extreme.fillColor;
+    }),
+    segment: {
+      borderColor: ctx => getSegmentColor(ctx, 'line'),
+      backgroundColor: ctx => getSegmentColor(ctx, 'fill'),
+    },
+    borderWidth: 2,
+    pointRadius: 0,
+    tension: 0.4,
+    fill: true
+  }];
+  
+  // Helper function to get color by segment
+  function getSegmentColor(ctx, type) {
+    const value = ctx.p0.parsed.y;
+    if (value <= 3) return type === 'line' ? uvColors.low.lineColor : uvColors.low.fillColor;
+    if (value <= 6) return type === 'line' ? uvColors.moderate.lineColor : uvColors.moderate.fillColor;
+    if (value <= 8) return type === 'line' ? uvColors.high.lineColor : uvColors.high.fillColor;
+    if (value <= 11) return type === 'line' ? uvColors.veryHigh.lineColor : uvColors.veryHigh.fillColor;
+    return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
+  }
+  
+  // Thin black outline
+  datasets.push({
+    label: 'UV Outline',
+    data: smoothData.values,
+    borderColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0)', // transparent
+    borderWidth: 1,
+    pointRadius: 0,
+    tension: 0.4,
+    fill: false
+  });
   
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: smoothData.times,
-      datasets: createSegmentedDatasets()
+      datasets: datasets
     },
     options: {
       responsive: true,
@@ -859,4 +833,80 @@ function getUvClass(uvValue) {
   if (uvValue < 8) return 'uv-high';
   if (uvValue < 11) return 'uv-very-high';
   return 'uv-extreme';
+}
+
+// Update the UV box with category styling and consistent font sizing
+function updateUvCategoryDisplay(currentUv) {
+  const uvCurrentClass = document.getElementById('uvCurrentClass');
+  if (!uvCurrentClass) return;
+  
+  // Get the current category styling
+  let backgroundColor, textColor, borderColor;
+  
+  if (currentUv === null) {
+    backgroundColor = 'rgba(200, 200, 200, 0.8)';  // Gray
+    textColor = '#000000';
+    borderColor = '#888888';
+  } else if (currentUv < 3) {
+    backgroundColor = 'rgba(76, 175, 80, 0.8)';  // Green
+    textColor = '#000000';
+    borderColor = '#2E7D32';
+  } else if (currentUv < 6) {
+    backgroundColor = 'rgba(255, 235, 59, 0.8)'; // Yellow
+    textColor = '#000000';
+    borderColor = '#F9A825';
+  } else if (currentUv < 8) {
+    backgroundColor = 'rgba(255, 152, 0, 0.8)';  // Orange
+    textColor = '#000000';
+    borderColor = '#E65100';
+  } else if (currentUv < 11) {
+    backgroundColor = 'rgba(233, 30, 99, 0.8)';  // Pink/red
+    textColor = '#FFFFFF';
+    borderColor = '#C2185B';
+  } else {
+    backgroundColor = 'rgba(156, 39, 176, 0.8)'; // Purple
+    textColor = '#FFFFFF';
+    borderColor = '#7B1FA2';
+  }
+  
+  // Format the UV value clearly
+  const uvValue = currentUv !== null ? (Number.isInteger(currentUv) ? currentUv.toString() : currentUv.toFixed(1)) : '-';
+  
+  // Clear any existing content
+  uvCurrentClass.innerHTML = '';
+  
+  // Update element styles
+  uvCurrentClass.style.backgroundColor = backgroundColor;
+  uvCurrentClass.style.color = textColor;
+  uvCurrentClass.style.padding = '12px 20px';
+  uvCurrentClass.style.fontWeight = 'bold';
+  uvCurrentClass.style.borderRadius = '8px';
+  uvCurrentClass.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  uvCurrentClass.style.border = `2px solid ${borderColor}`;
+  uvCurrentClass.style.display = 'flex';
+  uvCurrentClass.style.justifyContent = 'center';
+  uvCurrentClass.style.alignItems = 'center';
+  uvCurrentClass.style.minWidth = '60px';
+  
+  // Create a fresh span element for the value
+  const valueSpan = document.createElement('span');
+  valueSpan.style.fontSize = '2.2rem';
+  valueSpan.style.display = 'inline-block';
+  valueSpan.textContent = uvValue;
+  
+  // Append the new span to the container
+  uvCurrentClass.appendChild(valueSpan);
+  
+  // Also update the UV box element if it exists
+  const uvBox = document.querySelector('.uv-box');
+  if (uvBox) {
+    // Remove all category classes
+    uvBox.classList.remove('uv-low', 'uv-moderate', 'uv-high', 'uv-very-high', 'uv-extreme');
+    
+    // Add appropriate class
+    const uvClass = getUvClass(currentUv);
+    if (uvClass) {
+      uvBox.classList.add(uvClass);
+    }
+  }
 } 

@@ -176,6 +176,25 @@
       padding: 10px;
     }
     
+    /* UV Index label and value in a row */
+    .uv-index-row {
+      display: flex;
+      align-items: center;
+      margin-top: 5px;
+    }
+    
+    #uvIndexLabel {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-right: 15px;
+    }
+    
+    #uvCurrentClass {
+      overflow: visible !important;
+      text-overflow: clip !important;
+      white-space: normal !important;
+    }
+    
     /* Optimize UV card content layout */
     .uv-card h2 {
       font-size: 1.3rem;
@@ -267,9 +286,10 @@
       <!-- UV Index Display - now outside left-column for side-by-side layout -->
       <div class="card uv-box uv-card">
         <div class="uv-header">
-          <h2>UV Index</h2>
-          <div id="uvCurrentValue" class="aqi-value">-</div>
-          <div id="uvCurrentClass" class="aqi-category">-</div>
+          <div class="uv-index-row">
+            <div id="uvIndexLabel">UV Index</div>
+            <div id="uvCurrentClass" class="aqi-category">-</div>
+          </div>
           <div id="uvBelowInfo" class="uv-below-info"></div>
         </div>
         
