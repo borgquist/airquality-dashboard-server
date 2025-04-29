@@ -1013,16 +1013,21 @@ function createUvForecastGraph(data) {
     const current = enhancedForecast[i];
     const next = enhancedForecast[i+1];
     
-    if (current.uvi <= uvSafetyThreshold && next.uvi > uvSafetyThreshold) {
-      // Morning transition (safe to unsafe)
+    // Check for crossing from below threshold to above (morning unsafe)
+    if (current.uvi < uvSafetyThreshold && next.uvi >= uvSafetyThreshold) {
+      // Calculate exact crossing time
       const ratio = (uvSafetyThreshold - current.uvi) / (next.uvi - current.uvi);
       const transitionTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       morningUnsafeTime = transitionTime;
-    } else if (current.uvi > uvSafetyThreshold && next.uvi <= uvSafetyThreshold) {
-      // Evening transition (unsafe to safe)
+      debugPrint(`Found morning crossing at ${transitionTime.toLocaleTimeString()}, UV values: ${current.uvi} to ${next.uvi}`);
+    } 
+    // Check for crossing from above threshold to below (evening safe)
+    else if (current.uvi >= uvSafetyThreshold && next.uvi < uvSafetyThreshold) {
+      // Calculate exact crossing time
       const ratio = (current.uvi - uvSafetyThreshold) / (current.uvi - next.uvi);
       const transitionTime = new Date(current.time.getTime() + ratio * (next.time.getTime() - current.time.getTime()));
       eveningSafeTime = transitionTime;
+      debugPrint(`Found evening crossing at ${transitionTime.toLocaleTimeString()}, UV values: ${current.uvi} to ${next.uvi}`);
     }
   }
   
@@ -1037,19 +1042,9 @@ function createUvForecastGraph(data) {
   if (morningTimeStr) cutoffTimes.push(morningTimeStr);
   if (eveningTimeStr) cutoffTimes.push(eveningTimeStr);
   
-  // Also add first and last times for context
-  if (times.length > 0) {
-    const firstTime = times[0];
-    const lastTime = times[times.length - 1];
-    
-    if (!cutoffTimes.includes(firstTime)) {
-      cutoffTimes.unshift(firstTime);
-    }
-    
-    if (!cutoffTimes.includes(lastTime)) {
-      cutoffTimes.push(lastTime);
-    }
-  }
+  debugPrint(`Morning unsafe time: ${morningTimeStr}, Evening safe time: ${eveningTimeStr}`);
+  
+  // ONLY show the threshold crossing times, not first/last
   
   const ctx = document.getElementById('uvForecastGraph').getContext('2d');
   
@@ -1069,7 +1064,7 @@ function createUvForecastGraph(data) {
           data: uviValues,
           borderColor: '#000000',
           borderWidth: 3,
-          tension: 0.6,
+          tension: 0.3,
           pointRadius: 0,
           fill: false,
           cubicInterpolationMode: 'monotone',
@@ -1183,11 +1178,11 @@ function createUvForecastGraph(data) {
     const yPixel = yAxis.getPixelForValue(uvSafetyThreshold);
     
     // Add a red overlay to the "unsafe zone" (ABOVE threshold)
-    ctx.fillStyle = 'rgba(255, 200, 200, 1)';
+    ctx.fillStyle = 'rgba(255, 180, 180, 1)';
     ctx.fillRect(xAxis.left, yAxis.top, xAxis.width, yPixel - yAxis.top);
     
     // Add a green overlay to the "safe zone" (BELOW threshold)
-    ctx.fillStyle = 'rgba(200, 255, 200, 1)';
+    ctx.fillStyle = 'rgba(180, 255, 180, 1)';
     ctx.fillRect(xAxis.left, yPixel, xAxis.width, yAxis.bottom - yPixel);
     
     // Add "SAFE UV LEVELS" text centered in the safe area
