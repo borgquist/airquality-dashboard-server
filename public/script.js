@@ -276,6 +276,9 @@ async function fetchUvIndexData() {
     
     const data = await response.json();
     
+    // Log the data to debug
+    console.log("UV API response:", data);
+    
     // Store the forecast data for interpolation
     if (data && data.forecast && data.forecast.length > 0) {
       // Store the timestamp when we received this data
@@ -297,6 +300,18 @@ async function fetchUvIndexData() {
       } else {
         updateUvIndexDisplay(data);
       }
+    } else if (data && data.now && data.now.uvi !== null && data.now.uvi !== undefined) {
+      // We have current UV but no forecast - still show the current UV value
+      console.log("No forecast data, but current UV is available:", data.now.uvi);
+      
+      // Create a minimal data object with just current UV
+      const minimalData = {
+        now: data.now,
+        forecast: []
+      };
+      
+      // Update display with current UV only
+      updateUvIndexDisplay(minimalData);
     } else {
       updateUvIndexDisplay(data);
     }
@@ -499,6 +514,9 @@ function updateUvIndexDisplay(data) {
     return;
   }
   
+  // Debug output
+  console.log("Updating UV display with data:", JSON.stringify(data));
+  
   // Handle API configuration error
   if (data.error) {
     console.warn('UV API error:', data.error);
@@ -521,8 +539,10 @@ function updateUvIndexDisplay(data) {
     
     // Clear and update the forecast container
     const forecastContainer = document.querySelector('.uv-forecast-container');
-    forecastContainer.innerHTML = '';
-    forecastContainer.appendChild(safetyElement);
+    if (forecastContainer) {
+      forecastContainer.innerHTML = '';
+      forecastContainer.appendChild(safetyElement);
+    }
     
     // Hide the graph
     const graphContainer = document.getElementById('uvForecastGraph');
@@ -539,6 +559,25 @@ function updateUvIndexDisplay(data) {
   if (currentUvIndex === null || currentUvIndex === undefined) {
     document.getElementById('uvIndexValue').textContent = '-';
     document.getElementById('uvIndexCategory').textContent = '-';
+    
+    // Show error message
+    const forecastContainer = document.querySelector('.uv-forecast-container');
+    if (forecastContainer) {
+      forecastContainer.innerHTML = '';
+      
+      const safetyElement = document.createElement('div');
+      safetyElement.className = 'uv-safety-info';
+      safetyElement.textContent = 'UV Index data unavailable';
+      safetyElement.classList.add('uv-error');
+      forecastContainer.appendChild(safetyElement);
+    }
+    
+    // Hide the graph
+    const graphContainer = document.getElementById('uvForecastGraph');
+    if (graphContainer) {
+      graphContainer.style.display = 'none';
+    }
+    
     return;
   }
   
@@ -559,13 +598,19 @@ function updateUvIndexDisplay(data) {
   // Add the current category class
   categoryElement.classList.add(uvCategory.className);
   
+  // Get the forecast container and clear it
+  const forecastContainer = document.querySelector('.uv-forecast-container');
+  if (forecastContainer) {
+    forecastContainer.innerHTML = '';
+  }
+  
   // Make sure the graph container is visible and clear any previous error state
   const graphContainer = document.getElementById('uvForecastGraph');
   if (graphContainer) {
     graphContainer.style.display = 'block';
   }
   
-  // Create or update the UV forecast graph
+  // Create or update the UV forecast graph if we have forecast data
   if (data.forecast && data.forecast.length > 0) {
     createUvForecastGraph(data);
     
@@ -573,17 +618,25 @@ function updateUvIndexDisplay(data) {
     addUvSafetyTimes(data);
   } else {
     // No forecast data available but we have current UV
-    const forecastContainer = document.querySelector('.uv-forecast-container');
     if (forecastContainer) {
-      forecastContainer.innerHTML = '';
-      
       const safetyElement = document.createElement('div');
       safetyElement.className = 'uv-safety-info';
-      safetyElement.textContent = 'Forecast data unavailable, but current UV level is ' + currentUvIndex.toFixed(1);
+      
+      // Use a friendly message
+      const uvSafetyThreshold = 4;
+      const isCurrentUvSafe = currentUvIndex <= uvSafetyThreshold;
+      
+      if (isCurrentUvSafe) {
+        safetyElement.textContent = `Current UV level is safe (${currentUvIndex.toFixed(1)})`;
+      } else {
+        safetyElement.textContent = `Current UV level is ${currentUvIndex.toFixed(1)} - Protection recommended`;
+        safetyElement.classList.add('unsafe');
+      }
+      
       forecastContainer.appendChild(safetyElement);
     }
     
-    // Hide the graph if no forecast data
+    // Hide the graph when no forecast data is available
     if (graphContainer) {
       graphContainer.style.display = 'none';
     }
@@ -595,31 +648,30 @@ function addUvSafetyTimes(data) {
   const forecastData = data.forecast;
   if (!forecastData || !forecastData.length) {
     // No forecast data, just show a simplified message based on current UV
+    const uvSafetyThreshold = 4;
+    const currentUvi = data.now?.uvi || -1;
+    const isCurrentUvSafe = currentUvi <= uvSafetyThreshold;
+    
     const safetyElement = document.createElement('div');
     safetyElement.className = 'uv-safety-info';
     
-    // Get current UV level
-    const currentUvi = data.now?.uvi || -1;
-    const uvSafetyThreshold = 4;
-    const isCurrentUvSafe = currentUvi <= uvSafetyThreshold;
-    
     if (isCurrentUvSafe) {
-      safetyElement.textContent = 'Current UV level is safe';
+      safetyElement.textContent = `Current UV level is safe (${currentUvi.toFixed(1)})`;
     } else {
-      safetyElement.textContent = 'UV protection recommended';
+      safetyElement.textContent = `UV protection recommended - Current level: ${currentUvi.toFixed(1)}`;
       safetyElement.classList.add('unsafe');
     }
     
     // Add to the container
     const forecastContainer = document.querySelector('.uv-forecast-container');
     if (forecastContainer) {
-      // Clear existing message if any
-      const existingMessage = forecastContainer.querySelector('.uv-safety-info');
-      if (existingMessage) {
-        existingMessage.remove();
+      // Clear existing safety info if any
+      const existingSafetyInfo = forecastContainer.querySelector('.uv-safety-info');
+      if (existingSafetyInfo) {
+        existingSafetyInfo.remove();
       }
       
-      forecastContainer.appendChild(safetyElement);
+      forecastContainer.insertBefore(safetyElement, forecastContainer.firstChild);
     }
     
     return;
