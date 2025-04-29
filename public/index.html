@@ -4,11 +4,81 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Quality Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=1005">
+  <link rel="stylesheet" href="style.css?v=1006">
+  <style>
+    /* Critical layout styles to ensure proper display */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    }
+    
+    /* Container for overall layout */
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    
+    /* Header with fixed height */
+    .page-header {
+      height: 70px;
+      margin-bottom: 10px;
+    }
+    
+    /* Dashboard container - flex column by default (portrait) */
+    .flex-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    
+    /* Left column full width in portrait */
+    .left-col {
+      width: 100%;
+    }
+    
+    /* AQI card with fixed height */
+    .aqi-card {
+      height: 450px;
+      overflow: auto;
+      margin: 0 0 10px 0;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* UV card with fixed height */
+    .uv-card {
+      height: 380px;
+      overflow: auto;
+      margin: 0;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      background-color: #fff;
+    }
+    
+    /* Landscape orientation - side by side */
+    @media (orientation: landscape) {
+      .flex-dashboard {
+        flex-direction: row;
+        height: calc(100vh - 90px);
+      }
+      
+      .left-col, .uv-card {
+        width: 50%;
+        min-width: 300px;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <header>
+    <header class="page-header">
       <div class="header-container">
         <h1>Al Andalus Street</h1>
         <div class="update-info">
@@ -18,9 +88,9 @@
       </div>
     </header>
     
-    <div class="dashboard">
-      <div class="left-column">
-        <div class="card main-aqi">
+    <div class="dashboard flex-dashboard">
+      <div class="left-column left-col">
+        <div class="card main-aqi aqi-card">
           <h2>Current AQI</h2>
           
           <!-- Main AQI display with more room for 3-4 digits -->
@@ -75,7 +145,7 @@
       </div>
       
       <!-- UV Index Display - now outside left-column for side-by-side layout -->
-      <div class="card uv-box">
+      <div class="card uv-box uv-card">
         <h2>UV Index</h2>
         <div id="uvCurrentValue" class="aqi-value">-</div>
         <div id="uvCurrentClass" class="aqi-category">-</div>

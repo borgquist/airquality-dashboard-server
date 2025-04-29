@@ -241,7 +241,7 @@ async function fetchAirQualityData(forceRefresh = false) {
     // Update the last updated time
     const currentTime = new Date();
     document.getElementById('lastUpdatedTime').textContent = 
-      `Last updated: ${currentTime.toLocaleTimeString()}`;
+      `${currentTime.toLocaleTimeString()}`;
       
     debugPrint(`AQI data updated: ${JSON.stringify(data.current)}`);
   } catch (error) {
