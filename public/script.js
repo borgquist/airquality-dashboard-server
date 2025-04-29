@@ -644,6 +644,40 @@ function addUvSafetyTimes(data) {
   const apiCurrentUvi = data.now?.uvi || -1;
   const isCurrentUvSafe = apiCurrentUvi <= uvSafetyThreshold;
   
+  // Important check: If we don't have both transition times, but we should based on the curve
+  // Try to estimate the missing time(s)
+  if (!morningUnsafeTime && eveningSafeTime) {
+    // We have evening but no morning time - estimate a reasonable morning time
+    const morningHour = 9; // Default to 9:00 AM if we can't find actual time
+    const morningMinute = 0;
+    
+    // Create a date for this morning at the estimated time
+    const estimatedMorning = new Date(now);
+    estimatedMorning.setHours(morningHour, morningMinute, 0, 0);
+    
+    // Only use the estimate if it's earlier than the evening time
+    if (estimatedMorning < eveningSafeTime) {
+      morningUnsafeTime = estimatedMorning;
+      // Update the formatted string
+      morningTimeStr = formatTimeForDisplay(morningUnsafeTime);
+    }
+  } else if (morningUnsafeTime && !eveningSafeTime) {
+    // We have morning but no evening time - estimate a reasonable evening time
+    const eveningHour = 16; // Default to 4:00 PM if we can't find actual time
+    const eveningMinute = 30;
+    
+    // Create a date for this evening at the estimated time
+    const estimatedEvening = new Date(now);
+    estimatedEvening.setHours(eveningHour, eveningMinute, 0, 0);
+    
+    // Only use the estimate if it's later than the morning time
+    if (estimatedEvening > morningUnsafeTime) {
+      eveningSafeTime = estimatedEvening;
+      // Update the formatted string
+      eveningTimeStr = formatTimeForDisplay(eveningSafeTime);
+    }
+  }
+  
   // Simplified message that shows both times regardless of current time
   if (morningTimeStr && eveningTimeStr) {
     safetyMessage = `Safe UV: before ${morningTimeStr} & after ${eveningTimeStr}`;
@@ -958,12 +992,15 @@ function createUvForecastGraph(data) {
     times.push(timeLabel);
     uviValues.push(entry.uvi);
     
-    // Split data into safe and unsafe series for coloring
+    // For safe values (below threshold), show in green dataset
+    // For unsafe values (above threshold), show in red dataset
+    // At exact threshold value, show in both to ensure smooth transition
     if (entry.uvi <= uvSafetyThreshold) {
       safeUviValues.push(entry.uvi);
       unsafeUviValues.push(null);
     } else {
-      safeUviValues.push(null);
+      // For the unsafe dataset, start exactly at the threshold
+      safeUviValues.push(uvSafetyThreshold); // Connect green line to threshold
       unsafeUviValues.push(entry.uvi);
     }
     
@@ -988,7 +1025,7 @@ function createUvForecastGraph(data) {
       labels: times,
       datasets: [
         {
-          // Safe zone - green line
+          // Safe zone - green line that goes exactly to the threshold
           label: 'Safe UV',
           data: safeUviValues,
           borderColor: 'rgba(46, 204, 113, 1)',
@@ -999,10 +1036,13 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false
+          spanGaps: false,
+          segment: {
+            borderColor: ctx => 'rgba(46, 204, 113, 1)' // Keep green color consistently
+          }
         },
         {
-          // Unsafe zone - red line
+          // Unsafe zone - red line that starts exactly at the threshold
           label: 'Unsafe UV',
           data: unsafeUviValues,
           borderColor: 'rgba(231, 76, 60, 1)',
@@ -1013,7 +1053,10 @@ function createUvForecastGraph(data) {
           tension: 0.3,
           pointRadius: 0, // Hide all points except current time
           fill: 'origin',
-          spanGaps: false
+          spanGaps: false,
+          segment: {
+            borderColor: ctx => 'rgba(231, 76, 60, 1)' // Keep red color consistently
+          }
         },
         {
           // Current time marker - only show a single point
