@@ -4,64 +4,24 @@ document.addEventListener('DOMContentLoaded', function() {
   const canvas = document.getElementById('uvForecastGraph');
   if (!canvas) return;
   
-  // Add event listener for refresh button
-  const refreshButton = document.getElementById('refreshUVChart');
-  if (refreshButton) {
-    refreshButton.addEventListener('click', function() {
-      // Clear any cached canvas data
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Force complete redraw
-      setTimeout(function() {
-        renderUVChart();
-      }, 50);
-    });
-  }
-  
   // Create and render the chart
-  setTimeout(renderUVChart, 100); // Initial render with delay to ensure canvas is ready
-  
-  // Force render periodically to ensure it's displayed correctly
-  setInterval(renderUVChart, 2000);
+  renderUVChart();
   
   // Re-render on window resize
   window.addEventListener('resize', function() {
     renderUVChart();
   });
   
-  // Force full canvas redraw
-  function forceRedraw(canvas) {
-    // This forces the browser to clear the canvas cache and redraw
-    canvas.style.display = 'none';
-    canvas.offsetHeight; // Trigger reflow
-    canvas.style.display = 'block';
-  }
-  
   function renderUVChart() {
-    // Force redraw of canvas
-    forceRedraw(canvas);
-    
     const ctx = canvas.getContext('2d');
-    
-    // Set pixel ratio for high-DPI displays
-    const devicePixelRatio = window.devicePixelRatio || 1;
     
     // Set canvas dimensions to match its container for proper responsive behavior
     const container = canvas.parentElement;
-    const width = container.clientWidth;
-    const height = Math.max(250, container.clientHeight);
+    canvas.width = container.clientWidth;
+    canvas.height = Math.max(250, container.clientHeight);
     
-    // Set display size
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    
-    // Set actual size in memory (scaled for high-DPI)
-    canvas.width = width * devicePixelRatio;
-    canvas.height = height * devicePixelRatio;
-    
-    // Scale context for high-DPI displays
-    ctx.scale(devicePixelRatio, devicePixelRatio);
+    const width = canvas.width;
+    const height = canvas.height;
     
     // Clear the canvas
     ctx.clearRect(0, 0, width, height);
