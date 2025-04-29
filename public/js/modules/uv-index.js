@@ -395,6 +395,55 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
     return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
   }
   
+  // Add current time point marker by finding the closest time
+  const currentUv = getCurrentUvLevel(uvReadings, currentTime);
+  if (currentUv !== null) {
+    // Find closest time index using simple algorithm
+    let closestIndex = -1;
+    let minDiff = Infinity;
+    
+    for (let i = 0; i < smoothData.times.length; i++) {
+      const timeStr = smoothData.times[i];
+      if (!timeStr) continue;
+      
+      const parts = timeStr.split(':');
+      if (parts.length !== 2) continue;
+      
+      const hours = parseInt(parts[0], 10);
+      const minutes = parseInt(parts[1], 10);
+      
+      if (isNaN(hours) || isNaN(minutes)) continue;
+      
+      const timeMinutes = hours * 60 + minutes;
+      const curMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+      const diff = Math.abs(timeMinutes - curMinutes);
+      
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = i;
+      }
+    }
+    
+    // Create point data
+    if (closestIndex >= 0) {
+      const pointData = Array(smoothData.values.length).fill(null);
+      pointData[closestIndex] = smoothData.values[closestIndex];
+      
+      // Add marker dataset
+      datasets.push({
+        data: pointData,
+        backgroundColor: '#000',
+        borderColor: '#fff',
+        borderWidth: 2,
+        pointRadius: 8,
+        pointStyle: 'rectRot',
+        pointHoverRadius: 10,
+        fill: false,
+        showLine: false
+      });
+    }
+  }
+  
   // Create the chart
   uvChart = new Chart(ctx, {
     type: 'line',
@@ -448,7 +497,7 @@ function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
       },
       plugins: {
         legend: {
-          display: false
+          display: false // This will hide ALL legend items
         },
         tooltip: {
           backgroundColor: 'rgba(0, 0, 0, 0.7)',

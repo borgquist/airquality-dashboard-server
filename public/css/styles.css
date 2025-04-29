@@ -1,0 +1,24 @@
+/* Update info styling */
+.update-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+.update-info-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 20px;
+  margin-top: 10px;
+  padding-right: 20px;
+  font-size: 0.9rem;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  color: #666;
+} 
