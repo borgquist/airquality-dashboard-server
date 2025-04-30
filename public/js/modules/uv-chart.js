@@ -202,6 +202,38 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
       };
   }).filter(p => p.x !== null); // Filter out any points that failed conversion
 
+  // Find visual crossing points from the plotData for annotation positioning
+  let visualRiseTimestamp = null;
+  let visualFallTimestamp = null;
+  let firstAboveThresholdIndex = -1;
+  let lastAboveThresholdIndex = -1;
+
+  for (let i = 0; i < plotData.length; i++) {
+      if (plotData[i].y >= 4) {
+          if (firstAboveThresholdIndex === -1) {
+              firstAboveThresholdIndex = i;
+          }
+          lastAboveThresholdIndex = i;
+      }
+  }
+
+  // Visual rise is the timestamp of the first point >= 4
+  if (firstAboveThresholdIndex > 0) { // Need point before it to confirm rise
+      visualRiseTimestamp = plotData[firstAboveThresholdIndex].x;
+  } else if (firstAboveThresholdIndex === 0 && plotData[0].y >=4) {
+       visualRiseTimestamp = plotData[0].x; // Rises at the very start
+  }
+  
+  // Visual fall is the timestamp of the point *before* the last point >= 4 becomes < 4
+  // So, it's the timestamp of the last point that was still >= 4
+  if (lastAboveThresholdIndex !== -1 && lastAboveThresholdIndex < plotData.length -1) {
+       visualFallTimestamp = plotData[lastAboveThresholdIndex].x; 
+  } else if (lastAboveThresholdIndex === plotData.length -1 && plotData[lastAboveThresholdIndex].y >=4) {
+      visualFallTimestamp = plotData[lastAboveThresholdIndex].x; // Ends above threshold
+  }
+  
+  console.log("Visual crossing timestamps for annotation positioning:", { visualRiseTimestamp: formatTime(visualRiseTimestamp), visualFallTimestamp: formatTime(visualFallTimestamp) });
+
   const ctx = canvas.getContext('2d');
 
   const uvColors = {
@@ -222,58 +254,6 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
                backgroundColor: 'rgba(255, 152, 0, 0.8)', color: 'white', padding: 4, font: { size: 10 } }
   };
 
-  // Rise Time Annotation (if exists)
-  const riseTimestamp = uvRiseTime ? timeStringToTimestamp(uvRiseTime, plotData[0]?.x || Date.now()) : null;
-  if (riseTimestamp) {
-    annotations.riseTimeLabel = {
-      type: 'point',
-      xValue: riseTimestamp,
-      yValue: 0, // Position at the bottom of the chart area
-      yAdjust: 15, // Push below the axis (positive values push down)
-      backgroundColor: 'transparent',
-      radius: 0, // No visible point needed
-      label: {
-        content: uvRiseTime,
-        display: true,
-        position: 'bottom',
-        color: '#000', // Black text
-        font: {
-          weight: 'bold',
-          size: 11 // Slightly larger
-        },
-        padding: 0, // No padding needed
-        yAdjust: 5 // Fine-tune vertical position relative to yValue+yAdjust
-      }
-    };
-  }
-
-  // Fall Time Annotation (if exists)
-  const fallTimestamp = uvFallTime ? timeStringToTimestamp(uvFallTime, plotData[0]?.x || Date.now()) : null;
-  if (fallTimestamp) {
-    annotations.fallTimeLabel = {
-      type: 'point',
-      xValue: fallTimestamp,
-      yValue: 0, 
-      yAdjust: 15, 
-      backgroundColor: 'transparent',
-      radius: 0, 
-      label: {
-        content: uvFallTime,
-        display: true,
-        position: 'bottom',
-        color: '#000', 
-        font: {
-          weight: 'bold',
-          size: 11
-        },
-        padding: 0,
-        yAdjust: 5
-      }
-    };
-  }
-
-  // --- END ANNOTATIONS ---
-
   // Prepare the datasets - Ensure marker dataset is added
   const datasets = [{
           label: '',
@@ -288,7 +268,6 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
           fill: true,
           order: 2 // Ensure main line is behind marker
       }]
-      .concat(generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime));
 
   uvChart = new Chart(ctx, {
     type: 'line',
@@ -300,7 +279,7 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 10, right: 10, bottom: 5, left: 5 } },
+      layout: { padding: { top: 10, right: 10, bottom: 30, left: 5 } },
       scales: {
         x: {
           // Switch to time axis
@@ -407,72 +386,60 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
                 }
             }
         },
-        annotation: {
-          annotations: annotations
-        }
       },
       interaction: { intersect: false, mode: 'index' }
     }
   });
 
+  // --- Position Custom HTML Labels --- 
+  positionCustomTimeLabels(uvChart, visualRiseTimestamp, uvRiseTime, visualFallTimestamp, uvFallTime);
+  // TODO: Add resize listener to call positionCustomTimeLabels again?
+
   return uvChart;
 }
 
-// Function to generate the dataset for the current time marker
-function generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime) {
-    if (currentUv === null || !plotData || plotData.length === 0) {
-        return [];
+// Function to position the custom HTML labels
+function positionCustomTimeLabels(chart, riseTimestamp, riseTimeStr, fallTimestamp, fallTimeStr) {
+    const riseLabelEl = document.getElementById('uvRiseTimeAnnotationLabel');
+    const fallLabelEl = document.getElementById('uvFallTimeAnnotationLabel');
+
+    if (!chart || !chart.scales || !chart.scales.x) {
+        console.error("Chart or x-scale not ready for positioning labels.");
+        if (riseLabelEl) riseLabelEl.style.visibility = 'hidden';
+        if (fallLabelEl) fallLabelEl.style.visibility = 'hidden';
+        return;
     }
 
-    const currentTimestamp = currentTime.getTime();
-    
-    // Find the closest plot data point index
-    let closestIndex = -1;
-    let minDiff = Infinity;
-    for (let i = 0; i < plotData.length; i++) {
-        if (plotData[i].x === null) continue; // Skip null timestamps
-        const diff = Math.abs(plotData[i].x - currentTimestamp);
-        if (diff < minDiff) {
-            minDiff = diff;
-            closestIndex = i;
+    const xScale = chart.scales.x;
+
+    if (riseLabelEl) {
+        if (riseTimestamp && riseTimeStr) {
+            const risePixelX = xScale.getPixelForValue(riseTimestamp);
+            if (!isNaN(risePixelX)) {
+                riseLabelEl.style.left = `${risePixelX}px`;
+                riseLabelEl.textContent = riseTimeStr;
+                riseLabelEl.style.visibility = 'visible';
+            } else {
+                 riseLabelEl.style.visibility = 'hidden';
+            }
+        } else {
+            riseLabelEl.style.visibility = 'hidden';
         }
     }
 
-    // Interpolate the UV value at the exact current time
-    let interpolatedCurrentUv = null;
-    for (let i = 0; i < plotData.length - 1; i++) {
-        const p1 = plotData[i];
-        const p2 = plotData[i + 1];
-        if (p1.x !== null && p2.x !== null && currentTimestamp >= p1.x && currentTimestamp <= p2.x) {
-            const fraction = (currentTimestamp - p1.x) / (p2.x - p1.x);
-            interpolatedCurrentUv = p1.y + fraction * (p2.y - p1.y);
-            break;
+    if (fallLabelEl) {
+        if (fallTimestamp && fallTimeStr) {
+            const fallPixelX = xScale.getPixelForValue(fallTimestamp);
+             if (!isNaN(fallPixelX)) {
+                fallLabelEl.style.left = `${fallPixelX}px`;
+                fallLabelEl.textContent = fallTimeStr;
+                fallLabelEl.style.visibility = 'visible';
+            } else {
+                 fallLabelEl.style.visibility = 'hidden';
+            }
+        } else {
+            fallLabelEl.style.visibility = 'hidden';
         }
-    }
-    // If outside range or couldn't interpolate, use the passed currentUv 
-    if (interpolatedCurrentUv === null) {
-        interpolatedCurrentUv = currentUv;
-    }
-
-    // Create marker data - only one point needs a value
-    if (interpolatedCurrentUv !== null) {
-        const markerData = [{ x: currentTimestamp, y: interpolatedCurrentUv }];
-
-        return [{
-            label: 'Current Time',
-            data: markerData, 
-            pointStyle: 'rectRot', 
-            pointRadius: 8,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointBackgroundColor: '#000',
-            pointHoverRadius: 10,
-            showLine: false,
-            order: 1 // Ensure marker dataset draws on top
-        }];
-    } else {
-        console.warn("Could not create current time marker.");
-        return [];
     }
 }
 
