@@ -1,7 +1,7 @@
 // Version module for handling version information
 
 // Fetch version information
-async function fetchVersionInfo() {
+export async function fetchVersionInfo() {
   try {
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();

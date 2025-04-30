@@ -1,18 +1,27 @@
+import { fetchAirQualityData } from './modules/air-quality.js';
+import { fetchUvIndexData } from './modules/uv-index.js';
+import { setupEventSource } from './modules/event-source.js';
+import { fetchVersionInfo } from './modules/version.js';
+import { config, setConfig } from './modules/shared-state.js'; // Import shared state
+
 // Main entry point for Air Quality Dashboard
 document.addEventListener('DOMContentLoaded', loadConfig);
 
-// Load configuration
-let config;
-let eventSource;
-let lastAqiData = null; // Store the last AQI data received
-let lastUvData = null; // Store the last UV data received
-let uvChart = null; // Reference for UV chart
+// REMOVE: Definitions moved to shared-state.js
+// let config;
+// let eventSource; // Keep eventSource local to main.js for now
+// let lastAqiData = null;
+// let lastUvData = null;
+
+let eventSource = null; // Keep eventSource scoped here
+let uvChart = null; // Reference for UV chart (still needed? uv-chart.js manages its own instance)
 
 // Fetch configuration and initialize
 async function loadConfig() {
   try {
     const response = await fetch('/config.json');
-    config = await response.json();
+    const fetchedConfig = await response.json();
+    setConfig(fetchedConfig); // Update shared state
     
     // Load Chart.js before initializing dashboard
     await loadChartJsIfNeeded();
@@ -51,9 +60,4 @@ function loadChartJsIfNeeded() {
     script.onerror = reject;
     document.head.appendChild(script);
   });
-}
-
-// Helper function for safe logging
-function debugPrint(message) {
-  console.log(message);
 } 

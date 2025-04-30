@@ -310,11 +310,16 @@
     </div>
   </div>
   
-  <script src="js/modules/air-quality.js"></script>
-  <script src="js/modules/uv-index.js"></script>
-  <script src="js/modules/event-source.js"></script>
-  <script src="js/modules/version.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/index.js"></script>
+  <!-- Remove script tags for modules that will be imported by main.js -->
+  <!-- <script src="js/modules/air-quality.js"></script> -->
+  <!-- <script src="js/modules/uv-index.js"></script> -->
+  <!-- <script src="js/modules/event-source.js"></script> -->
+  <!-- <script src="js/modules/version.js"></script> -->
+  
+  <!-- Keep main.js as the module entry point -->
+  <script type="module" src="js/main.js"></script>
+  
+  <!-- Assuming index.js runs independently or is called from main.js -->
+  <!-- <script src="js/index.js"></script> -->
 </body>
 </html> 

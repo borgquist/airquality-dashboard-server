@@ -1,7 +1,19 @@
 // Event source module for handling server-sent events
 
+import { debugPrint } from './utils.js';
+import { config } from './shared-state.js';
+import { fetchAirQualityData } from './air-quality.js'; // Import necessary fetch functions
+import { fetchUvIndexData } from './uv-index.js';
+
+let eventSource = null; // Keep eventSource local to this module
+
 // Set up server-sent events for real-time updates
-function setupEventSource() {
+export function setupEventSource() {
+  if (!config?.sseEnabled) {
+    console.log('SSE disabled in config, skipping setup.');
+    return;
+  }
+  
   // Close existing connection if there is one
   if (eventSource) {
     eventSource.close();

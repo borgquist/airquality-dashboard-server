@@ -1,7 +1,10 @@
+import { debugPrint } from './utils.js';
+import { config, lastAqiData, setLastAqiData } from './shared-state.js';
+
 // Air quality module for handling AQI data
 
 // Fetch the air quality data from the server
-async function fetchAirQualityData(forceRefresh = false) {
+export async function fetchAirQualityData(forceRefresh = false) {
   try {
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();
@@ -27,8 +30,8 @@ async function fetchAirQualityData(forceRefresh = false) {
       console.log(`CLIENT RECEIVED PM2.5 AQI US: ${data.current.pm25.aqius} (conc: ${data.current.pm25.conc}) at ${new Date().toLocaleTimeString()}`);
     }
     
-    // Store the data for comparison
-    lastAqiData = data;
+    // Store the data for comparison in the shared state
+    setLastAqiData(data);
     
     // Update the display
     updateAirQualityDisplay(data);
@@ -43,6 +46,7 @@ async function fetchAirQualityData(forceRefresh = false) {
     document.getElementById('lastUpdatedTime').textContent = 
       `${currentTime.toLocaleTimeString()}`;
       
+    // Use imported debugPrint
     debugPrint(`AQI data updated: ${JSON.stringify(data.current)}`);
   } catch (error) {
     console.error('Error fetching air quality data:', error);
@@ -248,6 +252,12 @@ function formatPollutantName(pollutant) {
 
 // Get AQI category based on AQI value and thresholds from config
 function getAQICategory(aqi) {
+  // Access imported config
+  if (!config?.aqiThresholds) {
+      console.error('AQI thresholds not found in config!');
+      return { name: 'Unknown', className: '' }; // Default/error category
+  }
+
   if (aqi <= config.aqiThresholds.good) {
     return { name: 'Good', className: 'good' };
   } else if (aqi <= config.aqiThresholds.moderate) {

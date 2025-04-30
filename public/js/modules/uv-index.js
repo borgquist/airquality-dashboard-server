@@ -1,4 +1,18 @@
 // UV Index module for handling UV data and charts
+// import { CubicSpline } from './spline.js'; // REMOVE THIS LINE
+import {
+  timeToMinutes,
+  minutesToTime,
+  getUvCategoryName,
+  getUvClass,
+  generateSmoothCurve as generateSmoothCurveLinear, // Rename to avoid conflict
+  findCrossing as findCrossingLinear // Rename to avoid conflict
+} from './uv-utils.js';
+import { updateUvChart } from './uv-chart.js'; // Import the new chart function
+import { debugPrint } from './utils.js'; // Import debugPrint
+import { lastUvData, setLastUvData } from './shared-state.js'; // Import shared state
+
+// REMOVED: let uvChart = null; // Chart instance is now managed in uv-chart.js
 
 // Add cubic spline implementation
 class CubicSpline {
@@ -96,7 +110,7 @@ class CubicSpline {
 }
 
 // Fetch the UV index data from the server
-async function fetchUvIndexData(forceRefresh = false, isSseEvent = false) {
+export async function fetchUvIndexData(forceRefresh = false, isSseEvent = false) {
   try {
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();
@@ -118,12 +132,13 @@ async function fetchUvIndexData(forceRefresh = false, isSseEvent = false) {
     const data = await response.json();
     console.log("UV Data received:", data);
     
-    // Store the data for future reference
-    lastUvData = data;
+    // Store the data for future reference using shared state
+    setLastUvData(data);
     
     // Update the display - this creates the UV box if it doesn't exist
     updateUvIndexDisplay(data);
     
+    // Use imported debugPrint
     debugPrint(`UV data updated: ${JSON.stringify(data)}`);
   } catch (error) {
     console.error('Error fetching UV index data:', error);
@@ -228,387 +243,16 @@ function updateUvIndexDisplay(data) {
     uvInfo.innerHTML = '';
   }
   
-  // Update chart
-  updateUvChart(uvReadings, uvRiseTime, uvFallTime);
-}
-
-// Update UV chart
-function updateUvChart(uvReadings, uvRiseTime, uvFallTime) {
+  // Get the canvas element
   const canvas = document.getElementById('uvChart');
-  if (!canvas) return;
-  
-  // Clean up previous chart if it exists
-  if (uvChart) {
-    uvChart.destroy();
-  }
-  
-  // Generate smooth curve using cubic spline interpolation
-  const smoothData = generateSmoothCurveWithSpline(uvReadings);
-  
-  // Create annotations for rise and fall times
-  const annotations = {};
-  
-  if (uvRiseTime) {
-    annotations.riseTime = {
-      type: 'line',
-      xMin: uvRiseTime,
-      xMax: uvRiseTime,
-      borderColor: 'rgba(255, 152, 0, 0.8)',
-      borderWidth: 2,
-      borderDash: [5, 5],
-      label: {
-        content: `UV > 4 at ${uvRiseTime}`,
-        enabled: true,
-        position: 'top',
-        backgroundColor: 'rgba(255, 152, 0, 0.8)',
-        color: 'white',
-        padding: 4,
-        font: {
-          size: 12
-        }
-      }
-    };
-  }
-  
-  if (uvFallTime) {
-    annotations.fallTime = {
-      type: 'line',
-      xMin: uvFallTime,
-      xMax: uvFallTime,
-      borderColor: 'rgba(76, 175, 80, 0.8)',
-      borderWidth: 2,
-      borderDash: [5, 5],
-      label: {
-        content: `UV < 4 at ${uvFallTime}`,
-        enabled: true,
-        position: 'top',
-        backgroundColor: 'rgba(76, 175, 80, 0.8)',
-        color: 'white',
-        padding: 4,
-        font: {
-          size: 12
-        }
-      }
-    };
-  }
-  
-  // Add horizontal threshold line at UV=4
-  annotations.threshold = {
-    type: 'line',
-    yMin: 4,
-    yMax: 4,
-    borderColor: 'rgba(255, 152, 0, 0.8)',
-    borderWidth: 2,
-    borderDash: [5, 5],
-    label: {
-      content: 'Protection Level',
-      enabled: true,
-      position: 'end',
-      backgroundColor: 'rgba(255, 152, 0, 0.8)',
-      color: 'white',
-      padding: 4,
-      font: {
-        size: 12
-      }
-    }
-  };
-  
-  // Add vertical line for current time
-  const currentTime = new Date();
-  const currentTimeStr = currentTime.toLocaleTimeString('en-GB', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    timeZone: 'Asia/Dubai'
-  });
-  
-  annotations.currentTime = {
-    type: 'line',
-    xMin: currentTimeStr,
-    xMax: currentTimeStr,
-    borderColor: '#000000',
-    borderWidth: 3,
-    drawTime: 'afterDatasetsDraw'
-  };
-  
-  // Create chart
-  const ctx = canvas.getContext('2d');
-  
-  // Define colors for different UV ranges
-  const uvColors = {
-    low: {
-      lineColor: 'rgba(76, 175, 80, 1)',        // Green
-      fillColor: 'rgba(76, 175, 80, 0.8)'      
-    },
-    moderate: {
-      lineColor: 'rgba(255, 235, 59, 1)',       // Yellow
-      fillColor: 'rgba(255, 235, 59, 0.8)'     
-    },
-    high: {
-      lineColor: 'rgba(255, 152, 0, 1)',        // Orange
-      fillColor: 'rgba(255, 152, 0, 0.8)'     
-    },
-    veryHigh: {
-      lineColor: 'rgba(233, 30, 99, 1)',        // Pink/red
-      fillColor: 'rgba(233, 30, 99, 0.8)'      
-    },
-    extreme: {
-      lineColor: 'rgba(156, 39, 176, 1)',       // Purple
-      fillColor: 'rgba(156, 39, 176, 0.8)'     
-    }
-  };
-  
-  // Create the datasets
-  const datasets = [{
-    label: '',  // Empty label to hide in legend
-    data: smoothData.values,
-    borderColor: smoothData.values.map((v, i) => {
-      if (v <= 3) return uvColors.low.lineColor;
-      if (v <= 6) return uvColors.moderate.lineColor;
-      if (v <= 8) return uvColors.high.lineColor;
-      if (v <= 11) return uvColors.veryHigh.lineColor;
-      return uvColors.extreme.lineColor;
-    }),
-    backgroundColor: smoothData.values.map((v, i) => {
-      if (v <= 3) return uvColors.low.fillColor;
-      if (v <= 6) return uvColors.moderate.fillColor;
-      if (v <= 8) return uvColors.high.fillColor;
-      if (v <= 11) return uvColors.veryHigh.fillColor;
-      return uvColors.extreme.fillColor;
-    }),
-    segment: {
-      borderColor: ctx => getSegmentColor(ctx, 'line'),
-      backgroundColor: ctx => getSegmentColor(ctx, 'fill'),
-    },
-    borderWidth: 2,
-    pointRadius: 0,
-    tension: 0.4,
-    fill: true
-  }];
-  
-  // Helper function to get color by segment
-  function getSegmentColor(ctx, type) {
-    const value = ctx.p0.parsed.y;
-    if (value <= 3) return type === 'line' ? uvColors.low.lineColor : uvColors.low.fillColor;
-    if (value <= 6) return type === 'line' ? uvColors.moderate.lineColor : uvColors.moderate.fillColor;
-    if (value <= 8) return type === 'line' ? uvColors.high.lineColor : uvColors.high.fillColor;
-    if (value <= 11) return type === 'line' ? uvColors.veryHigh.lineColor : uvColors.veryHigh.fillColor;
-    return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
-  }
-  
-  // Add current time point marker by finding the closest time
-  const currentUv = getCurrentUvLevel(uvReadings, currentTime);
-  if (currentUv !== null) {
-    // Find closest time index using simple algorithm
-    let closestIndex = -1;
-    let minDiff = Infinity;
-    
-    for (let i = 0; i < smoothData.times.length; i++) {
-      const timeStr = smoothData.times[i];
-      if (!timeStr) continue;
-      
-      const parts = timeStr.split(':');
-      if (parts.length !== 2) continue;
-      
-      const hours = parseInt(parts[0], 10);
-      const minutes = parseInt(parts[1], 10);
-      
-      if (isNaN(hours) || isNaN(minutes)) continue;
-      
-      const timeMinutes = hours * 60 + minutes;
-      const curMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-      const diff = Math.abs(timeMinutes - curMinutes);
-      
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIndex = i;
-      }
-    }
-    
-    // Create point data
-    if (closestIndex >= 0) {
-      const pointData = Array(smoothData.values.length).fill(null);
-      pointData[closestIndex] = smoothData.values[closestIndex];
-      
-      // Add marker dataset
-      datasets.push({
-        data: pointData,
-        backgroundColor: '#000',
-        borderColor: '#fff',
-        borderWidth: 2,
-        pointRadius: 8,
-        pointStyle: 'rectRot',
-        pointHoverRadius: 10,
-        fill: false,
-        showLine: false
-      });
-    }
-  }
-  
-  // Create the chart
-  uvChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: smoothData.times,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: {
-          top: 10,
-          right: 10,
-          bottom: 5,
-          left: 5
-        }
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            maxRotation: 0,
-            autoSkip: true,
-            maxTicksLimit: 12,
-            color: '#333',
-            font: {
-              size: 10
-            }
-          }
-        },
-        y: {
-          beginAtZero: true,
-          suggestedMax: Math.max(...smoothData.values) * 1.1,
-          ticks: {
-            stepSize: 2,
-            color: '#333',
-            font: {
-              size: 10
-            },
-            callback: function(value) {
-              return value === 0 ? '' : value;
-            }
-          },
-          grid: {
-            color: 'rgba(200, 200, 200, 0.3)'
-          }
-        }
-      },
-      plugins: {
-        legend: {
-          display: false // This will hide ALL legend items
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          titleColor: 'white',
-          bodyColor: 'white',
-          titleFont: {
-            size: 12
-          },
-          bodyFont: {
-            size: 12
-          },
-          padding: 8,
-          displayColors: false,
-          callbacks: {
-            title: function(tooltipItems) {
-              return tooltipItems[0].label;
-            },
-            label: function(context) {
-              return `UV Index: ${context.raw.toFixed(1)}`;
-            }
-          }
-        },
-        annotation: {
-          annotations: annotations
-        }
-      },
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      }
-    }
-  });
-}
 
-// Function to generate a smooth curve using cubic spline
-function generateSmoothCurveWithSpline(uvReadings) {
-  if (!uvReadings || uvReadings.length < 2) {
-    console.error('Cannot generate smooth curve: insufficient data');
-    
-    // Fall back to original data as points
-    return {
-      times: uvReadings.map(reading => {
-        const date = new Date(reading.utc);
-        return date.toLocaleTimeString('en-GB', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'Asia/Dubai' // Display in local time
-        });
-      }),
-      values: uvReadings.map(reading => reading.uv)
-    };
-  }
-  
-  try {
-    // Prepare data for interpolation
-    const x = uvReadings.map(r => new Date(r.utc).getTime()); // ms since epoch
-    const y = uvReadings.map(r => r.uv);
-    
-    console.log('Prepared data for spline:', {
-      timeRange: [new Date(x[0]).toISOString(), new Date(x[x.length-1]).toISOString()],
-      uvRange: [Math.min(...y), Math.max(...y)],
-      points: x.length
-    });
-    
-    // Create spline using our direct implementation
-    console.log('Creating CubicSpline instance');
-    const spline = new CubicSpline(x, y);
-    console.log('CubicSpline instance created successfully');
-    
-    // Generate smoothed points (every 10 minutes)
-    const start = x[0];
-    const end = x[x.length - 1];
-    const step = 10 * 60 * 1000; // 10 minutes in ms
-    
-    const smoothTimes = [];
-    const smoothValues = [];
-    
-    for (let t = start; t <= end; t += step) {
-      // Interpolate UV value at this time
-      const uv = spline.at(t);
-      
-      // Format time for display
-      const timeStr = new Date(t).toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'Asia/Dubai' // Display in local time
-      });
-      
-      smoothTimes.push(timeStr);
-      smoothValues.push(uv);
-    }
-    
-    console.log(`Generated ${smoothTimes.length} smooth points using cubic spline`);
-    console.log('Sample points:', smoothValues.slice(0, 3), '...', smoothValues.slice(-3));
-    return { times: smoothTimes, values: smoothValues };
-  } catch (error) {
-    console.error('Error generating smooth curve with spline:', error);
-    console.log('Falling back to linear interpolation after error');
-    
-    // Fall back to linear interpolation if spline fails
-    return generateSmoothCurve(uvReadings.map(reading => {
-      const date = new Date(reading.utc);
-      return {
-        utc: date.toLocaleTimeString('en-GB', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'Asia/Dubai'
-        }),
-        uv: reading.uv
-      };
-    }));
+  // Update chart using the imported function
+  // Pass necessary data: canvas, readings, current UV, current time, rise/fall times
+  // The chart instance is managed within the uv-chart module now.
+  if (canvas) {
+      updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, uvFallTime);
+  } else {
+      console.error("UV Chart canvas element not found!");
   }
 }
 
@@ -673,7 +317,7 @@ function findUvCrossing(uvReadings, targetUV, direction = "rising") {
     console.error('Error in findUvCrossing:', error);
     
     // Fall back to the original linear method
-    return findCrossing(uvReadings.map(reading => {
+    return findCrossingLinear(uvReadings.map(reading => {
       const date = new Date(reading.utc);
       return {
         utc: date.toLocaleTimeString('en-GB', { 
@@ -743,16 +387,6 @@ function getCurrentUvLevel(uvReadings, currentTime) {
   return null;
 }
 
-// Get UV category name
-function getUvCategoryName(uvValue) {
-  if (uvValue === null) return '-';
-  if (uvValue < 3) return 'Low';
-  if (uvValue < 6) return 'Moderate';
-  if (uvValue < 8) return 'High';
-  if (uvValue < 11) return 'Very High';
-  return 'Extreme';
-}
-
 // Get UV recommendations
 function getUvInfoAndRecommendations(uvValue) {
   if (uvValue === null) return '';
@@ -772,90 +406,6 @@ function getUvInfoAndRecommendations(uvValue) {
   }
   
   return `<p>${recommendations}</p>`;
-}
-
-// Generate additional points for a smoother curve (fallback for linear interpolation)
-function generateSmoothCurve(times, values) {
-  if (times.length !== values.length || times.length < 2) {
-    return { times, values };
-  }
-  
-  const smoothTimes = [];
-  const smoothValues = [];
-  
-  // Convert times to minutes for interpolation
-  const minutesTimes = times.map(time => timeToMinutes(time));
-  
-  // Add extra points between each original point
-  for (let i = 0; i < times.length - 1; i++) {
-    const startTime = minutesTimes[i];
-    const endTime = minutesTimes[i + 1];
-    const startValue = values[i];
-    const endValue = values[i + 1];
-    
-    // How many points to add between (more points for wider time gaps)
-    const pointsToAdd = Math.max(5, Math.ceil((endTime - startTime) / 5));
-    
-    for (let j = 0; j <= pointsToAdd; j++) {
-      const fraction = j / pointsToAdd;
-      const currentMinutes = startTime + fraction * (endTime - startTime);
-      const currentValue = startValue + fraction * (endValue - startValue);
-      
-      smoothTimes.push(minutesToTime(currentMinutes));
-      smoothValues.push(currentValue);
-    }
-  }
-  
-  // Add last point if needed
-  if (smoothTimes[smoothTimes.length - 1] !== times[times.length - 1]) {
-    smoothTimes.push(times[times.length - 1]);
-    smoothValues.push(values[values.length - 1]);
-  }
-  
-  return { times: smoothTimes, values: smoothValues };
-}
-
-// Find the interpolated crossing time (fallback method)
-function findCrossing(uvReadings, targetUV, direction = "rising") {
-  for (let i = 0; i < uvReadings.length - 1; i++) {
-    const current = uvReadings[i];
-    const next = uvReadings[i + 1];
-
-    if ((direction === "rising" && current.uv < targetUV && next.uv >= targetUV) ||
-        (direction === "falling" && current.uv > targetUV && next.uv <= targetUV)) {
-
-      const uvDelta = next.uv - current.uv;
-      const timeDelta = timeToMinutes(next.utc) - timeToMinutes(current.utc);
-      const fraction = (targetUV - current.uv) / uvDelta;
-      const interpolatedMinutes = timeToMinutes(current.utc) + (fraction * timeDelta);
-
-      return minutesToTime(interpolatedMinutes); // Already in local time
-    }
-  }
-  return null; // No crossing found
-}
-
-// Convert "HH:MM" string to minutes since midnight
-function timeToMinutes(timeStr) {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-// Convert minutes since midnight to "HH:MM" string
-function minutesToTime(minutes) {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes % 60);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-// Get UV index class for styling
-function getUvClass(uvValue) {
-  if (uvValue === null) return '';
-  if (uvValue < 3) return 'uv-low';
-  if (uvValue < 6) return 'uv-moderate';
-  if (uvValue < 8) return 'uv-high';
-  if (uvValue < 11) return 'uv-very-high';
-  return 'uv-extreme';
 }
 
 // Update the UV box with category styling and consistent font sizing
