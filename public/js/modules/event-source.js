@@ -18,10 +18,10 @@ disconnectedStyle.textContent = `
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255, 0, 0, 0.2);
+    background-color: rgba(255, 0, 0, 0.4);
     z-index: 9999;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     pointer-events: none;
   }
@@ -29,12 +29,34 @@ disconnectedStyle.textContent = `
   .server-disconnected-message {
     background-color: #f44336;
     color: white;
-    padding: 15px 20px;
-    margin-top: 15px;
-    border-radius: 4px;
+    padding: 30px 40px;
+    margin: 0;
+    border-radius: 8px;
     font-weight: bold;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     text-align: center;
+    font-size: 32px;
+    max-width: 90%;
+    width: 600px;
+    border: 4px solid white;
+  }
+  
+  .server-disconnected-message small {
+    display: block;
+    font-size: 18px;
+    margin-top: 15px;
+    opacity: 0.9;
+  }
+  
+  /* Flashing animation */
+  @keyframes flashBorder {
+    0% { border-color: white; }
+    50% { border-color: yellow; }
+    100% { border-color: white; }
+  }
+  
+  .server-disconnected-message {
+    animation: flashBorder 2s infinite;
   }
 `;
 document.head.appendChild(disconnectedStyle);
@@ -87,7 +109,12 @@ function markServerDisconnected() {
   if (!document.querySelector('.server-disconnected-overlay')) {
     const overlay = document.createElement('div');
     overlay.className = 'server-disconnected-overlay';
-    overlay.innerHTML = '<div class="server-disconnected-message">SERVER CONNECTION LOST - DATA IS STALE</div>';
+    overlay.innerHTML = `
+      <div class="server-disconnected-message">
+        SERVER CONNECTION LOST
+        <small>Data is stale. Attempting to reconnect...</small>
+      </div>
+    `;
     document.body.appendChild(overlay);
   }
   
