@@ -337,8 +337,11 @@
     </div>
     
     <div class="update-info-footer">
-      <div class="live-indicator"><span class="pulse"></span>Live Updates</div>
-      <div id="lastUpdated">Last updated: <span id="lastUpdatedTime">-</span></div>
+      <!-- New wrapper div for vertical stacking and right alignment -->
+      <div style="display: flex; flex-direction: column; align-items: flex-end;">
+        <div class="live-indicator"><span class="pulse"></span>Live Updates</div>
+        <div id="lastUpdated">Last updated:&nbsp;<span id="lastUpdatedTime">-</span></div>
+      </div>
     </div>
   </div>
   
