@@ -78,7 +78,6 @@
       height: 100px;
       margin: 3px 0;
       flex-shrink: 0;
-      position: relative;
     }
     
     /* UV Index value */
@@ -195,7 +194,7 @@
     
     #uvIndexLabel {
       font-weight: bold;
-      font-size: 1.2rem;
+      font-size: 1.5rem;
       margin-right: 15px;
     }
     
@@ -203,6 +202,20 @@
       overflow: visible !important;
       text-overflow: clip !important;
       white-space: normal !important;
+    }
+    
+    /* UV Time Range Info Styling */
+    .uv-time-range {
+        font-size: 1rem;
+        font-weight: normal;
+        margin-left: 8px;
+        color: var(--text-color-secondary); /* Use secondary text color */
+        display: inline-block; /* Keep it on the same line if space allows */
+        vertical-align: middle; /* Align vertically with the UV index box */
+        white-space: nowrap; /* Prevent wrapping */
+        padding: 2px 5px;
+        background-color: rgba(128, 128, 128, 0.1); /* Subtle background */
+        border-radius: 4px;
     }
     
     /* Optimize UV card content layout */
@@ -222,22 +235,6 @@
       margin: 3px 0;
       font-size: 0.8rem;
       line-height: 1.2;
-    }
-    
-    /* Styling for custom time labels below chart */
-    .uv-time-annotation-label {
-        position: absolute;
-        bottom: 5px; /* Adjust as needed to position below axis */
-        transform: translateX(-50%); /* Center the label horizontally */
-        font-weight: bold;
-        font-size: 11px; /* Slightly larger */
-        color: #000;
-        background-color: rgba(255, 255, 255, 0.7); /* Optional: slight background */
-        padding: 1px 3px;
-        border-radius: 2px;
-        white-space: nowrap;
-        visibility: hidden; /* Initially hidden */
-        z-index: 10; /* Ensure it's above canvas */
     }
   </style>
 </head>
@@ -311,25 +308,14 @@
           <div class="uv-index-row">
             <div id="uvIndexLabel">UV Index</div>
             <div id="uvCurrentClass" class="aqi-category">-</div>
+            <div id="uvTimeRangeInfo" class="uv-time-range"></div>
           </div>
-          <div id="uvBelowInfo" class="uv-below-info"></div>
         </div>
         
-        <div class="uv-chart-container">
+        <div class="uv-chart-container" style="position: relative;">
           <canvas id="uvChart" width="100%" height="100%"></canvas>
-          <!-- Absolutely positioned labels for rise/fall times -->
-          <span id="uvRiseTimeAnnotationLabel" class="uv-time-annotation-label"></span>
-          <span id="uvFallTimeAnnotationLabel" class="uv-time-annotation-label"></span>
         </div>
         
-        <!-- Removed Container for crossing times below the chart as they are now on the x-axis -->
-        <!-- 
-        <div class="uv-crossing-times-display" style="text-align: center; margin-top: 5px;">
-          <span id="uvRiseTimeDisplay" style="font-weight: bold; margin: 0 10px;"></span>
-          <span id="uvFallTimeDisplay" style="font-weight: bold; margin: 0 10px;"></span>
-        </div>
-        -->
-
         <div id="uvInfo" class="uv-info">
           <!-- UV info is now empty as requested -->
         </div>

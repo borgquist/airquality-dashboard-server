@@ -6,11 +6,12 @@ let uvChart = null; // Keep track of the chart instance locally within this modu
 // Helper function to get color by segment
 function getSegmentColor(ctx, type, uvColors) {
   const value = ctx.p0.parsed.y;
-  if (value <= 3) return type === 'line' ? uvColors.low.lineColor : uvColors.low.fillColor;
-  if (value <= 6) return type === 'line' ? uvColors.moderate.lineColor : uvColors.moderate.fillColor;
-  if (value <= 8) return type === 'line' ? uvColors.high.lineColor : uvColors.high.fillColor;
-  if (value <= 11) return type === 'line' ? uvColors.veryHigh.lineColor : uvColors.veryHigh.fillColor;
-  return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor;
+  // Use standard UV index thresholds
+  if (value < 4) return type === 'line' ? uvColors.low.lineColor : uvColors.low.fillColor; // Green
+  if (value < 6) return type === 'line' ? uvColors.moderate.lineColor : uvColors.moderate.fillColor; // Yellow
+  if (value < 8) return type === 'line' ? uvColors.high.lineColor : uvColors.high.fillColor; // Orange
+  if (value < 11) return type === 'line' ? uvColors.veryHigh.lineColor : uvColors.veryHigh.fillColor; // Red/Pink
+  return type === 'line' ? uvColors.extreme.lineColor : uvColors.extreme.fillColor; // Purple
 }
 
 // Function to generate a smooth curve using cubic spline
@@ -268,6 +269,8 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
           fill: true,
           order: 2 // Ensure main line is behind marker
       }]
+      // Restore call to add the current time marker dataset
+      .concat(generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime));
 
   uvChart = new Chart(ctx, {
     type: 'line',
@@ -297,8 +300,8 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
             maxRotation: 0,
             color: '#333',
             font: { size: 10 },
-            autoSkip: false,
-            // Callback to filter ticks based on our desired timestamps
+            autoSkip: false, // Disable auto skipping again
+            // Restore callback to filter ticks
             callback: function(value, index, ticks) {
                 // value is the timestamp for the potential tick
                 const tolerance = 60 * 1000; // 1 minute tolerance
@@ -309,16 +312,23 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
                 const riseTimestamp = uvRiseTime ? timeStringToTimestamp(uvRiseTime, firstTimestamp) : null;
                 const fallTimestamp = uvFallTime ? timeStringToTimestamp(uvFallTime, firstTimestamp) : null;
 
-                // Check if current tick matches rise or fall time - hide if it does (annotation handles it)
-                if (riseTimestamp && Math.abs(value - riseTimestamp) < tolerance) return null;
-                if (fallTimestamp && Math.abs(value - fallTimestamp) < tolerance) return null;
+                // Check if current tick matches rise or fall time - hide if it does (using custom labels)
+                // Note: We are NOT using annotations anymore, so we *should* show rise/fall here.
+                // We will rely on the proximity check below to hide nearby hourly marks.
+                // if (riseTimestamp && Math.abs(value - riseTimestamp) < tolerance) return null;
+                // if (fallTimestamp && Math.abs(value - fallTimestamp) < tolerance) return null;
 
                 const currentTickTimeStr = formatTime(value);
                 const firstTimeStr = formatTime(firstTimestamp);
                 const lastTimeStr = formatTime(lastTimestamp);
-                
-                // Show first and last tick (if they aren't rise/fall)
-                if (currentTickTimeStr === firstTimeStr || currentTickTimeStr === lastTimeStr) {
+                const riseTimeStr = uvRiseTime;
+                const fallTimeStr = uvFallTime;
+
+                // Show first/last/rise/fall times directly
+                if (currentTickTimeStr === firstTimeStr || 
+                    currentTickTimeStr === lastTimeStr || 
+                    (riseTimeStr && currentTickTimeStr === riseTimeStr) || 
+                    (fallTimeStr && currentTickTimeStr === fallTimeStr)) {
                     return currentTickTimeStr;
                 }
 
@@ -342,7 +352,7 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
                 // Hide all other ticks
                 return null;
             }
-          }
+          },
         },
         y: {
           beginAtZero: true,
@@ -391,55 +401,66 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
     }
   });
 
-  // --- Position Custom HTML Labels --- 
-  positionCustomTimeLabels(uvChart, visualRiseTimestamp, uvRiseTime, visualFallTimestamp, uvFallTime);
-  // TODO: Add resize listener to call positionCustomTimeLabels again?
-
   return uvChart;
 }
 
-// Function to position the custom HTML labels
-function positionCustomTimeLabels(chart, riseTimestamp, riseTimeStr, fallTimestamp, fallTimeStr) {
-    const riseLabelEl = document.getElementById('uvRiseTimeAnnotationLabel');
-    const fallLabelEl = document.getElementById('uvFallTimeAnnotationLabel');
-
-    if (!chart || !chart.scales || !chart.scales.x) {
-        console.error("Chart or x-scale not ready for positioning labels.");
-        if (riseLabelEl) riseLabelEl.style.visibility = 'hidden';
-        if (fallLabelEl) fallLabelEl.style.visibility = 'hidden';
-        return;
+// Restore current time marker dataset function
+function generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime) {
+    if (currentUv === null || !plotData || plotData.length === 0) {
+        return [];
     }
 
-    const xScale = chart.scales.x;
-
-    if (riseLabelEl) {
-        if (riseTimestamp && riseTimeStr) {
-            const risePixelX = xScale.getPixelForValue(riseTimestamp);
-            if (!isNaN(risePixelX)) {
-                riseLabelEl.style.left = `${risePixelX}px`;
-                riseLabelEl.textContent = riseTimeStr;
-                riseLabelEl.style.visibility = 'visible';
-            } else {
-                 riseLabelEl.style.visibility = 'hidden';
-            }
-        } else {
-            riseLabelEl.style.visibility = 'hidden';
+    const currentTimestamp = currentTime.getTime();
+    
+    // Find the closest plot data point index
+    let closestIndex = -1;
+    let minDiff = Infinity;
+    for (let i = 0; i < plotData.length; i++) {
+        if (plotData[i].x === null) continue; // Skip null timestamps
+        const diff = Math.abs(plotData[i].x - currentTimestamp);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestIndex = i;
         }
     }
 
-    if (fallLabelEl) {
-        if (fallTimestamp && fallTimeStr) {
-            const fallPixelX = xScale.getPixelForValue(fallTimestamp);
-             if (!isNaN(fallPixelX)) {
-                fallLabelEl.style.left = `${fallPixelX}px`;
-                fallLabelEl.textContent = fallTimeStr;
-                fallLabelEl.style.visibility = 'visible';
-            } else {
-                 fallLabelEl.style.visibility = 'hidden';
+    // Interpolate the UV value at the exact current time
+    let interpolatedCurrentUv = null;
+    for (let i = 0; i < plotData.length - 1; i++) {
+        const p1 = plotData[i];
+        const p2 = plotData[i + 1];
+        if (p1.x !== null && p2.x !== null && currentTimestamp >= p1.x && currentTimestamp <= p2.x) {
+            const fraction = (currentTimestamp - p1.x) / (p2.x - p1.x);
+            if (isFinite(fraction)) { // Avoid division by zero if timestamps are identical
+                 interpolatedCurrentUv = p1.y + fraction * (p2.y - p1.y);
             }
-        } else {
-            fallLabelEl.style.visibility = 'hidden';
+            break;
         }
+    }
+    // If outside range or couldn't interpolate, use the passed currentUv 
+    if (interpolatedCurrentUv === null) {
+        interpolatedCurrentUv = currentUv;
+    }
+
+    // Create marker data - only one point needs a value
+    if (interpolatedCurrentUv !== null) {
+        const markerData = [{ x: currentTimestamp, y: interpolatedCurrentUv }];
+
+        return [{
+            label: 'Current Time',
+            data: markerData, // Data is an array of {x, y} points
+            pointStyle: 'rectRot', // Rotated square
+            pointRadius: 8,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointBackgroundColor: '#000',
+            pointHoverRadius: 10,
+            showLine: false,
+            order: 1 // Ensure marker dataset draws on top
+        }];
+    } else {
+        console.warn("Could not create current time marker.");
+        return [];
     }
 }
 

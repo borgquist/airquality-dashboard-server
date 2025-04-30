@@ -195,6 +195,25 @@ function updateUvIndexDisplay(data) {
   
   // Update the UV category display box with enhanced styling
   updateUvCategoryDisplay(currentUv);
+
+  // Update Time Range Info Box
+  const timeRangeInfoEl = document.getElementById('uvTimeRangeInfo');
+  if (timeRangeInfoEl) {
+      if (uvRiseTime && uvFallTime) {
+          // Use innerHTML to allow bold tags
+          timeRangeInfoEl.innerHTML = `Safe before <b>${uvRiseTime}</b> and after <b>${uvFallTime}</b>`;
+          timeRangeInfoEl.style.display = 'inline-block'; // Make visible
+      } else if (uvFallTime) { // Case where only fall time is available (e.g., UV starts high)
+          timeRangeInfoEl.innerHTML = `Safe after <b>${uvFallTime}</b>`;
+          timeRangeInfoEl.style.display = 'inline-block'; 
+      } else if (uvRiseTime) { // Case where only rise time is available (e.g., UV ends high - less common)
+          timeRangeInfoEl.innerHTML = `Safe before <b>${uvRiseTime}</b>`;
+          timeRangeInfoEl.style.display = 'inline-block'; 
+      } else {
+          timeRangeInfoEl.innerHTML = ''; // Clear content
+          timeRangeInfoEl.style.display = 'none'; // Hide if no range info
+      }
+  }
   
   // Crossing times are now handled directly on the chart's x-axis ticks.
   
@@ -383,7 +402,7 @@ function getUvInfoAndRecommendations(uvValue) {
   
   let recommendations = '';
   
-  if (uvValue < 3) {
+  if (uvValue < 4) {
     recommendations = 'Low risk. No protection needed for most people.';
   } else if (uvValue < 6) {
     recommendations = 'Wear sunscreen SPF 30+, hat, and sunglasses.';
@@ -399,6 +418,7 @@ function getUvInfoAndRecommendations(uvValue) {
 }
 
 // Update the UV box with category styling and consistent font sizing
+// Also appends the UV>=4 time range if available.
 function updateUvCategoryDisplay(currentUv) {
   const uvCurrentClass = document.getElementById('uvCurrentClass');
   if (!uvCurrentClass) return;
@@ -410,7 +430,7 @@ function updateUvCategoryDisplay(currentUv) {
     backgroundColor = 'rgba(200, 200, 200, 0.8)';  // Gray
     textColor = '#000000';
     borderColor = '#888888';
-  } else if (currentUv < 3) {
+  } else if (currentUv < 4) {
     backgroundColor = 'rgba(76, 175, 80, 0.8)';  // Green
     textColor = '#000000';
     borderColor = '#2E7D32';
