@@ -16,9 +16,14 @@
 
   <style>
     /* Critical layout styles to ensure proper display */
-    body {
+    html, body { /* Ensure html and body take full height */
+      height: 100%;
       margin: 0;
       padding: 0;
+      display: flex; /* Make body a flex container */
+      flex-direction: column; /* Stack children vertically */
+    }
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
     }
     
@@ -29,6 +34,11 @@
       margin: 0 auto;
       padding: 10px;
       box-sizing: border-box;
+      display: flex; /* Make container a flex container */
+      flex-direction: column; /* Stack children vertically */
+      flex-grow: 1; /* Allow container to grow */
+      flex-shrink: 1; /* Allow container to shrink */
+      min-height: 0; /* Necessary for flex children with overflow */
     }
     
     /* Header with fixed height */
@@ -137,8 +147,10 @@
     @media (orientation: landscape) {
       .flex-dashboard {
         flex-direction: row;
-        height: calc(100vh - 90px);
-        overflow: hidden;
+        overflow: auto; /* Use auto overflow */
+        flex-grow: 1; /* Ensure it takes available space */
+        flex-shrink: 1; /* Allow shrinking */
+        min-height: 0; /* Prevent overflow */
       }
       
       .left-col, .uv-card {
@@ -149,13 +161,15 @@
       
       /* Adjust heights for landscape mode */
       .aqi-card {
-        height: auto; /* Let height adjust to content */
-        max-height: calc(100vh - 90px);
+        overflow-y: auto; /* Allow scrolling within card if needed */
+        height: auto; 
+        max-height: calc(100vh - 100px); /* Use max-height relative to viewport */
       }
       
       .uv-card {
-        height: auto;
-        max-height: calc(100vh - 90px);
+        overflow-y: auto; /* Allow scrolling within card if needed */
+        height: auto; 
+        max-height: calc(100vh - 100px); /* Use max-height relative to viewport */
       }
       
       /* Even more compact for landscape */
@@ -173,7 +187,7 @@
       }
     }
     
-    /* Card height optimizations */
+    /* Card height optimizations (PORTRAIT ONLY) */
     .aqi-card {
       height: 450px;
       overflow: visible;
