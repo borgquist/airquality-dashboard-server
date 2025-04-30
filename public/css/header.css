@@ -1,0 +1,86 @@
+header {
+  height: 70px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.header-container {
+  width: 100%;
+}
+
+h1 {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+#lastUpdated {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Live update indicator */
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: #4CAF50;
+  font-weight: 600;
+  font-size: 0.8rem;
+  vertical-align: middle;
+  transition: color 0.3s ease;
+  justify-content: flex-end;
+}
+
+.live-indicator.disconnected {
+  color: #f44336;
+}
+
+.live-indicator.disconnected .pulse {
+  background: #f44336;
+  animation: pulse-error 1s infinite;
+}
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4CAF50;
+  margin-right: 5px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-error {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+} 

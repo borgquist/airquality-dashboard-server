@@ -1,0 +1,611 @@
+/* Media queries for responsive layout */
+@media (min-width: 768px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    min-height: 400px;
+    max-height: 90vh;
+    overflow: visible;
+    margin-bottom: 1rem;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    height: 100%;
+    max-height: 800px; /* Set a specific max height for larger screens */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+}
+
+/* Portrait mode - stacked cards */
+@media (orientation: portrait) {
+  .dashboard {
+    flex-direction: column;
+  }
+  
+  .left-column, .uv-box {
+    width: 100%;
+  }
+  
+  .main-aqi {
+    height: 450px !important;
+  }
+  
+  .uv-box {
+    height: 380px !important;
+  }
+}
+
+/* Compact styles for smaller screens */
+@media (max-height: 700px) {
+  .main-aqi {
+    height: 400px;
+  }
+  
+  .uv-box {
+    height: 340px;
+  }
+  
+  header {
+    height: 60px;
+  }
+}
+
+/* Very small screens */
+@media (max-height: 600px) {
+  .main-aqi {
+    height: 340px;
+  }
+  
+  .uv-box {
+    height: 300px;
+  }
+  
+  header {
+    height: 50px;
+    margin-bottom: 5px;
+  }
+}
+
+/* Medium screens */
+@media (max-width: 767px) and (min-width: 480px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 1rem;
+    height: auto;
+  }
+  
+  .container {
+    padding: 1rem;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    height: 100%;
+    max-height: 500px; /* Even smaller height on mobile */
+  }
+  
+  .aqi-value {
+    font-size: min(7rem, 18vmin);
+    margin: 0.1rem 0;
+  }
+  
+  .aqi-category {
+    margin: 0.1rem 0 0.5rem 0;
+    padding: 0.2rem 0.8rem;
+  }
+  
+  .measurements-grid {
+    gap: 0.4rem;
+    margin: 0.3rem 0;
+  }
+  
+  .weather-data-grid {
+    margin-top: 0.8rem;
+    gap: 0.5rem;
+  }
+  
+  .card {
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 0.4rem 0.2rem;
+  }
+  
+  .weather-item::before {
+    height: 60%;
+    left: -0.3rem;
+  }
+  
+  .label, .value {
+    font-size: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .header-container {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .update-info {
+    align-items: center;
+  }
+}
+
+/* Small screens - stacked layout */
+@media (max-width: 479px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+  
+  .container {
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    width: 100%;
+  }
+  
+  .info-box {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    width: 100%;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+  
+  .header-container {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .update-info {
+    align-items: center;
+  }
+  
+  .card {
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .uv-box h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    margin-bottom: 0.3rem;
+    padding: 0.3rem 0.2rem;
+  }
+  
+  .weather-item::before {
+    height: 50%;
+    width: 0.2rem;
+    left: -0.3rem;
+  }
+  
+  .label {
+    font-size: 0.9rem;
+  }
+  
+  .value {
+    font-size: 1.1rem;
+  }
+}
+
+/* Responsive adjustments for UV box */
+@media (max-width: 767px) {
+  .uv-box-container .uv-box {
+    padding: 0.6rem !important;
+  }
+  
+  .uv-box-container .uv-box .aqi-value {
+    font-size: min(4rem, 13vmin);
+  }
+  
+  .uv-box-container .uv-box .aqi-category {
+    font-size: 1rem;
+    padding: 0.2rem 0.8rem;
+  }
+  
+  .uv-box-container .uv-chart-container {
+    height: 120px;
+    padding: 8px;
+  }
+  
+  .uv-box-container .uv-crossing-times {
+    font-size: 0.8rem;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 4px;
+  }
+  
+  .uv-box-container .uv-info {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+  
+  .uv-box {
+    padding: 12px;
+  }
+  
+  .uv-chart-container {
+    height: 190px;
+  }
+  
+  .uv-box .aqi-value-container {
+    gap: 10px;
+    padding: 4px 8px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(3rem, 10vmin);
+    min-width: 80px;
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.3px;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.4rem;
+  }
+  
+  .uv-header {
+    gap: 5px;
+    padding: 0 3px;
+  }
+  
+  .uv-header h2 {
+    font-size: 1.1rem;
+    min-width: 80px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: 1.6rem;
+    margin-right: 3px;
+    min-width: 50px;
+    max-width: 70px;
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.25rem;
+    letter-spacing: 0.2px;
+    max-width: 85px;
+  }
+  
+  .uv-below-info {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.25rem;
+    margin-left: 1px;
+    max-width: 105px;
+  }
+}
+
+/* Very small screens - make everything more compact */
+@media (max-width: 400px) {
+  .uv-box {
+    padding: 10px;
+  }
+  
+  .uv-box h2 {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+  
+  .uv-box .aqi-value-container {
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(2.8rem, 9vmin);
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .uv-chart-container {
+    height: 160px;
+  }
+  
+  .uv-crossing-times {
+    margin: 4px 0;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.3rem;
+  }
+  
+  #uvInfo {
+    font-size: 0.8rem;
+  }
+  
+  .uv-header {
+    gap: 4px;
+    padding: 0 2px;
+  }
+  
+  .uv-header h2 {
+    font-size: 1rem;
+    min-width: 70px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: 1.5rem;
+    max-width: 60px;
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.2rem;
+    max-width: 75px;
+  }
+  
+  .uv-below-info {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.2rem;
+    max-width: 90px;
+  }
+}
+
+/* Landscape orientation - prioritize the chart */
+@media (orientation: landscape) {
+  body {
+    overflow: hidden;
+  }
+  
+  .dashboard {
+    flex-direction: row !important;
+    height: calc(100vh - 90px) !important;
+    overflow: hidden !important;
+  }
+  
+  .left-column, .card.uv-box {
+    width: 50% !important;
+    height: auto !important;
+  }
+  
+  .main-aqi, .uv-box {
+    height: 100% !important;
+    max-height: none !important;
+    overflow: auto;
+  }
+  
+  .card {
+    margin-bottom: 0 !important;
+  }
+  
+  .left-column > div, .dashboard > div {
+    height: 100%;
+  }
+  
+  .aqi-value {
+    font-size: min(7rem, 15vmin);
+  }
+  
+  .uv-box .aqi-value {
+    font-size: min(3rem, 10vmin);
+  }
+  
+  .uv-chart-container {
+    height: 200px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(2.8rem, 8vmin);
+  }
+  
+  .uv-box .aqi-value-container {
+    margin-bottom: 5px;
+  }
+  
+  .uv-crossing-times {
+    margin: 5px 0;
+  }
+}
+
+/* iPad and tablet specific styles */
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: portrait) {
+  .dashboard {
+    max-height: none;
+  }
+  
+  .main-aqi {
+    min-height: 0;
+    max-height: 75vh;
+  }
+  
+  .aqi-value {
+    font-size: min(15rem, 25vmin);
+  }
+  
+  .measurements-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin: 1.5rem 0;
+  }
+  
+  .secondary-measurements {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Small to medium tablets in portrait (like Galaxy Tab A9 8.7") */
+@media only screen and (min-device-width: 600px) and (max-device-width: 900px) and (orientation: portrait) {
+  .dashboard {
+    max-height: none;
+    overflow: visible;
+  }
+  
+  .main-aqi {
+    min-height: 0;
+    max-height: none;
+    padding: 1.2rem;
+  }
+  
+  .aqi-value {
+    font-size: min(13rem, 23vmin);
+    margin: 0.5rem 0;
+  }
+  
+  .aqi-category {
+    margin: 0.5rem 0 1.2rem 0;
+    font-size: min(1.4rem, 4vmin);
+    padding: 0.4rem 1.2rem;
+  }
+  
+  .measurements-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.2rem 0;
+    padding: 0 0.5rem;
+  }
+  
+  .secondary-measurements {
+    margin-top: 0.5rem;
+  }
+  
+  .measurement-value {
+    font-size: 1.3rem;
+  }
+  
+  .measurement-label {
+    font-size: 0.9rem;
+  }
+  
+  .weather-data-grid {
+    margin-top: 1.3rem;
+    gap: 0.8rem;
+  }
+  
+  .weather-value {
+    font-size: 1.3rem;
+  }
+}
+
+/* Specific optimizations for portrait mode on mobile */
+@media (orientation: portrait) and (max-width: 768px) {
+  .dashboard {
+    max-height: none; /* Remove max-height in portrait mode on mobile to allow scrolling */
+    overflow: visible;
+  }
+  
+  .main-aqi {
+    max-height: none; /* Remove max-height to prevent content being cut off */
+    min-height: 80vh; /* Ensure card takes up most of the viewport height */
+    padding: 1rem;
+  }
+  
+  .aqi-value {
+    font-size: min(10rem, 22vmin); /* Slightly smaller font for AQI value */
+  }
+  
+  .measurements-grid {
+    gap: 0.8rem;
+    margin: 0.8rem 0;
+  }
+  
+  .weather-data-grid {
+    margin-top: 1rem;
+  }
+}
+
+/* Additional portrait mode optimization for very tall phones */
+@media (orientation: portrait) and (min-height: 800px) {
+  .main-aqi {
+    min-height: 0; /* Don't force minimum height on tall phones */
+    max-height: 800px; /* Set a maximum height to prevent excessive stretching */
+  }
+}
+
+@media (max-height: 800px) {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .container {
+    padding: 0.5rem 1rem 0 1rem;
+  }
+  
+  .dashboard {
+    gap: 0.8rem;
+  }
+  
+  footer {
+    margin-top: 0.2rem;
+    border-top: none;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    margin-bottom: 0.2rem;
+    padding: 0.3rem 0.2rem;
+  }
+} 
