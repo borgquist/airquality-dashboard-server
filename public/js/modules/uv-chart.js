@@ -214,28 +214,67 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
 
   const annotations = {};
 
-  // Add horizontal threshold line at UV=4
+  // Threshold line (keep)
   annotations.threshold = {
-    type: 'line',
-    yMin: 4,
-    yMax: 4,
-    borderColor: 'rgba(255, 152, 0, 0.8)',
-    borderWidth: 2,
-    borderDash: [5, 5],
-    label: {
-      content: 'Protection Level',
-      enabled: true,
-      position: 'end',
-      backgroundColor: 'rgba(255, 152, 0, 0.8)',
-      color: 'white',
-      padding: 4,
-      font: {
-        size: 12
-      }
-    }
+      type: 'line', yMin: 4, yMax: 4,
+      borderColor: 'rgba(255, 152, 0, 0.8)', borderWidth: 2, borderDash: [5, 5],
+      label: { content: 'Protection Level', enabled: true, position: 'end',
+               backgroundColor: 'rgba(255, 152, 0, 0.8)', color: 'white', padding: 4, font: { size: 10 } }
   };
 
-  // Prepare the datasets
+  // Rise Time Annotation (if exists)
+  const riseTimestamp = uvRiseTime ? timeStringToTimestamp(uvRiseTime, plotData[0]?.x || Date.now()) : null;
+  if (riseTimestamp) {
+    annotations.riseTimeLabel = {
+      type: 'point',
+      xValue: riseTimestamp,
+      yValue: 0, // Position at the bottom of the chart area
+      yAdjust: 15, // Push below the axis (positive values push down)
+      backgroundColor: 'transparent',
+      radius: 0, // No visible point needed
+      label: {
+        content: uvRiseTime,
+        display: true,
+        position: 'bottom',
+        color: '#000', // Black text
+        font: {
+          weight: 'bold',
+          size: 11 // Slightly larger
+        },
+        padding: 0, // No padding needed
+        yAdjust: 5 // Fine-tune vertical position relative to yValue+yAdjust
+      }
+    };
+  }
+
+  // Fall Time Annotation (if exists)
+  const fallTimestamp = uvFallTime ? timeStringToTimestamp(uvFallTime, plotData[0]?.x || Date.now()) : null;
+  if (fallTimestamp) {
+    annotations.fallTimeLabel = {
+      type: 'point',
+      xValue: fallTimestamp,
+      yValue: 0, 
+      yAdjust: 15, 
+      backgroundColor: 'transparent',
+      radius: 0, 
+      label: {
+        content: uvFallTime,
+        display: true,
+        position: 'bottom',
+        color: '#000', 
+        font: {
+          weight: 'bold',
+          size: 11
+        },
+        padding: 0,
+        yAdjust: 5
+      }
+    };
+  }
+
+  // --- END ANNOTATIONS ---
+
+  // Prepare the datasets - Ensure marker dataset is added
   const datasets = [{
           label: '',
           data: plotData,
@@ -246,10 +285,10 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.4,
-          fill: true
+          fill: true,
+          order: 2 // Ensure main line is behind marker
       }]
-      // Add the current time marker dataset
-      .concat(generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime)); 
+      .concat(generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime));
 
   uvChart = new Chart(ctx, {
     type: 'line',
@@ -283,46 +322,38 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
             // Callback to filter ticks based on our desired timestamps
             callback: function(value, index, ticks) {
                 // value is the timestamp for the potential tick
+                const tolerance = 60 * 1000; // 1 minute tolerance
+                const proximityThreshold = 30 * 60 * 1000; // 30 minutes
+
+                const firstTimestamp = smoothData.axisTimestamps[0];
+                const lastTimestamp = smoothData.axisTimestamps[smoothData.axisTimestamps.length - 1];
+                const riseTimestamp = uvRiseTime ? timeStringToTimestamp(uvRiseTime, firstTimestamp) : null;
+                const fallTimestamp = uvFallTime ? timeStringToTimestamp(uvFallTime, firstTimestamp) : null;
+
+                // Check if current tick matches rise or fall time - hide if it does (annotation handles it)
+                if (riseTimestamp && Math.abs(value - riseTimestamp) < tolerance) return null;
+                if (fallTimestamp && Math.abs(value - fallTimestamp) < tolerance) return null;
+
                 const currentTickTimeStr = formatTime(value);
-
-                // Format the specific times we definitely want to show
-                const firstTimeStr = formatTime(smoothData.axisTimestamps[0]);
-                const lastTimeStr = formatTime(smoothData.axisTimestamps[smoothData.axisTimestamps.length - 1]);
-                const riseTimeStr = uvRiseTime; // Already in HH:mm format
-                const fallTimeStr = uvFallTime; // Already in HH:mm format
-
-                // Always show first and last tick
+                const firstTimeStr = formatTime(firstTimestamp);
+                const lastTimeStr = formatTime(lastTimestamp);
+                
+                // Show first and last tick (if they aren't rise/fall)
                 if (currentTickTimeStr === firstTimeStr || currentTickTimeStr === lastTimeStr) {
-                    return currentTickTimeStr;
-                }
-
-                // Always show rise time tick
-                if (riseTimeStr && currentTickTimeStr === riseTimeStr) {
-                    return currentTickTimeStr;
-                }
-
-                // Always show fall time tick
-                if (fallTimeStr && currentTickTimeStr === fallTimeStr) {
                     return currentTickTimeStr;
                 }
 
                 // Check for hourly ticks
                 const date = new Date(value);
                 if (date.getMinutes() === 0) {
-                    const proximityThreshold = 30 * 60 * 1000; // 30 minutes
-                    const firstTimestamp = smoothData.axisTimestamps[0];
-                    const lastTimestamp = smoothData.axisTimestamps[smoothData.axisTimestamps.length - 1];
-                    const riseTimestamp = riseTimeStr ? timeStringToTimestamp(riseTimeStr, firstTimestamp) : null;
-                    const fallTimestamp = fallTimeStr ? timeStringToTimestamp(fallTimeStr, firstTimestamp) : null;
-                    
                     let hideHourly = false;
                     // Hide if too close to rise/fall
                     if (riseTimestamp && Math.abs(value - riseTimestamp) < proximityThreshold) hideHourly = true;
                     if (fallTimestamp && Math.abs(value - fallTimestamp) < proximityThreshold) hideHourly = true;
-                    // Hide if too close to start (and start isn't on the hour)
-                    if (formatTime(firstTimestamp) !== currentTickTimeStr && new Date(firstTimestamp).getMinutes() !== 0 && Math.abs(value - firstTimestamp) < proximityThreshold) hideHourly = true;
-                    // Hide if too close to end (and end isn't on the hour)
-                    if (formatTime(lastTimestamp) !== currentTickTimeStr && new Date(lastTimestamp).getMinutes() !== 0 && Math.abs(value - lastTimestamp) < proximityThreshold) hideHourly = true;
+                    // Hide if too close to start (and start isn't on the hour, and start isn't rise/fall)
+                    if (formatTime(firstTimestamp) !== currentTickTimeStr && !(riseTimestamp && Math.abs(firstTimestamp - riseTimestamp) < tolerance) && !(fallTimestamp && Math.abs(firstTimestamp - fallTimestamp) < tolerance) && new Date(firstTimestamp).getMinutes() !== 0 && Math.abs(value - firstTimestamp) < proximityThreshold) hideHourly = true;
+                    // Hide if too close to end (and end isn't on the hour, and end isn't rise/fall)
+                    if (formatTime(lastTimestamp) !== currentTickTimeStr && !(riseTimestamp && Math.abs(lastTimestamp - riseTimestamp) < tolerance) && !(fallTimestamp && Math.abs(lastTimestamp - fallTimestamp) < tolerance) && new Date(lastTimestamp).getMinutes() !== 0 && Math.abs(value - lastTimestamp) < proximityThreshold) hideHourly = true;
                     
                     if (!hideHourly) {
                         return currentTickTimeStr; // Show hourly if not too close
@@ -429,15 +460,15 @@ function generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime) {
 
         return [{
             label: 'Current Time',
-            data: markerData, // Data is an array of {x, y} points
-            pointStyle: 'rectRot', // Rotated square
+            data: markerData, 
+            pointStyle: 'rectRot', 
             pointRadius: 8,
             pointBorderColor: '#fff',
             pointBorderWidth: 2,
             pointBackgroundColor: '#000',
             pointHoverRadius: 10,
             showLine: false,
-            order: 1 // Ensure it draws on top of the main line
+            order: 1 // Ensure marker dataset draws on top
         }];
     } else {
         console.warn("Could not create current time marker.");
