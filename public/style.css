@@ -1,0 +1,1905 @@
+:root {
+  --color-bg: #f5f7fa;
+  --color-text: #333;
+  --color-primary: #3498db;
+  --color-secondary: #2ecc71;
+  --color-card-bg: #fff;
+  --color-border: #e1e5e9;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --border-radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  transition: background-color 1s ease;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 10px 15px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  height: 70px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.header-container {
+  width: 100%;
+}
+
+.update-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+h1 {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+#lastUpdated {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dashboard {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 10px !important;
+}
+
+.left-column {
+  width: 100% !important;
+}
+
+.card.main-aqi {
+  width: 100% !important;
+  height: 450px !important;
+  overflow: auto !important;
+  padding: 15px !important;
+}
+
+.card.uv-box {
+  width: 100% !important;
+  height: 380px !important;
+  overflow: auto !important;
+  padding: 15px !important;
+}
+
+.main-aqi {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+  transition: background-color 0.5s ease, color 0.5s ease;
+  width: 100%;
+  height: 450px;
+  padding: 15px;
+  overflow: auto;
+}
+
+.card {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  background-color: var(--color-card-bg);
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0;
+  margin-bottom: 10px;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card h2 {
+  margin: 0 0 10px 0;
+  padding-bottom: 5px;
+  font-size: 1.5rem;
+  border-bottom: 1px solid rgba(200, 200, 200, 0.3);
+}
+
+.card h3 {
+  color: #000;
+  margin: 1rem 0;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.main-aqi h2 {
+  color: inherit;
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.aqi-value {
+  font-size: min(7rem, 18vmin);
+  font-weight: bold;
+  margin: 0.1rem 0;
+  line-height: 0.9;
+  width: 100%;
+}
+
+.aqi-category {
+  padding: 0.3rem 1rem;
+  border-radius: var(--border-radius);
+  display: inline-block;
+  font-weight: bold;
+  margin: 0.2rem 0 0.8rem 0;
+  font-size: min(1.3rem, 4vmin);
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.main-pollutant {
+  font-size: 1rem;
+  color: #777;
+  display: none;
+}
+
+.info-box {
+  padding: 1.5rem;
+}
+
+.info-data {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.2rem;
+}
+
+.weather-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.8rem;
+  position: relative;
+}
+
+.label {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.value {
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+/* Enhanced weather data styling */
+.weather-item {
+  padding: 0.5rem 0.2rem;
+  transition: background-color 0.2s ease;
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.weather-item:hover {
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.weather-item::before {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.3rem;
+  height: 70%;
+  background-color: var(--color-primary);
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.weather-item.temperature::before {
+  background-color: #e74c3c; /* Red for temperature */
+}
+
+.weather-item.humidity::before {
+  background-color: #3498db; /* Blue for humidity */
+}
+
+.weather-item.pressure::before {
+  background-color: #9b59b6; /* Purple for pressure */
+}
+
+/* Icons for weather data */
+.weather-item .label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.weather-item .label::before {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+.weather-item.temperature .label::before {
+  content: '🌡️';
+}
+
+.weather-item.humidity .label::before {
+  content: '💧';
+}
+
+.weather-item.pressure .label::before {
+  content: '⭕';
+}
+
+/* Alternative icon approach for better browser compatibility */
+.weather-item.temperature .label::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233498db'%3E%3Cpath d='M12 2a7 7 0 0 0-7 7v5.5c0 3.87 3.13 7 7 7s7-3.13 7-7V9a7 7 0 0 0-7-7zm0 2a5 5 0 0 1 5 5v5.5c0 2.76-2.24 5-5 5s-5-2.24-5-5V9a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v5.5c0 1.65 1.35 3 3 3s3-1.35 3-3V9a3 3 0 0 0-3-3z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  margin-left: 5px;
+}
+
+.weather-item.humidity .label::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233498db'%3E%3Cpath d='M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  margin-left: 5px;
+}
+
+.weather-item.pressure .label::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233498db'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  margin-left: 5px;
+}
+
+/* Hide the emoji icons on browsers that support SVG icons */
+.weather-item.temperature .label::before,
+.weather-item.humidity .label::before,
+.weather-item.pressure .label::before {
+  display: none;
+}
+
+/* Background colors for body */
+body.bg-good {
+  background-color: rgba(0, 128, 0, 0.15);
+}
+
+body.bg-moderate {
+  background-color: rgba(255, 255, 0, 0.15);
+}
+
+body.bg-unhealthy-sensitive {
+  background-color: rgba(255, 165, 0, 0.15);
+}
+
+body.bg-unhealthy {
+  background-color: rgba(255, 165, 0, 0.15);
+}
+
+body.bg-very-unhealthy {
+  background-color: rgba(255, 0, 0, 0.15);
+}
+
+body.bg-hazardous {
+  background-color: rgba(139, 0, 0, 0.15);
+}
+
+/* Media queries for responsive layout */
+@media (min-width: 768px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    min-height: 400px;
+    max-height: 90vh;
+    overflow: visible;
+    margin-bottom: 1rem;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    height: 100%;
+    max-height: 800px; /* Set a specific max height for larger screens */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+}
+
+/* Portrait mode - stacked cards */
+@media (orientation: portrait) {
+  .dashboard {
+    flex-direction: column;
+  }
+  
+  .left-column, .uv-box {
+    width: 100%;
+  }
+  
+  .main-aqi {
+    height: 450px !important;
+  }
+  
+  .uv-box {
+    height: 380px !important;
+  }
+}
+
+/* Compact styles for smaller screens */
+@media (max-height: 700px) {
+  .main-aqi {
+    height: 400px;
+  }
+  
+  .uv-box {
+    height: 340px;
+  }
+  
+  header {
+    height: 60px;
+  }
+}
+
+/* Very small screens */
+@media (max-height: 600px) {
+  .main-aqi {
+    height: 340px;
+  }
+  
+  .uv-box {
+    height: 300px;
+  }
+  
+  header {
+    height: 50px;
+    margin-bottom: 5px;
+  }
+}
+
+/* Medium screens */
+@media (max-width: 767px) and (min-width: 480px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 1rem;
+    height: auto;
+  }
+  
+  .container {
+    padding: 1rem;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    height: 100%;
+    max-height: 500px; /* Even smaller height on mobile */
+  }
+  
+  .aqi-value {
+    font-size: min(7rem, 18vmin);
+    margin: 0.1rem 0;
+  }
+  
+  .aqi-category {
+    margin: 0.1rem 0 0.5rem 0;
+    padding: 0.2rem 0.8rem;
+  }
+  
+  .measurements-grid {
+    gap: 0.4rem;
+    margin: 0.3rem 0;
+  }
+  
+  .weather-data-grid {
+    margin-top: 0.8rem;
+    gap: 0.5rem;
+  }
+  
+  .card {
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 0.4rem 0.2rem;
+  }
+  
+  .weather-item::before {
+    height: 60%;
+    left: -0.3rem;
+  }
+  
+  .label, .value {
+    font-size: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .header-container {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .update-info {
+    align-items: center;
+  }
+}
+
+/* Small screens - stacked layout */
+@media (max-width: 479px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+  
+  .container {
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .main-aqi {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    width: 100%;
+  }
+  
+  .info-box {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    width: 100%;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+  
+  .header-container {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .update-info {
+    align-items: center;
+  }
+  
+  .card {
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .uv-box h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    margin-bottom: 0.3rem;
+    padding: 0.3rem 0.2rem;
+  }
+  
+  .weather-item::before {
+    height: 50%;
+    width: 0.2rem;
+    left: -0.3rem;
+  }
+  
+  .label {
+    font-size: 0.9rem;
+  }
+  
+  .value {
+    font-size: 1.1rem;
+  }
+}
+
+/* Live update indicator */
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: #4CAF50;
+  font-weight: 600;
+  font-size: 0.8rem;
+  vertical-align: middle;
+  transition: color 0.3s ease;
+  justify-content: flex-end;
+}
+
+.live-indicator.disconnected {
+  color: #f44336;
+}
+
+.live-indicator.disconnected .pulse {
+  background: #f44336;
+  animation: pulse-error 1s infinite;
+}
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4CAF50;
+  margin-right: 5px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-error {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Card spacer */
+.card-spacer {
+  height: 20px;
+  width: 100%;
+}
+
+/* Weather data in AQI card */
+.weather-data-small {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  justify-content: space-around;
+}
+
+.weather-data-small .weather-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--measurement-text-color, #fff);
+  padding: 5px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  border-bottom: none;
+  margin-bottom: 0;
+  position: relative;
+}
+
+.weather-data-small .weather-item::before {
+  display: none; /* Remove the colored bar */
+}
+
+.weather-data-small .label {
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--measurement-text-color, rgba(255, 255, 255, 0.9));
+}
+
+.weather-data-small .value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--measurement-text-color, #fff);
+}
+
+.weather-data-small .label::before {
+  display: inline;
+  margin-right: 4px;
+}
+
+.aqi-measurement-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0.2rem 0;
+}
+
+.measurement-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Update existing styles to accommodate labels */
+.aqi-side-values {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 4rem;
+  margin: 0 0.5rem;
+}
+
+.aqi-measurement {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .aqi-side-values {
+    min-width: 3rem;
+    gap: 0.2rem;
+    margin: 0 0.3rem;
+  }
+  
+  .aqi-measurement {
+    font-size: 0.95rem;
+    min-width: 2.8rem;
+    padding: 0.1rem 0.3rem;
+  }
+  
+  .measurement-label {
+    font-size: 0.7rem;
+  }
+  
+  .aqi-measurement-container {
+    gap: 0.1rem;
+    margin: 0.1rem 0;
+  }
+}
+
+.aqi-measurements-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+/* Add adaptive text color styles for measurement values */
+.aqi-measurement {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 0.4rem;
+  margin-bottom: 0.2rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* Variable for adaptive text color */
+  color: var(--measurement-text-color, #fff);
+}
+
+.measurement-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+  /* Variable for adaptive text color */
+  color: var(--measurement-text-color, #fff);
+}
+
+/* Set text color variables based on AQI category */
+.main-aqi.good {
+  background-color: #4CAF50;
+  --measurement-text-color: #000;
+}
+
+.main-aqi.moderate {
+  background-color: #FFEB3B;
+  --measurement-text-color: #000;
+}
+
+.main-aqi.unhealthy-sensitive {
+  background-color: #FF9800;
+  --measurement-text-color: #000;
+}
+
+.main-aqi.unhealthy {
+  background-color: #F44336;
+  --measurement-text-color: #fff;
+}
+
+.main-aqi.very-unhealthy {
+  background-color: #9C27B0;
+  --measurement-text-color: #fff;
+}
+
+.main-aqi.hazardous {
+  background-color: #7D0023;
+  --measurement-text-color: #fff;
+}
+
+/* Ensure weather data text is also properly visible */
+.weather-data-small .label,
+.weather-data-small .value {
+  color: var(--measurement-text-color, #fff);
+}
+
+/* Adjust the layout for measurements now that they're below */
+.aqi-measurements-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Move AQI category closer to value */
+.aqi-category {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+/* Measurements grid layout */
+.measurements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+  padding: 0 5px;
+  width: 100%;
+}
+
+.secondary-measurements {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 0;
+  justify-content: center;
+}
+
+.secondary-measurements .measurement-item {
+  margin: 0 auto;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+/* When only one measurement is visible, center it */
+.secondary-measurements:has(.measurement-item[style*="display: none"]) .measurement-item {
+  grid-column: 1 / -1;
+}
+
+.measurement-item {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 0.4rem 0.3rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.measurement-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.measurement-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+  color: var(--measurement-text-color, #fff);
+}
+
+.measurement-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--measurement-text-color, #fff);
+  opacity: 0.9;
+}
+
+/* Weather data grid */
+.weather-data-grid {
+  border-top-width: 0;
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.weather-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  border-bottom: none;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.weather-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.weather-label {
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--measurement-text-color, rgba(255, 255, 255, 0.9));
+  white-space: nowrap;
+}
+
+.weather-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--measurement-text-color, #fff);
+  text-align: right;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .measurements-grid {
+    gap: 0.6rem;
+    padding: 0;
+  }
+  
+  .measurement-value {
+    font-size: 1.3rem;
+  }
+  
+  .weather-data-grid {
+    margin-top: 1.2rem;
+    gap: 0.6rem;
+  }
+  
+  .weather-label {
+    font-size: 0.8rem;
+  }
+  
+  .weather-value {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .measurements-grid {
+    gap: 0.4rem;
+  }
+  
+  .measurement-value {
+    font-size: 1.1rem;
+  }
+  
+  .measurement-label {
+    font-size: 0.7rem;
+  }
+  
+  .weather-data-grid {
+    gap: 0.4rem;
+  }
+  
+  .weather-item {
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .weather-icon {
+    font-size: 1rem;
+  }
+}
+
+/* Hide containers when no data is available */
+#particlesContainer:has(.measurement-value:empty),
+#particlesContainer:has(.measurement-value[innerText="-"]),
+#co2Container:has(.measurement-value:empty),
+#co2Container:has(.measurement-value[innerText="-"]) {
+  display: none;
+}
+
+@media (max-height: 800px) {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .container {
+    padding: 0.5rem 1rem 0 1rem;
+  }
+  
+  .dashboard {
+    gap: 0.8rem;
+  }
+  
+  footer {
+    margin-top: 0.2rem;
+    border-top: none;
+  }
+  
+  .info-data {
+    gap: 0.5rem;
+  }
+  
+  .weather-item {
+    margin-bottom: 0.2rem;
+    padding: 0.3rem 0.2rem;
+  }
+}
+
+/* Specific optimizations for portrait mode on mobile */
+@media (orientation: portrait) and (max-width: 768px) {
+  .dashboard {
+    max-height: none; /* Remove max-height in portrait mode on mobile to allow scrolling */
+    overflow: visible;
+  }
+  
+  .main-aqi {
+    max-height: none; /* Remove max-height to prevent content being cut off */
+    min-height: 80vh; /* Ensure card takes up most of the viewport height */
+    padding: 1rem;
+  }
+  
+  .aqi-value {
+    font-size: min(10rem, 22vmin); /* Slightly smaller font for AQI value */
+  }
+  
+  .measurements-grid {
+    gap: 0.8rem;
+    margin: 0.8rem 0;
+  }
+  
+  .weather-data-grid {
+    margin-top: 1rem;
+  }
+}
+
+/* Additional portrait mode optimization for very tall phones */
+@media (orientation: portrait) and (min-height: 800px) {
+  .main-aqi {
+    min-height: 0; /* Don't force minimum height on tall phones */
+    max-height: 800px; /* Set a maximum height to prevent excessive stretching */
+  }
+}
+
+/* iPad and tablet specific styles */
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: portrait) {
+  .dashboard {
+    max-height: none;
+  }
+  
+  .main-aqi {
+    min-height: 0;
+    max-height: 75vh;
+  }
+  
+  .aqi-value {
+    font-size: min(15rem, 25vmin);
+  }
+  
+  .measurements-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin: 1.5rem 0;
+  }
+  
+  .secondary-measurements {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Small to medium tablets in portrait (like Galaxy Tab A9 8.7") */
+@media only screen and (min-device-width: 600px) and (max-device-width: 900px) and (orientation: portrait) {
+  .dashboard {
+    max-height: none;
+    overflow: visible;
+  }
+  
+  .main-aqi {
+    min-height: 0;
+    max-height: none;
+    padding: 1.2rem;
+  }
+  
+  .aqi-value {
+    font-size: min(13rem, 23vmin);
+    margin: 0.5rem 0;
+  }
+  
+  .aqi-category {
+    margin: 0.5rem 0 1.2rem 0;
+    font-size: min(1.4rem, 4vmin);
+    padding: 0.4rem 1.2rem;
+  }
+  
+  .measurements-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.2rem 0;
+    padding: 0 0.5rem;
+  }
+  
+  .secondary-measurements {
+    margin-top: 0.5rem;
+  }
+  
+  .measurement-value {
+    font-size: 1.3rem;
+  }
+  
+  .measurement-label {
+    font-size: 0.9rem;
+  }
+  
+  .weather-data-grid {
+    margin-top: 1.3rem;
+    gap: 0.8rem;
+  }
+  
+  .weather-value {
+    font-size: 1.3rem;
+  }
+}
+
+.uv-box-container {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.uv-box-container h3 {
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+  color: inherit;
+}
+
+.uv-box-container .uv-box {
+  height: 380px;
+  padding: 15px;
+  background-color: #fff;
+  text-align: center;
+  overflow: auto;
+}
+
+.uv-box-container .uv-chart-container {
+  width: 100%;
+  background-color: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 8px 0;
+  height: 140px; /* Adjusted to fit in the fixed container */
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.uv-box-container .uv-crossing-times {
+  display: flex;
+  justify-content: space-around;
+  margin: 5px 0;
+  font-weight: bold;
+  font-size: 0.9rem; /* Smaller font */
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  gap: 5px;
+}
+
+#uvRiseTime, #uvFallTime {
+  padding: 0.2rem 0.4rem;
+}
+
+.uv-box-container .uv-info {
+  text-align: center;
+  padding: 5px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 0.9rem; /* Smaller font */
+}
+
+/* UV value display */
+.uv-box-container .uv-box .aqi-value {
+  font-size: min(3.5rem, 12vmin);
+}
+
+.uv-box-container .uv-box .aqi-category {
+  margin: 0.3rem 0 0.8rem 0;
+  padding: 0.3rem 1rem;
+  font-size: 1.2rem;
+}
+
+/* UV color classes */
+.uv-low {
+  background-color: #abd162;
+  color: #333;
+}
+
+.uv-moderate {
+  background-color: #ffdb57;
+  color: #333;
+}
+
+.uv-high {
+  background-color: #ffa94b;
+  color: #333;
+}
+
+.uv-very-high {
+  background-color: #ff6d4b;
+  color: white;
+}
+
+.uv-extreme {
+  background-color: #9b479f;
+  color: white;
+}
+
+/* UV box color styling for better visual hierarchy */
+.uv-box.uv-low h2,
+.uv-box.uv-moderate h2,
+.uv-box.uv-high h2,
+.uv-box.uv-very-high h2,
+.uv-box.uv-extreme h2 {
+  color: inherit;
+}
+
+.uv-box.uv-low .uv-chart-container,
+.uv-box.uv-moderate .uv-chart-container,
+.uv-box.uv-high .uv-chart-container,
+.uv-box.uv-very-high .uv-chart-container,
+.uv-box.uv-extreme .uv-chart-container {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.uv-box.uv-low #uvRiseTime,
+.uv-box.uv-low #uvFallTime,
+.uv-box.uv-moderate #uvRiseTime,
+.uv-box.uv-moderate #uvFallTime,
+.uv-box.uv-high #uvRiseTime,
+.uv-box.uv-high #uvFallTime,
+.uv-box.uv-very-high #uvRiseTime,
+.uv-box.uv-very-high #uvFallTime,
+.uv-box.uv-extreme #uvRiseTime,
+.uv-box.uv-extreme #uvFallTime {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Responsive adjustments for UV box */
+@media (max-width: 767px) {
+  .uv-box-container .uv-box {
+    padding: 0.6rem !important;
+  }
+  
+  .uv-box-container .uv-box .aqi-value {
+    font-size: min(4rem, 13vmin);
+  }
+  
+  .uv-box-container .uv-box .aqi-category {
+    font-size: 1rem;
+    padding: 0.2rem 0.8rem;
+  }
+  
+  .uv-box-container .uv-chart-container {
+    height: 120px;
+    padding: 8px;
+  }
+  
+  .uv-box-container .uv-crossing-times {
+    font-size: 0.8rem;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 4px;
+  }
+  
+  .uv-box-container .uv-info {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+}
+
+.uv-info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.uv-box h2 {
+  margin-bottom: 0.3rem;
+  font-size: 1.5rem;
+  border-bottom: none;
+}
+
+.uv-box #uvCurrentValue {
+  font-size: min(3.5rem, 12vmin);
+  line-height: 1;
+  margin: 0.1rem 0;
+}
+
+.uv-box #uvCurrentClass {
+  font-size: 1.2rem;
+  padding: 0.3rem 0.8rem;
+  margin: 0.2rem 0 0.8rem;
+}
+
+#uvRiseTime, #uvFallTime {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .uv-box #uvCurrentValue {
+    font-size: min(3.5rem, 13vmin);
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 1rem;
+    padding: 0.2rem 0.6rem;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* Add flex for the left column to allow multiple cards */
+.left-column {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+}
+
+/* Make responsive layout more robust */
+@media (orientation: landscape) {
+  body {
+    overflow: hidden;
+  }
+  
+  .dashboard {
+    flex-direction: row !important;
+    height: calc(100vh - 90px) !important;
+    overflow: hidden !important;
+  }
+  
+  .left-column, .card.uv-box {
+    width: 50% !important;
+    height: auto !important;
+  }
+  
+  .main-aqi, .uv-box {
+    height: 100% !important;
+    max-height: none !important;
+    overflow: auto;
+  }
+  
+  .card {
+    margin-bottom: 0 !important;
+  }
+  
+  .left-column > div, .dashboard > div {
+    height: 100%;
+  }
+  
+  .aqi-value {
+    font-size: min(7rem, 15vmin);
+  }
+  
+  .uv-box .aqi-value {
+    font-size: min(3rem, 10vmin);
+  }
+}
+
+@media (orientation: portrait) {
+  .dashboard {
+    flex-direction: column;
+  }
+  
+  .left-column, .uv-box {
+    width: 100%;
+  }
+}
+
+/* Card styling - ensure both AQI and UV box get proper styling */
+.main-aqi, .uv-box {
+  padding: 15px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  max-height: none;
+}
+
+/* Override AQI category styles for better display */
+.aqi-category {
+  padding: 0.3rem 1rem;
+  border-radius: var(--border-radius);
+  display: inline-block;
+  font-weight: bold;
+  margin: 0.2rem 0 0.8rem 0;
+  font-size: min(1.3rem, 4vmin);
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Ensure UV box elements are consistently styled */
+.uv-box .aqi-category {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: inherit;
+}
+
+/* Clean up any overlapping styles */
+.uv-box {
+  height: 380px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+}
+
+.uv-box h2 {
+  margin: 0 0 5px 0;
+  font-size: 1.5rem;
+  border-bottom: none;
+  flex-shrink: 0;
+}
+
+/* Compact value and category to use less vertical space */
+.uv-box .aqi-value-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 15px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  flex-wrap: wrap;
+}
+
+/* Styling based on UV level */
+.uv-low .aqi-value-container {
+  background-color: rgba(171, 209, 98, 0.2);
+  border-left: 4px solid #abd162;
+}
+
+.uv-moderate .aqi-value-container {
+  background-color: rgba(255, 219, 87, 0.2);
+  border-left: 4px solid #ffdb57;
+}
+
+.uv-high .aqi-value-container {
+  background-color: rgba(255, 169, 75, 0.2);
+  border-left: 4px solid #ffa94b;
+}
+
+.uv-very-high .aqi-value-container {
+  background-color: rgba(255, 109, 75, 0.2);
+  border-left: 4px solid #ff6d4b;
+}
+
+.uv-extreme .aqi-value-container {
+  background-color: rgba(155, 71, 159, 0.2);
+  border-left: 4px solid #9b479f;
+}
+
+.uv-box #uvCurrentValue {
+  font-size: min(3.2rem, 10vmin);
+  line-height: 1;
+  margin: 0;
+  min-width: 90px;
+  text-align: center;
+}
+
+.uv-box #uvCurrentClass {
+  font-size: 1.2rem;
+  padding: 0.3rem 0.8rem;
+  margin: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Enlarged chart container */
+.uv-chart-container {
+  width: 100%;
+  background-color: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 0 0 10px 0;
+  height: 200px; /* Increased height further */
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-grow: 1; /* Allow to take available space */
+}
+
+/* Make crossing times smaller and horizontal with improved styling */
+.uv-crossing-times {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 0.9rem;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+#uvRiseTime, #uvFallTime {
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+  margin: 0 3px;
+  font-weight: 600;
+}
+
+/* Color-coded time indicators */
+#uvRiseTime {
+  background-color: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #2e7d32;
+}
+
+#uvFallTime {
+  background-color: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #2e7d32;
+}
+
+/* Override for colored boxes */
+.uv-box.uv-low #uvRiseTime,
+.uv-box.uv-low #uvFallTime,
+.uv-box.uv-moderate #uvRiseTime,
+.uv-box.uv-moderate #uvFallTime,
+.uv-box.uv-high #uvRiseTime,
+.uv-box.uv-high #uvFallTime,
+.uv-box.uv-very-high #uvRiseTime,
+.uv-box.uv-very-high #uvFallTime,
+.uv-box.uv-extreme #uvRiseTime,
+.uv-box.uv-extreme #uvFallTime {
+  background-color: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Style the "Ok" indicators based on current UV level */
+.uv-low #uvRiseTime, 
+.uv-low #uvFallTime, 
+.uv-moderate #uvRiseTime, 
+.uv-moderate #uvFallTime {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.uv-high #uvRiseTime, 
+.uv-high #uvFallTime, 
+.uv-very-high #uvRiseTime, 
+.uv-very-high #uvFallTime, 
+.uv-extreme #uvRiseTime, 
+.uv-extreme #uvFallTime {
+  color: white;
+}
+
+/* Compact info section - now empty but keeping minimal height for spacing */
+#uvInfo {
+  min-height: 5px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 767px) {
+  .uv-box {
+    padding: 12px;
+  }
+  
+  .uv-chart-container {
+    height: 190px;
+  }
+  
+  .uv-box .aqi-value-container {
+    gap: 10px;
+    padding: 4px 8px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(3rem, 10vmin);
+    min-width: 80px;
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.5rem;
+    letter-spacing: 0.3px;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.4rem;
+  }
+}
+
+/* Landscape orientation - prioritize the chart */
+@media (orientation: landscape) {
+  .uv-chart-container {
+    height: 200px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(2.8rem, 8vmin);
+  }
+  
+  .uv-box .aqi-value-container {
+    margin-bottom: 5px;
+  }
+  
+  .uv-crossing-times {
+    margin: 5px 0;
+  }
+}
+
+/* Very small screens - make everything more compact */
+@media (max-width: 400px) {
+  .uv-box {
+    padding: 10px;
+  }
+  
+  .uv-box h2 {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+  
+  .uv-box .aqi-value-container {
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: min(2.8rem, 9vmin);
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .uv-chart-container {
+    height: 160px;
+  }
+  
+  .uv-crossing-times {
+    margin: 4px 0;
+  }
+  
+  #uvRiseTime, #uvFallTime {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.3rem;
+  }
+  
+  #uvInfo {
+    font-size: 0.8rem;
+  }
+}
+
+/* UV color classes */
+.uv-low, 
+.uv-moderate, 
+.uv-high, 
+.uv-very-high, 
+.uv-extreme {
+  color: inherit;
+}
+
+/* Container for category and below info */
+.uv-info-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+/* UV below info styling - adjusted for better visibility */
+.uv-below-info {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #2e7d32;
+  background-color: rgba(76, 175, 80, 0.15);
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  border-left: 2px solid #4CAF50;
+  margin-top: 3px;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .uv-below-info {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+  
+  .uv-info-wrapper {
+    gap: 2px;
+  }
+}
+
+@media (max-width: 400px) {
+  .uv-below-info {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+}
+
+/* UV header with everything on a single row */
+.uv-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 5px;
+}
+
+.uv-header h2 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.3rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: none;
+  min-width: 90px;
+}
+
+.uv-box #uvCurrentValue {
+  font-size: 2.2rem;
+  line-height: 1;
+  margin: 0;
+  flex-shrink: 0;
+  margin-right: 5px;
+  min-width: 60px;
+  max-width: 85px;
+  text-align: center;
+}
+
+.uv-box #uvCurrentClass {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+  margin: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  max-width: 95px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* UV below info styling - in single row */
+.uv-below-info {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #2e7d32;
+  background-color: rgba(76, 175, 80, 0.15);
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  border-left: 2px solid #4CAF50;
+  text-align: center;
+  flex-shrink: 0;
+  margin-left: 2px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure the chart container fits properly */
+.uv-chart-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .uv-header {
+    gap: 5px;
+    padding: 0 3px;
+  }
+  
+  .uv-header h2 {
+    font-size: 1.1rem;
+    min-width: 80px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: 1.6rem;
+    margin-right: 3px;
+    min-width: 50px;
+    max-width: 70px;
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.25rem;
+    letter-spacing: 0.2px;
+    max-width: 85px;
+  }
+  
+  .uv-below-info {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.25rem;
+    margin-left: 1px;
+    max-width: 105px;
+  }
+}
+
+@media (max-width: 400px) {
+  .uv-header {
+    gap: 4px;
+    padding: 0 2px;
+  }
+  
+  .uv-header h2 {
+    font-size: 1rem;
+    min-width: 70px;
+  }
+  
+  .uv-box #uvCurrentValue {
+    font-size: 1.5rem;
+    max-width: 60px;
+  }
+  
+  .uv-box #uvCurrentClass {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.2rem;
+    max-width: 75px;
+  }
+  
+  .uv-below-info {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.2rem;
+    max-width: 90px;
+  }
+}
+
+/* Prevent horizontal scrolling in the entire card */
+.uv-box {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Crossing times - ensure they fit within the container */
+.uv-crossing-times {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 5px;
+  box-sizing: border-box;
+}
+
+/* Remove the old containers since we're using the uv-header now */
+.uv-box .aqi-value-container,
+.uv-info-wrapper {
+  display: none;
+}
+
+/* Additional fixes to prevent horizontal scrolling */
+.card.uv-box {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+  padding: 12px !important;
+}
+
+.uv-chart-container canvas {
+  max-width: 100%;
+} 
