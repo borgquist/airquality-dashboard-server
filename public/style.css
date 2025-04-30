@@ -4,4 +4,10 @@
 @import url('css/card.css');
 @import url('css/aqi-card.css');
 @import url('css/uv-card.css');
-@import url('css/responsive.css'); 
+/* @import url('css/responsive.css'); - Split below */
+
+/* Import new responsive files */
+@import url('css/responsive-layout.css');
+@import url('css/responsive-card.css');
+@import url('css/responsive-aqi-card.css');
+@import url('css/responsive-uv-card.css'); 

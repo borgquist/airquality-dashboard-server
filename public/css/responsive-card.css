@@ -1,0 +1,85 @@
+/* Media queries for general card and weather item styles */
+
+/* Medium screens */
+@media (max-width: 767px) and (min-width: 480px) {
+  .card {
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .info-data {
+    gap: 0.5rem;
+  }
+
+  .weather-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 0.4rem 0.2rem;
+  }
+
+  .weather-item::before {
+    height: 60%;
+    left: -0.3rem;
+  }
+
+  .label, .value { /* General label/value sizing */
+    font-size: 1rem;
+  }
+}
+
+/* Small screens - stacked layout */
+@media (max-width: 479px) {
+  .card {
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .info-data {
+    gap: 0.5rem;
+  }
+
+  .weather-item {
+    margin-bottom: 0.3rem;
+    padding: 0.3rem 0.2rem;
+  }
+
+  .weather-item::before {
+    height: 50%;
+    width: 0.2rem;
+    left: -0.3rem;
+  }
+
+  .label {
+    font-size: 0.9rem;
+  }
+
+  .value {
+    font-size: 1.1rem;
+  }
+}
+
+/* Height-based adjustments */
+@media (max-height: 800px) {
+ .info-data {
+    gap: 0.5rem;
+  }
+
+  .weather-item {
+    margin-bottom: 0.2rem;
+    padding: 0.3rem 0.2rem;
+  }
+}
+
+/* Landscape general card adjustments */
+@media (orientation: landscape) {
+  .card {
+    margin-bottom: 0 !important;
+  }
+} 

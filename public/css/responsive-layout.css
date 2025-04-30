@@ -1,0 +1,193 @@
+/* Media queries for layout */
+
+@media (min-width: 768px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    min-height: 400px;
+    max-height: 90vh;
+    overflow: visible;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Portrait mode - general dashboard/column adjustments */
+@media (orientation: portrait) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .left-column, .uv-box { /* Keep width here as it affects layout */
+    width: 100%;
+  }
+}
+
+/* Compact styles for header */
+@media (max-height: 700px) {
+  header {
+    height: 60px;
+  }
+}
+
+/* Very small screens - header */
+@media (max-height: 600px) {
+  header {
+    height: 50px;
+    margin-bottom: 5px;
+  }
+}
+
+/* Medium screens - layout, header */
+@media (max-width: 767px) and (min-width: 480px) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 1rem;
+    height: auto;
+  }
+
+  .container {
+    padding: 1rem;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* .info-data, .weather-item, .label, .value moved to -card */
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .header-container {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .update-info {
+    align-items: center;
+  }
+}
+
+/* Small screens - layout, header */
+@media (max-width: 479px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  .container {
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 0.8rem;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* .info-box moved to -aqi */
+
+  h1 {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+
+  .header-container {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .update-info {
+    align-items: center;
+  }
+
+  /* .label, .value moved to -card */
+}
+
+/* Height-based adjustments - general */
+@media (max-height: 800px) {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .container {
+    padding: 0.5rem 1rem 0 1rem;
+  }
+
+  .dashboard {
+    gap: 0.8rem;
+  }
+
+  footer { /* Assuming footer exists or might be added */
+    margin-top: 0.2rem;
+    border-top: none;
+  }
+}
+
+/* Portrait mode - mobile dashboard */
+@media (orientation: portrait) and (max-width: 768px) {
+  .dashboard {
+    max-height: none; /* Remove max-height in portrait mode on mobile to allow scrolling */
+    overflow: visible;
+  }
+}
+
+/* iPad/Tablet portrait - dashboard */
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: portrait) {
+  .dashboard {
+    max-height: none;
+  }
+}
+
+/* Small/Medium Tablet portrait - dashboard */
+@media only screen and (min-device-width: 600px) and (max-device-width: 900px) and (orientation: portrait) {
+  .dashboard {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Robust landscape layout */
+@media (orientation: landscape) {
+  body {
+    overflow: hidden;
+  }
+
+  .dashboard {
+    flex-direction: row !important;
+    height: calc(100vh - 90px) !important;
+    overflow: hidden !important;
+  }
+
+  .left-column { /* Keep width here */
+    width: 50% !important;
+    height: auto !important;
+  }
+  
+  .left-column > div, .dashboard > div { /* Ensure direct children fill height */
+    height: 100%;
+  }
+}
+
+/* General portrait layout (redundant with specific portrait above, but keep for clarity) */
+@media (orientation: portrait) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .left-column { /* Keep width here */
+    width: 100%;
+  }
+} 
