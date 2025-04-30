@@ -14,7 +14,8 @@ function getSegmentColor(ctx, type, uvColors) {
 }
 
 // Function to generate a smooth curve using cubic spline
-function generateSmoothCurveWithSpline(uvReadings) {
+// Returns smooth values/times and specific timestamps for axis ticks
+function generateSmoothCurveWithSpline(uvReadings, uvRiseTime, uvFallTime) {
   if (!uvReadings || uvReadings.length < 2) {
     console.error('Cannot generate smooth curve: insufficient data');
     // Fall back to original data as points
@@ -50,29 +51,71 @@ function generateSmoothCurveWithSpline(uvReadings) {
     // Generate smoothed points (every 10 minutes)
     const start = x[0];
     const end = x[x.length - 1];
-    const step = 10 * 60 * 1000; // 10 minutes in ms
+    const step = 10 * 60 * 1000; // 10 minutes in ms for curve smoothness
 
-    const smoothTimes = [];
-    const smoothValues = [];
+    const smoothTimes = []; // Times corresponding to smoothValues (10 min intervals)
+    const smoothValues = []; // Interpolated UV values (10 min intervals)
+    const pointsToInclude = new Map(); // Use Map to store { timeStr: timestamp } for unique, sorted labels
 
+    // Add first point
+    const startTimeStr = formatTime(start);
+    pointsToInclude.set(startTimeStr, start);
+
+    // Generate the smooth curve points (still needed for drawing)
     for (let t = start; t <= end; t += step) {
-      // Interpolate UV value at this time
       const uv = spline.at(t);
-
-      // Format time for display
-      const timeStr = new Date(t).toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Dubai' // Display in local time
-      });
-
+      const timeStr = formatTime(t);
       smoothTimes.push(timeStr);
       smoothValues.push(uv);
+      // Don't add hourly marks here anymore
     }
 
-    console.log(`Generated ${smoothTimes.length} smooth points using cubic spline`);
-    console.log('Sample points:', smoothValues.slice(0, 3), '...', smoothValues.slice(-3));
-    return { times: smoothTimes, values: smoothValues };
+    // Explicitly add points on the hour for axis labels
+    let currentHourTimestamp = new Date(start);
+    currentHourTimestamp.setMinutes(0, 0, 0); // Start at the beginning of the hour
+    // Move to the *next* hour if start wasn't exactly on the hour
+    if (new Date(start).getMinutes() !== 0 || new Date(start).getSeconds() !== 0 || new Date(start).getMilliseconds() !== 0) {
+        currentHourTimestamp.setHours(currentHourTimestamp.getHours() + 1);
+    }
+
+    while (currentHourTimestamp.getTime() < end) {
+        const hourStr = formatTime(currentHourTimestamp.getTime());
+        pointsToInclude.set(hourStr, currentHourTimestamp.getTime());
+        currentHourTimestamp.setHours(currentHourTimestamp.getHours() + 1);
+    }
+
+    // Ensure specific rise/fall times are included in the axis labels
+    if (uvRiseTime) {
+      const riseTimestamp = timeStringToTimestamp(uvRiseTime, start);
+      if (riseTimestamp) pointsToInclude.set(uvRiseTime, riseTimestamp);
+    }
+    if (uvFallTime) {
+        const fallTimestamp = timeStringToTimestamp(uvFallTime, start);
+        if (fallTimestamp) pointsToInclude.set(uvFallTime, fallTimestamp);
+    }
+
+    // Add last point
+    const endTimeStr = formatTime(end);
+    pointsToInclude.set(endTimeStr, end);
+
+    // Sort the labels by timestamp
+    const sortedPoints = Array.from(pointsToInclude.entries())
+                              .sort(([, tsA], [, tsB]) => tsA - tsB);
+
+    // Extract the sorted time strings for labels
+    const sortedLabels = sortedPoints.map(([timeStr]) => timeStr);
+
+    // Calculate the UV value for each specific axis label time using the spline
+    const axisValues = sortedPoints.map(([, timestamp]) => spline.at(timestamp));
+
+    // Extract the sorted timestamps for tick generation
+    const axisTimestamps = sortedPoints.map(([, timestamp]) => timestamp);
+
+    console.log(`Generated ${smoothValues.length} smooth points for curve drawing`);
+    console.log('Generated axis timestamps:', axisTimestamps.map(ts => formatTime(ts))); // Log formatted times
+
+    // Return necessary data
+    return { times: smoothTimes, values: smoothValues, axisTimestamps: axisTimestamps };
   } catch (error) {
     console.error('Error generating smooth curve with spline:', error);
     console.log('Falling back to linear interpolation after error');
@@ -99,66 +142,77 @@ function generateSmoothCurveWithSpline(uvReadings) {
   }
 }
 
+// Helper function to format timestamp to HH:MM
+function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Dubai'
+  });
+}
+
+// Restore helper function needed for converting HH:MM strings
+
+// Helper function to convert HH:MM back to a timestamp (approximate for sorting)
+// Needs a reference timestamp (like the start time) to infer the date.
+function timeStringToTimestamp(timeStr, referenceTimestamp) {
+    if (!timeStr) return null;
+    try {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const refDate = new Date(referenceTimestamp);
+        // Set hours/minutes based on the timeStr, keeping the date from reference
+        // Note: This assumes times are within the same day as the reference start time.
+        // Adjustments might be needed if data spans midnight.
+        const targetDate = new Date(refDate);
+        targetDate.setHours(hours, minutes, 0, 0); // Set time, clear seconds/ms
+
+        // Handle potential day rollovers (e.g., if start is 23:00 and timeStr is 01:00)
+        // This basic version assumes same day - might need refinement for edge cases.
+
+        return targetDate.getTime();
+    } catch (e) {
+        console.error(`Error converting time string ${timeStr} to timestamp:`, e);
+        return null;
+    }
+}
 
 // Update UV chart
 function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, uvFallTime) {
   if (!canvas) return null;
 
-  // Clean up previous chart if it exists
+  console.log('updateUvChart received times:', { uvRiseTime, uvFallTime });
+
   if (uvChart) {
     uvChart.destroy();
     uvChart = null;
   }
 
-  // Generate smooth curve using cubic spline interpolation
-  const smoothData = generateSmoothCurveWithSpline(uvReadings);
+  const smoothData = generateSmoothCurveWithSpline(uvReadings, uvRiseTime, uvFallTime);
 
-  // Create annotations for rise and fall times
+  console.log('Generated smoothData.times for curve:', smoothData.times);
+  console.log('Generated axisTimestamps for ticks:', smoothData.axisTimestamps);
+
+  // Convert 10-min interval times to timestamps for plotting on time axis
+  const plotData = smoothData.times.map((timeStr, index) => {
+      // Use the start time of the dataset as reference for converting HH:MM back to timestamp
+      const refTimestamp = timeStringToTimestamp(smoothData.times[0], Date.now()); // Use current time as fallback ref
+      return {
+          x: timeStringToTimestamp(timeStr, refTimestamp), 
+          y: smoothData.values[index]
+      };
+  }).filter(p => p.x !== null); // Filter out any points that failed conversion
+
+  const ctx = canvas.getContext('2d');
+
+  const uvColors = {
+    low: { lineColor: 'rgba(76, 175, 80, 1)', fillColor: 'rgba(76, 175, 80, 0.8)' },       // Green
+    moderate: { lineColor: 'rgba(255, 235, 59, 1)', fillColor: 'rgba(255, 235, 59, 0.8)' }, // Yellow
+    high: { lineColor: 'rgba(255, 152, 0, 1)', fillColor: 'rgba(255, 152, 0, 0.8)' },      // Orange
+    veryHigh: { lineColor: 'rgba(233, 30, 99, 1)', fillColor: 'rgba(233, 30, 99, 0.8)' },   // Pink/red
+    extreme: { lineColor: 'rgba(156, 39, 176, 1)', fillColor: 'rgba(156, 39, 176, 0.8)' } // Purple
+  };
+
   const annotations = {};
-
-  if (uvRiseTime) {
-    annotations.riseTime = {
-      type: 'line',
-      xMin: uvRiseTime,
-      xMax: uvRiseTime,
-      borderColor: 'rgba(255, 152, 0, 0.8)',
-      borderWidth: 2,
-      borderDash: [5, 5],
-      label: {
-        content: `UV > 4 at ${uvRiseTime}`,
-        enabled: true,
-        position: 'top',
-        backgroundColor: 'rgba(255, 152, 0, 0.8)',
-        color: 'white',
-        padding: 4,
-        font: {
-          size: 12
-        }
-      }
-    };
-  }
-
-  if (uvFallTime) {
-    annotations.fallTime = {
-      type: 'line',
-      xMin: uvFallTime,
-      xMax: uvFallTime,
-      borderColor: 'rgba(76, 175, 80, 0.8)',
-      borderWidth: 2,
-      borderDash: [5, 5],
-      label: {
-        content: `UV < 4 at ${uvFallTime}`,
-        enabled: true,
-        position: 'top',
-        backgroundColor: 'rgba(76, 175, 80, 0.8)',
-        color: 'white',
-        padding: 4,
-        font: {
-          size: 12
-        }
-      }
-    };
-  }
 
   // Add horizontal threshold line at UV=4
   annotations.threshold = {
@@ -181,178 +235,214 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
     }
   };
 
-  // Add vertical line for current time
-  const currentTimeStr = currentTime.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Dubai'
-  });
-
-  annotations.currentTime = {
-    type: 'line',
-    xMin: currentTimeStr,
-    xMax: currentTimeStr,
-    borderColor: '#000000',
-    borderWidth: 3,
-    drawTime: 'afterDatasetsDraw' // Ensure it's drawn on top
-  };
-
-  // Create chart context
-  const ctx = canvas.getContext('2d');
-
-  // Define colors for different UV ranges
-  const uvColors = {
-    low: { lineColor: 'rgba(76, 175, 80, 1)', fillColor: 'rgba(76, 175, 80, 0.8)' },       // Green
-    moderate: { lineColor: 'rgba(255, 235, 59, 1)', fillColor: 'rgba(255, 235, 59, 0.8)' }, // Yellow
-    high: { lineColor: 'rgba(255, 152, 0, 1)', fillColor: 'rgba(255, 152, 0, 0.8)' },      // Orange
-    veryHigh: { lineColor: 'rgba(233, 30, 99, 1)', fillColor: 'rgba(233, 30, 99, 0.8)' },   // Pink/red
-    extreme: { lineColor: 'rgba(156, 39, 176, 1)', fillColor: 'rgba(156, 39, 176, 0.8)' } // Purple
-  };
-
-  // Create the datasets
+  // Prepare the datasets
   const datasets = [{
-    label: '', // Empty label to hide in legend
-    data: smoothData.values,
-    // Segment styling is now used instead of mapping colors directly here
-    segment: {
-      borderColor: ctx => getSegmentColor(ctx, 'line', uvColors),
-      backgroundColor: ctx => getSegmentColor(ctx, 'fill', uvColors),
-    },
-    borderWidth: 2,
-    pointRadius: 0,
-    tension: 0.4,
-    fill: true
-  }];
+          label: '',
+          data: plotData,
+          segment: {
+            borderColor: ctx => getSegmentColor(ctx, 'line', uvColors),
+            backgroundColor: ctx => getSegmentColor(ctx, 'fill', uvColors),
+          },
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.4,
+          fill: true
+      }]
+      // Add the current time marker dataset
+      .concat(generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime)); 
 
-  // Add current time point marker
-  if (currentUv !== null && smoothData.times.length > 0) {
-    // Find closest time index
-    let closestIndex = -1;
-    let minDiff = Infinity;
-    const curMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-
-    for (let i = 0; i < smoothData.times.length; i++) {
-      const timeStr = smoothData.times[i];
-      if (!timeStr) continue;
-      const parts = timeStr.split(':');
-      if (parts.length !== 2) continue;
-      const hours = parseInt(parts[0], 10);
-      const minutes = parseInt(parts[1], 10);
-      if (isNaN(hours) || isNaN(minutes)) continue;
-
-      const timeMinutes = hours * 60 + minutes;
-      const diff = Math.abs(timeMinutes - curMinutes);
-
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIndex = i;
-      }
-    }
-
-    // Create point data if a valid index is found
-    if (closestIndex >= 0 && smoothData.values[closestIndex] !== undefined && smoothData.values[closestIndex] !== null) {
-      const pointData = Array(smoothData.values.length).fill(null);
-      pointData[closestIndex] = smoothData.values[closestIndex];
-
-      datasets.push({
-        data: pointData,
-        backgroundColor: '#000', // Black square
-        borderColor: '#fff',     // White border
-        borderWidth: 2,
-        pointRadius: 8,
-        pointStyle: 'rectRot',   // Rotated square
-        pointHoverRadius: 10,
-        fill: false,
-        showLine: false,
-        label: 'Current Time' // Optional: Label for this specific point dataset
-      });
-    } else {
-        console.warn("Could not place current time marker. Closest index or value invalid.", { closestIndex, currentUv, smoothDataValues: smoothData.values });
-    }
-  }
-
-  // Create the chart instance
   uvChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: smoothData.times,
+      // No labels needed here for time axis, data provides x values
+      // labels: smoothData.axisLabels, 
       datasets: datasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: {
-        padding: { top: 10, right: 10, bottom: 5, left: 5 }
-      },
+      layout: { padding: { top: 10, right: 10, bottom: 5, left: 5 } },
       scales: {
         x: {
+          // Switch to time axis
+          type: 'time',
+          time: {
+              unit: 'minute', // Base unit
+              tooltipFormat: 'HH:mm', // Format for tooltips
+              displayFormats: {
+                  minute: 'HH:mm', // Format for ticks if needed
+                  hour: 'HH:mm'     // Ensure hour ticks also use HH:mm
+              }
+          },
           grid: { display: false },
           ticks: {
             maxRotation: 0,
-            autoSkip: true,
-            maxTicksLimit: 12, // Limit ticks for clarity
             color: '#333',
-            font: { size: 10 }
+            font: { size: 10 },
+            autoSkip: false,
+            // Callback to filter ticks based on our desired timestamps
+            callback: function(value, index, ticks) {
+                // value is the timestamp for the potential tick
+                const currentTickTimeStr = formatTime(value);
+
+                // Format the specific times we definitely want to show
+                const firstTimeStr = formatTime(smoothData.axisTimestamps[0]);
+                const lastTimeStr = formatTime(smoothData.axisTimestamps[smoothData.axisTimestamps.length - 1]);
+                const riseTimeStr = uvRiseTime; // Already in HH:mm format
+                const fallTimeStr = uvFallTime; // Already in HH:mm format
+
+                // Always show first and last tick
+                if (currentTickTimeStr === firstTimeStr || currentTickTimeStr === lastTimeStr) {
+                    return currentTickTimeStr;
+                }
+
+                // Always show rise time tick
+                if (riseTimeStr && currentTickTimeStr === riseTimeStr) {
+                    return currentTickTimeStr;
+                }
+
+                // Always show fall time tick
+                if (fallTimeStr && currentTickTimeStr === fallTimeStr) {
+                    return currentTickTimeStr;
+                }
+
+                // Check for hourly ticks
+                const date = new Date(value);
+                if (date.getMinutes() === 0) {
+                    const proximityThreshold = 30 * 60 * 1000; // 30 minutes
+                    const firstTimestamp = smoothData.axisTimestamps[0];
+                    const lastTimestamp = smoothData.axisTimestamps[smoothData.axisTimestamps.length - 1];
+                    const riseTimestamp = riseTimeStr ? timeStringToTimestamp(riseTimeStr, firstTimestamp) : null;
+                    const fallTimestamp = fallTimeStr ? timeStringToTimestamp(fallTimeStr, firstTimestamp) : null;
+                    
+                    let hideHourly = false;
+                    // Hide if too close to rise/fall
+                    if (riseTimestamp && Math.abs(value - riseTimestamp) < proximityThreshold) hideHourly = true;
+                    if (fallTimestamp && Math.abs(value - fallTimestamp) < proximityThreshold) hideHourly = true;
+                    // Hide if too close to start (and start isn't on the hour)
+                    if (formatTime(firstTimestamp) !== currentTickTimeStr && new Date(firstTimestamp).getMinutes() !== 0 && Math.abs(value - firstTimestamp) < proximityThreshold) hideHourly = true;
+                    // Hide if too close to end (and end isn't on the hour)
+                    if (formatTime(lastTimestamp) !== currentTickTimeStr && new Date(lastTimestamp).getMinutes() !== 0 && Math.abs(value - lastTimestamp) < proximityThreshold) hideHourly = true;
+                    
+                    if (!hideHourly) {
+                        return currentTickTimeStr; // Show hourly if not too close
+                    }
+                }
+
+                // Hide all other ticks
+                return null;
+            }
           }
         },
         y: {
           beginAtZero: true,
-          // Dynamically set max based on data, add some padding
           suggestedMax: smoothData.values.length > 0 ? Math.max(6, Math.ceil(Math.max(...smoothData.values) * 1.1)) : 6,
           ticks: {
             stepSize: 2,
             color: '#333',
             font: { size: 10 },
-            // Hide zero label
             callback: function(value) {
               return value === 0 ? '' : value;
             }
           },
           grid: {
-            color: 'rgba(200, 200, 200, 0.3)' // Lighter grid lines
+            color: 'rgba(200, 200, 200, 0.3)'
           }
         }
       },
       plugins: {
-        legend: {
-          display: false // Hide dataset labels in the legend
-        },
+        legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          titleColor: 'white',
-          bodyColor: 'white',
-          titleFont: { size: 12 },
-          bodyFont: { size: 12 },
-          padding: 8,
-          displayColors: false, // Don't show color box in tooltip
-          callbacks: {
-            // Show time in title
-            title: function(tooltipItems) {
-              return tooltipItems[0].label;
-            },
-            // Show UV index in body
-            label: function(context) {
-                // Check if it's the marker point dataset
-               if (context.dataset.label === 'Current Time') {
-                   return `Current UV: ${context.parsed.y.toFixed(1)}`;
-               }
-               // Otherwise, show interpolated UV
-               return `UV Index: ${context.raw.toFixed(1)}`;
+            callbacks: {
+                title: function(tooltipItems) {
+                    // Format timestamp from the first item for the title
+                    if (tooltipItems.length > 0) {
+                        const timestamp = tooltipItems[0].parsed.x;
+                        return formatTime(timestamp);
+                    }
+                    return '';
+                },
+                label: function(context) {
+                    // Use parsed.y for the UV value
+                    const uvValue = context.parsed.y;
+                    if (uvValue !== null) {
+                         // Check if it's the marker point dataset by its label
+                        if (context.dataset.label === 'Current Time') {
+                            return `Current UV: ${uvValue.toFixed(1)}`;
+                        }
+                        return `UV Index: ${uvValue.toFixed(1)}`;
+                    }
+                    return ''; 
+                }
             }
-          }
         },
-        annotation: { // Ensure chartjs-plugin-annotation is loaded
+        annotation: {
           annotations: annotations
         }
       },
-      interaction: {
-        intersect: false, // Tooltip triggers on hover anywhere along the x-axis
-        mode: 'index'     // Show tooltips for all datasets at that index
-      }
+      interaction: { intersect: false, mode: 'index' }
     }
   });
 
-  return uvChart; // Return the created chart instance
+  return uvChart;
 }
 
-export { updateUvChart }; // Export the main function 
+// Function to generate the dataset for the current time marker
+function generateCurrentTimeMarkerDataset(plotData, currentUv, currentTime) {
+    if (currentUv === null || !plotData || plotData.length === 0) {
+        return [];
+    }
+
+    const currentTimestamp = currentTime.getTime();
+    
+    // Find the closest plot data point index
+    let closestIndex = -1;
+    let minDiff = Infinity;
+    for (let i = 0; i < plotData.length; i++) {
+        if (plotData[i].x === null) continue; // Skip null timestamps
+        const diff = Math.abs(plotData[i].x - currentTimestamp);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestIndex = i;
+        }
+    }
+
+    // Interpolate the UV value at the exact current time
+    let interpolatedCurrentUv = null;
+    for (let i = 0; i < plotData.length - 1; i++) {
+        const p1 = plotData[i];
+        const p2 = plotData[i + 1];
+        if (p1.x !== null && p2.x !== null && currentTimestamp >= p1.x && currentTimestamp <= p2.x) {
+            const fraction = (currentTimestamp - p1.x) / (p2.x - p1.x);
+            interpolatedCurrentUv = p1.y + fraction * (p2.y - p1.y);
+            break;
+        }
+    }
+    // If outside range or couldn't interpolate, use the passed currentUv 
+    if (interpolatedCurrentUv === null) {
+        interpolatedCurrentUv = currentUv;
+    }
+
+    // Create marker data - only one point needs a value
+    if (interpolatedCurrentUv !== null) {
+        const markerData = [{ x: currentTimestamp, y: interpolatedCurrentUv }];
+
+        return [{
+            label: 'Current Time',
+            data: markerData, // Data is an array of {x, y} points
+            pointStyle: 'rectRot', // Rotated square
+            pointRadius: 8,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointBackgroundColor: '#000',
+            pointHoverRadius: 10,
+            showLine: false,
+            order: 1 // Ensure it draws on top of the main line
+        }];
+    } else {
+        console.warn("Could not create current time marker.");
+        return [];
+    }
+}
+
+export { updateUvChart }; 

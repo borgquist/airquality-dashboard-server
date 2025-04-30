@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Quality Dashboard</title>
   <link rel="stylesheet" href="style.css?v=1006">
+
+  <!-- Chart.js and Date Adapter dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@^4"></script> 
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@^3/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@^3"></script>
+  <!-- Include chartjs-plugin-annotation -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@^3"></script>
+
   <style>
     /* Critical layout styles to ensure proper display */
     body {
@@ -293,11 +301,14 @@
           <canvas id="uvChart" width="100%" height="100%"></canvas>
         </div>
         
-        <div class="uv-crossing-times">
-          <div id="uvRiseTime">Ok before: --:--</div>
-          <div id="uvFallTime">Ok after: --:--</div>
+        <!-- Removed Container for crossing times below the chart as they are now on the x-axis -->
+        <!-- 
+        <div class="uv-crossing-times-display" style="text-align: center; margin-top: 5px;">
+          <span id="uvRiseTimeDisplay" style="font-weight: bold; margin: 0 10px;"></span>
+          <span id="uvFallTimeDisplay" style="font-weight: bold; margin: 0 10px;"></span>
         </div>
-        
+        -->
+
         <div id="uvInfo" class="uv-info">
           <!-- UV info is now empty as requested -->
         </div>

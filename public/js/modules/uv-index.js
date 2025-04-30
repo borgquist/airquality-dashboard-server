@@ -196,17 +196,7 @@ function updateUvIndexDisplay(data) {
   // Update the UV category display box with enhanced styling
   updateUvCategoryDisplay(currentUv);
   
-  // Update crossing times with new labels
-  const uvRiseElement = document.getElementById('uvRiseTime');
-  const uvFallElement = document.getElementById('uvFallTime');
-  
-  if (uvRiseElement) {
-    uvRiseElement.textContent = uvRiseTime ? `Ok before: ${uvRiseTime}` : 'Ok before: --:--';
-  }
-  
-  if (uvFallElement) {
-    uvFallElement.textContent = uvFallTime ? `Ok after: ${uvFallTime}` : 'Ok after: --:--';
-  }
+  // Crossing times are now handled directly on the chart's x-axis ticks.
   
   // Update the below 4 info
   const uvBelowInfo = document.getElementById('uvBelowInfo');
@@ -220,21 +210,21 @@ function updateUvIndexDisplay(data) {
     // 1. We have a valid fall time
     // 2. The current time is before the fall time
     // 3. The current UV level is at or above the threshold
-    if (uvFallTime && currentUv >= 4) {
-      const [fallHour, fallMinute] = uvFallTime.split(':').map(Number);
-      const fallTimeMinutes = fallHour * 60 + fallMinute;
+    // if (uvFallTime && currentUv >= 4) { // Removed condition
+    //   const [fallHour, fallMinute] = uvFallTime.split(':').map(Number);
+    //   const fallTimeMinutes = fallHour * 60 + fallMinute;
       
-      if (currentTimeMinutes < fallTimeMinutes) {
-        uvBelowInfo.textContent = `below 4 after ${uvFallTime}`;
-        uvBelowInfo.style.display = 'inline-block';
-      } else {
-        // Current time is already past the fall time, hide notification
-        uvBelowInfo.style.display = 'none';
-      }
-    } else {
+    //   if (currentTimeMinutes < fallTimeMinutes) {
+    //     uvBelowInfo.textContent = `below 4 after ${uvFallTime}`;
+    //     uvBelowInfo.style.display = 'inline-block';
+    //   } else {
+    //     // Current time is already past the fall time, hide notification
+    //     uvBelowInfo.style.display = 'none';
+    //   }
+    // } else {
       // No fall time or UV already below threshold, hide notification
       uvBelowInfo.style.display = 'none';
-    }
+    // }
   }
   
   // Clear UV info text - we don't want any recommendations displayed
