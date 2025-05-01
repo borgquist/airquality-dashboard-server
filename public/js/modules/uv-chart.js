@@ -177,6 +177,18 @@ function timeStringToTimestamp(timeStr, referenceTimestamp) {
     }
 }
 
+// Helper function to format timestamp to ham/pm
+function formatTimeAmPm(timestamp) {
+  const date = new Date(timestamp);
+  let hours = date.getHours(); // Use local hours based on timezone
+  const minutes = date.getMinutes(); // Keep minutes for precision if needed, but not in output format
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  // const minutesStr = minutes < 10 ? '0'+minutes : minutes; // If you wanted minutes: `${hours}:${minutesStr}${ampm}`
+  return `${hours}${ampm}`; // Return format like "9am", "1pm"
+}
+
 // Update UV chart
 function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, uvFallTime) {
   if (!canvas) return null;
@@ -301,56 +313,11 @@ function updateUvChart(canvas, uvReadings, currentUv, currentTime, uvRiseTime, u
             color: '#333',
             font: { size: 10 },
             autoSkip: false, // Disable auto skipping again
-            // Restore callback to filter ticks
+            maxTicksLimit: 15, // Limit ticks to prevent overlap
             callback: function(value, index, ticks) {
-                // value is the timestamp for the potential tick
-                const tolerance = 60 * 1000; // 1 minute tolerance
-                const proximityThreshold = 30 * 60 * 1000; // 30 minutes
-
-                const firstTimestamp = smoothData.axisTimestamps[0];
-                const lastTimestamp = smoothData.axisTimestamps[smoothData.axisTimestamps.length - 1];
-                const riseTimestamp = uvRiseTime ? timeStringToTimestamp(uvRiseTime, firstTimestamp) : null;
-                const fallTimestamp = uvFallTime ? timeStringToTimestamp(uvFallTime, firstTimestamp) : null;
-
-                // Check if current tick matches rise or fall time - hide if it does (using custom labels)
-                // Note: We are NOT using annotations anymore, so we *should* show rise/fall here.
-                // We will rely on the proximity check below to hide nearby hourly marks.
-                // if (riseTimestamp && Math.abs(value - riseTimestamp) < tolerance) return null;
-                // if (fallTimestamp && Math.abs(value - fallTimestamp) < tolerance) return null;
-
-                const currentTickTimeStr = formatTime(value);
-                const firstTimeStr = formatTime(firstTimestamp);
-                const lastTimeStr = formatTime(lastTimestamp);
-                const riseTimeStr = uvRiseTime;
-                const fallTimeStr = uvFallTime;
-
-                // Show first/last/rise/fall times directly
-                if (currentTickTimeStr === firstTimeStr || 
-                    currentTickTimeStr === lastTimeStr || 
-                    (riseTimeStr && currentTickTimeStr === riseTimeStr) || 
-                    (fallTimeStr && currentTickTimeStr === fallTimeStr)) {
-                    return currentTickTimeStr;
-                }
-
-                // Check for hourly ticks
-                const date = new Date(value);
-                if (date.getMinutes() === 0) {
-                    let hideHourly = false;
-                    // Hide if too close to rise/fall
-                    if (riseTimestamp && Math.abs(value - riseTimestamp) < proximityThreshold) hideHourly = true;
-                    if (fallTimestamp && Math.abs(value - fallTimestamp) < proximityThreshold) hideHourly = true;
-                    // Hide if too close to start (and start isn't on the hour, and start isn't rise/fall)
-                    if (formatTime(firstTimestamp) !== currentTickTimeStr && !(riseTimestamp && Math.abs(firstTimestamp - riseTimestamp) < tolerance) && !(fallTimestamp && Math.abs(firstTimestamp - fallTimestamp) < tolerance) && new Date(firstTimestamp).getMinutes() !== 0 && Math.abs(value - firstTimestamp) < proximityThreshold) hideHourly = true;
-                    // Hide if too close to end (and end isn't on the hour, and end isn't rise/fall)
-                    if (formatTime(lastTimestamp) !== currentTickTimeStr && !(riseTimestamp && Math.abs(lastTimestamp - riseTimestamp) < tolerance) && !(fallTimestamp && Math.abs(lastTimestamp - fallTimestamp) < tolerance) && new Date(lastTimestamp).getMinutes() !== 0 && Math.abs(value - lastTimestamp) < proximityThreshold) hideHourly = true;
-                    
-                    if (!hideHourly) {
-                        return currentTickTimeStr; // Show hourly if not too close
-                    }
-                }
-
-                // Hide all other ticks
-                return null;
+              // value is the timestamp
+              // Format using the new am/pm helper
+              return formatTimeAmPm(value);
             }
           },
         },
