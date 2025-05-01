@@ -8,6 +8,10 @@ import { fetchUvIndexData } from './uv-index.js';
 let eventSource = null; // Keep eventSource local to this module
 let connectionMonitor = null;
 let reconnectionTimer = null;
+let consecutiveFailures = 0; // Track consecutive health check failures
+const MAX_CONSECUTIVE_FAILURES = 3; // Number of failures before marking as disconnected
+const HEALTH_CHECK_INTERVAL = 5000; // Check every 5 seconds
+const HEALTH_CHECK_TIMEOUT = 3000; // 3 second timeout
 
 // Add styling for the disconnected state
 const disconnectedStyle = document.createElement('style');
@@ -61,17 +65,17 @@ disconnectedStyle.textContent = `
 `;
 document.head.appendChild(disconnectedStyle);
 
-// Check server connection every second
+// Check server connection periodically
 function startConnectionMonitoring() {
   // Clear any existing monitoring
   if (connectionMonitor) {
     clearInterval(connectionMonitor);
   }
   
-  // Monitor connection state every second
+  // Monitor connection state
   connectionMonitor = setInterval(() => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT); // Use configured timeout
     
     fetch('/api/health', { 
       method: 'HEAD',
@@ -81,17 +85,26 @@ function startConnectionMonitoring() {
     .then(response => {
       clearTimeout(timeoutId);
       if (response.ok) {
-        markServerConnected();
+        markServerConnected(); // Reset failures on success
       } else {
-        markServerDisconnected();
+        // Increment failure count, mark disconnected only if threshold reached
+        consecutiveFailures++;
+        console.warn(`Server health check failed (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`);
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          markServerDisconnected();
+        }
       }
     })
     .catch(error => {
       clearTimeout(timeoutId);
-      console.error('Server connection check failed:', error.message);
-      markServerDisconnected();
+      // Increment failure count, mark disconnected only if threshold reached
+      consecutiveFailures++;
+      console.error(`Server connection check failed (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error.message);
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        markServerDisconnected();
+      }
     });
-  }, 1000);
+  }, HEALTH_CHECK_INTERVAL); // Use configured interval
 }
 
 // Mark the server as disconnected
@@ -130,7 +143,10 @@ function markServerDisconnected() {
 
 // Mark the server as connected
 function markServerConnected() {
-  // Remove the disconnected class from the live indicator
+  // Only act if we were previously marked disconnected or had failures
+  const wasDisconnected = consecutiveFailures > 0;
+  consecutiveFailures = 0; // Reset failure count on successful connection
+
   const liveIndicator = document.querySelector('.live-indicator');
   if (liveIndicator && liveIndicator.classList.contains('disconnected')) {
     liveIndicator.classList.remove('disconnected');
@@ -142,10 +158,15 @@ function markServerConnected() {
       overlay.remove();
     }
     
+    console.log('Server connection restored.');
+    
     // Restart EventSource if needed
     if (!eventSource) {
-      setupEventSource();
+      setupEventSource(true); // Pass flag indicating reconnection
     }
+  } else if (wasDisconnected) {
+      // If we had failures but didn't show the overlay, log restoration
+      console.log('Server connection check successful after previous failures.');
   }
 }
 
@@ -177,14 +198,17 @@ function startReconnection() {
 }
 
 // Set up server-sent events for real-time updates
-export function setupEventSource() {
+export function setupEventSource(isReconnection = false) { // Add flag parameter
   if (!config?.sseEnabled) {
     debugPrint('SSE disabled in config, skipping setup.');
     return;
   }
   
   // Start connection monitoring regardless of SSE state
-  startConnectionMonitoring();
+  // Only start monitoring if it hasn't been started already
+  if (!connectionMonitor) {
+      startConnectionMonitoring();
+  }
   
   // Don't set up a new connection if one exists
   if (eventSource) {
@@ -196,8 +220,14 @@ export function setupEventSource() {
     
     // Connection opened
     eventSource.addEventListener('open', () => {
-      console.log('✅ SSE connection established successfully');
-      debugPrint('SSE connection established');
+      console.log(`✅ SSE connection established successfully ${isReconnection ? '(reconnected)' : ''}`);
+      debugPrint(`SSE connection established ${isReconnection ? '(reconnected)' : ''}`);
+      // If this was a reconnection, force a data refresh
+      if (isReconnection) {
+          console.log('Forcing data refresh after SSE reconnection.');
+          fetchAirQualityData(true); // Force refresh AQI
+          fetchUvIndexData(true, true); // Force refresh UV
+      }
     });
     
     // Listen for AQI updates
