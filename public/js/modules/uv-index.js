@@ -199,20 +199,44 @@ function updateUvIndexDisplay(data) {
   // Update Time Range Info Box
   const timeRangeInfoEl = document.getElementById('uvTimeRangeInfo');
   if (timeRangeInfoEl) {
+      // Define a style for the time values
+      const timeStyle = "font-weight: bold; font-size: calc(1em + 5px);";
+
       if (uvRiseTime && uvFallTime) {
-          // Use innerHTML to allow bold tags
-          timeRangeInfoEl.innerHTML = `Safe before <b>${uvRiseTime}</b> and after <b>${uvFallTime}</b>`;
+          // Display the high UV period on two lines
+          timeRangeInfoEl.innerHTML = `High UV between<br><span style="${timeStyle}">${uvRiseTime} - ${uvFallTime}</span>`;
           timeRangeInfoEl.style.display = 'inline-block'; // Make visible
-      } else if (uvFallTime) { // Case where only fall time is available (e.g., UV starts high)
-          timeRangeInfoEl.innerHTML = `Safe after <b>${uvFallTime}</b>`;
+      } else if (uvFallTime) { // Case where only fall time is available (UV starts high)
+          timeRangeInfoEl.innerHTML = `High UV until<br><span style="${timeStyle}">${uvFallTime}</span>`;
           timeRangeInfoEl.style.display = 'inline-block'; 
-      } else if (uvRiseTime) { // Case where only rise time is available (e.g., UV ends high - less common)
-          timeRangeInfoEl.innerHTML = `Safe before <b>${uvRiseTime}</b>`;
+      } else if (uvRiseTime) { // Case where only rise time is available (UV ends high or never drops)
+          timeRangeInfoEl.innerHTML = `High UV from<br><span style="${timeStyle}">${uvRiseTime}</span>`;
           timeRangeInfoEl.style.display = 'inline-block'; 
       } else {
-          timeRangeInfoEl.innerHTML = ''; // Clear content
-          timeRangeInfoEl.style.display = 'none'; // Hide if no range info
+          // Check if UV ever goes >= 4. If not, maybe say "UV stays low all day"
+          const maxUv = data.result.map(item => item.uv).reduce((max, val) => Math.max(max, val), 0); // Safer max calculation
+          if (maxUv < 4) {
+            timeRangeInfoEl.innerHTML = `UV stays low all day`;
+            timeRangeInfoEl.style.display = 'inline-block';
+          } else {
+            // Fallback if times missing but UV does reach 4
+            timeRangeInfoEl.innerHTML = ''; // Clear content
+            timeRangeInfoEl.style.display = 'none'; // Hide
+          }
       }
+      // Position the entire box absolutely to the top-right
+      timeRangeInfoEl.style.position = 'absolute';
+      timeRangeInfoEl.style.right = '15px'; // Adjust as needed for padding from the edge
+      timeRangeInfoEl.style.top = '15px'; // Adjust as needed for vertical positioning
+      // Remove styles that might conflict with absolute positioning
+      timeRangeInfoEl.style.marginLeft = ''; 
+      timeRangeInfoEl.style.marginRight = '';
+      timeRangeInfoEl.style.display = 'inline-block'; // Needed for width:fit-content
+      timeRangeInfoEl.style.width = 'fit-content'; 
+      timeRangeInfoEl.style.textAlign = 'right'; 
+      timeRangeInfoEl.style.lineHeight = '1.3';
+      // Ensure the parent container has position: relative for this to work correctly.
+      // This might need to be set in CSS for the parent element (e.g., the .card class).
   }
   
   // Crossing times are now handled directly on the chart's x-axis ticks.
